@@ -68,12 +68,12 @@ const Home: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (!config || config.heroSlides.length === 0) return;
+    if (!config || !config.heroSlides || config.heroSlides.length === 0) return;
     const timer = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % config.heroSlides.length);
     }, 5000);
     return () => clearInterval(timer);
-  }, [config.heroSlides.length]);
+  }, [config.heroSlides?.length]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -82,7 +82,7 @@ const Home: React.FC = () => {
           setTrustVisible(true);
         }
       },
-      { threshold: 0.15 }
+      { threshold: 0.1, rootMargin: '50px' }
     );
     if (trustRef.current) observer.observe(trustRef.current);
     return () => observer.disconnect();
@@ -97,7 +97,7 @@ const Home: React.FC = () => {
           setActiveStep(index);
         }
       });
-    }, { threshold: 0.5, rootMargin: "-10% 0px -10% 0px" });
+    }, { threshold: 0.3, rootMargin: "0px" });
     document.querySelectorAll('.step-item').forEach(el => observer.observe(el));
     return () => observer.disconnect();
   }, [config.stepItems]);
@@ -122,7 +122,7 @@ const Home: React.FC = () => {
       {/* Marquee Header */}
       <div className="bg-brand-accent/20 border-b border-brand-accent/30 py-1.5 overflow-hidden backdrop-blur-md relative z-20">
         <div className="animate-marquee whitespace-nowrap flex gap-12 text-xs font-bold font-mono tracking-widest text-brand-cyan">
-           {config.marqueeText.map((text, i) => (
+           {(config.marqueeText || []).map((text, i) => (
              <React.Fragment key={i}>
                <span>{text}</span>
                <span className="text-white opacity-30">•</span>
@@ -133,7 +133,7 @@ const Home: React.FC = () => {
 
       {/* Hero Carousel Section */}
       <section className="relative h-[650px] flex items-center justify-center overflow-hidden group">
-        {config.heroSlides.map((slide, index) => (
+        {(config.heroSlides || []).map((slide, index) => (
           <div 
             key={slide.id}
             className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${index === currentSlide ? 'opacity-100' : 'opacity-0'}`}
@@ -155,32 +155,29 @@ const Home: React.FC = () => {
           </div>
 
           <h1 className="text-5xl md:text-8xl font-display font-bold text-white mb-6 tracking-tighter leading-tight uppercase">
-             <span className={`glitch-text block ${config.heroSlides[currentSlide]?.accent || 'text-white'}`} data-text={config.heroSlides[currentSlide]?.title}>
-               {config.heroSlides[currentSlide]?.title}
+             <span className={`glitch-text block ${config.heroSlides?.[currentSlide]?.accent || 'text-white'}`} data-text={config.heroSlides?.[currentSlide]?.title}>
+               {config.heroSlides?.[currentSlide]?.title}
              </span>
           </h1>
           
           <p className="text-lg md:text-2xl text-slate-300 mb-12 max-w-3xl mx-auto font-light tracking-wide border-l-4 border-brand-accent pl-6 text-left md:text-center md:border-l-0 md:pl-0">
-            {config.heroSlides[currentSlide]?.subtitle}
+            {config.heroSlides?.[currentSlide]?.subtitle}
           </p>
 
           <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
             <Link 
               to="/browse"
-              className={`px-12 py-5 ${config.heroSlides[currentSlide]?.buttonColor || 'bg-brand-accent'} font-black rounded-none skew-x-[-12deg] uppercase tracking-widest transition-all shadow-[0_0_30px_rgba(255,255,255,0.2)] hover:shadow-[0_0_50px_rgba(255,70,85,0.4)] hover:scale-105 flex items-center gap-2 group/btn`}
+              className={`px-12 py-5 ${config.heroSlides?.[currentSlide]?.buttonColor || 'bg-brand-accent'} font-black rounded-none skew-x-[-12deg] uppercase tracking-widest transition-all shadow-[0_0_30px_rgba(255,255,255,0.2)] hover:shadow-[0_0_50px_rgba(255,70,85,0.4)] hover:scale-105 flex items-center gap-2 group/btn`}
             >
               <div className="skew-x-[12deg] flex items-center gap-2 text-white">
                 Initialize Rental <ChevronRight className="w-6 h-6 group-hover/btn:translate-x-1 transition-transform" />
               </div>
             </Link>
-            <a href="#how-it-works" className="text-xs font-bold tracking-[0.4em] text-slate-500 hover:text-white transition-colors border-b border-transparent hover:border-brand-cyan py-1">
-              SYSTEM SPECS
-            </a>
           </div>
         </div>
 
         <div className="absolute bottom-12 left-1/2 -translate-x-1/2 z-30 flex gap-4">
-          {config.heroSlides.map((_, idx) => (
+          {(config.heroSlides || []).map((_, idx) => (
             <button
               key={idx}
               onClick={() => setCurrentSlide(idx)}
@@ -191,17 +188,17 @@ const Home: React.FC = () => {
       </section>
 
       {/* Trust Indicators */}
-      <section ref={trustRef} className="bg-brand-darker border-y border-white/5 py-16 relative overflow-hidden">
+      <section ref={trustRef} className="bg-brand-darker border-y border-white/5 py-16 relative overflow-visible">
         <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.03) 1px, transparent 0)', backgroundSize: '40px 40px' }}></div>
         <div className="max-w-7xl mx-auto px-4 grid grid-cols-2 md:grid-cols-4 gap-6 relative z-10">
-          {config.trustItems.map((item, i) => {
+          {(config.trustItems || []).map((item, i) => {
             const Icon = trustIcons[i] || Star;
             const colors = ["text-brand-cyan", "text-brand-secondary", "text-green-400", "text-brand-accent"];
             return (
              <div 
                key={i} 
-               className={`glass-panel p-8 rounded-2xl flex flex-col items-center gap-4 hover:bg-white/5 group duration-700 border border-white/5
-                 ${trustVisible ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-24 scale-90'}
+               className={`glass-panel p-8 rounded-2xl flex flex-col items-center gap-4 hover:bg-white/5 group duration-700 border border-white/5 transition-all
+                 ${trustVisible ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-12 scale-95'}
                `}
                style={{ transitionDelay: `${i * 100}ms` }}
              >
@@ -227,7 +224,7 @@ const Home: React.FC = () => {
           </div>
 
           <div className="flex flex-col md:flex-row justify-between items-start gap-8 relative">
-            {config.stepItems.map((step, idx, arr) => {
+            {(config.stepItems || []).map((step, idx, arr) => {
               const isActive = activeStep >= idx;
               const isArrowFilled = activeStep > idx;
               const Icon = stepIcons[idx] || Gamepad2;
@@ -271,7 +268,7 @@ const Home: React.FC = () => {
 
         <div className="relative w-full hover:pause-marquee group">
           <div className="flex gap-10 w-max animate-marquee">
-            {[...config.reviews, ...config.reviews].map((review, i) => (
+            {[...(config.reviews || []), ...(config.reviews || [])].map((review, i) => (
               <div 
                 key={i} 
                 onClick={() => review.type === 'video' ? setSelectedVideo(review) : null}
@@ -355,15 +352,15 @@ const Home: React.FC = () => {
         <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-brand-accent to-transparent opacity-30"></div>
         <div className="max-w-5xl mx-auto text-center px-4 relative z-10">
           <h2 className="text-6xl md:text-9xl font-display font-black mb-10 text-white uppercase tracking-tighter leading-[0.9]">
-            {config.cta.titleLine1} <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-accent to-brand-secondary glitch-text" data-text={config.cta.titleLine2}>{config.cta.titleLine2}</span>
+            {config.cta?.titleLine1} <br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-accent to-brand-secondary glitch-text" data-text={config.cta?.titleLine2}>{config.cta?.titleLine2}</span>
           </h2>
-          <p className="text-slate-400 mb-12 text-xl font-light tracking-wide max-w-2xl mx-auto">{config.cta.subtitle}</p>
+          <p className="text-slate-400 mb-12 text-xl font-light tracking-wide max-w-2xl mx-auto">{config.cta?.subtitle}</p>
           <Link 
             to="/browse" 
             className="inline-block px-16 py-6 bg-white hover:bg-brand-cyan text-brand-darker font-black text-2xl skew-x-[-12deg] transition-all hover:scale-110 shadow-[0_0_40px_rgba(255,255,255,0.3)] active:scale-95 uppercase tracking-widest"
           >
-            <div className="skew-x-[12deg]">{config.cta.buttonText}</div>
+            <div className="skew-x-[12deg]">{config.cta?.buttonText}</div>
           </Link>
         </div>
       </section>

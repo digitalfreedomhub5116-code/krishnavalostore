@@ -32,14 +32,6 @@ export const DEFAULT_HOME_CONFIG: HomeConfig = {
       subtitle: "Get credentials delivered to your WhatsApp in under 120 seconds.",
       accent: "text-brand-cyan",
       buttonColor: "bg-brand-cyan hover:bg-cyan-400 text-brand-darker"
-    },
-    {
-      id: 3,
-      image: "https://images.unsplash.com/photo-1538370910416-0411a7ee2188?q=80&w=2670&auto=format&fit=crop",
-      title: "PREMIUM LOADOUTS ONLY",
-      subtitle: "Rare knife skins and fully upgraded weapon bundles at your fingertips.",
-      accent: "text-brand-secondary",
-      buttonColor: "bg-brand-secondary hover:bg-purple-600 text-white"
     }
   ],
   trustItems: [
@@ -72,15 +64,6 @@ export const DEFAULT_HOME_CONFIG: HomeConfig = {
       quote: 'Best service for streamers. Always reliable and cheap rates.',
       rating: 5,
       date: '2 DAYS AGO'
-    },
-    {
-      id: 3,
-      type: 'text',
-      name: 'Ishan K.',
-      rank: 'Platinum',
-      quote: 'Used it for 3 days straight. No issues, instant support.',
-      rating: 5,
-      date: '5 HOURS AGO'
     }
   ],
   cta: {
@@ -131,11 +114,6 @@ export const StorageService = {
     window.dispatchEvent(new Event('storage'));
   },
 
-  deleteAccounts: async (ids: string[]) => {
-    await supabase.from('accounts').delete().in('id', ids);
-    window.dispatchEvent(new Event('storage'));
-  },
-
   getBookings: async (): Promise<Booking[]> => {
     const { data, error } = await supabase.from('bookings').select('*').order('data->createdAt', { ascending: false });
     if (error || !data) return [];
@@ -145,21 +123,6 @@ export const StorageService = {
   getUserBookings: async (userId: string): Promise<Booking[]> => {
     const bookings = await StorageService.getBookings();
     return bookings.filter(b => b.customerId === userId);
-  },
-
-  createBooking: async (booking: Booking) => {
-    await supabase.from('bookings').upsert({
-      order_id: booking.orderId,
-      data: booking,
-      status: booking.status
-    });
-    const acc = await StorageService.getAccountById(booking.accountId);
-    if (acc) {
-      acc.isBooked = true;
-      acc.bookedUntil = booking.endTime;
-      await StorageService.saveAccount(acc);
-    }
-    window.dispatchEvent(new Event('storage'));
   },
 
   updateBookingStatus: async (orderId: string, status: BookingStatus) => {
@@ -183,10 +146,21 @@ export const StorageService = {
   getHomeConfig: async (): Promise<HomeConfig> => {
     try {
       const { data, error } = await supabase.from('home_config').select('data').eq('id', 'global').single();
-      if (error || !data?.data || !data.data.heroSlides || data.data.heroSlides.length === 0) {
+      if (error || !data?.data || !data.data.heroSlides) {
         return DEFAULT_HOME_CONFIG;
       }
-      return data.data as HomeConfig;
+      // Ensure arrays exist to prevent map errors
+      const config = data.data as HomeConfig;
+      return {
+        ...DEFAULT_HOME_CONFIG,
+        ...config,
+        marqueeText: config.marqueeText || DEFAULT_HOME_CONFIG.marqueeText,
+        heroSlides: config.heroSlides || DEFAULT_HOME_CONFIG.heroSlides,
+        trustItems: config.trustItems || DEFAULT_HOME_CONFIG.trustItems,
+        stepItems: config.stepItems || DEFAULT_HOME_CONFIG.stepItems,
+        reviews: config.reviews || DEFAULT_HOME_CONFIG.reviews,
+        cta: config.cta || DEFAULT_HOME_CONFIG.cta
+      };
     } catch {
       return DEFAULT_HOME_CONFIG;
     }
@@ -242,5 +216,20 @@ export const StorageService = {
     localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
     window.dispatchEvent(new Event('storage'));
     return user;
-  }
+  },
+
+  createBooking: async (booking: Booking) => {
+    await supabase.from('bookings').upsert({
+      order_id: booking.orderId,
+      data: booking,
+      status: booking.status
+    });
+    const acc = await StorageService.getAccountById(booking.accountId);
+    if (acc) {
+      acc.isBooked = true;
+      acc.bookedUntil = booking.endTime;
+      await StorageService.saveAccount(acc);
+    }
+    window.dispatchEvent(new Event('storage'));
+  },
 };

@@ -166,9 +166,12 @@ const AdminDashboard: React.FC = () => {
 
             {/* Marquee Alerts Editor */}
             <section className="bg-brand-surface border border-white/10 rounded-xl p-6">
-                <h3 className="text-xs font-bold text-white mb-6 flex items-center gap-2 uppercase tracking-[0.3em] text-slate-400 border-b border-white/5 pb-4">
-                    <Zap className="text-brand-cyan" size={16} /> Marquee Broadcasts
-                </h3>
+                <div className="flex justify-between items-center mb-6 border-b border-white/5 pb-4">
+                    <h3 className="text-xs font-bold text-white flex items-center gap-2 uppercase tracking-[0.3em] text-slate-400">
+                        <Zap className="text-brand-cyan" size={16} /> Marquee Broadcasts
+                    </h3>
+                    <button onClick={() => setHomeConfig({...homeConfig, marqueeText: [...homeConfig.marqueeText, "NEW ALERT MESSAGE"]})} className="text-[10px] font-bold text-brand-cyan hover:underline uppercase">+ ADD ALERT</button>
+                </div>
                 <div className="space-y-3">
                     {homeConfig.marqueeText.map((text, idx) => (
                         <div key={idx} className="flex gap-3 items-center group">
@@ -182,8 +185,8 @@ const AdminDashboard: React.FC = () => {
                                     setHomeConfig({...homeConfig, marqueeText: m});
                                 }}
                                 className="flex-1 bg-brand-dark border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white focus:border-brand-cyan outline-none transition-all"
-                                placeholder="Alert message..."
                             />
+                            <button onClick={() => { const m = homeConfig.marqueeText.filter((_, i) => i !== idx); setHomeConfig({...homeConfig, marqueeText: m}); }} className="text-slate-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 size={14}/></button>
                         </div>
                     ))}
                 </div>
@@ -199,17 +202,7 @@ const AdminDashboard: React.FC = () => {
                         <div key={slide.id} className="bg-brand-dark border border-white/5 p-6 rounded-xl space-y-4 group hover:border-brand-accent/30 transition-all">
                             <div className="flex justify-between items-center">
                                 <span className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">MODULE 0{idx+1}</span>
-                                <div className="flex gap-2">
-                                   <button 
-                                      onClick={() => {
-                                        const s = homeConfig.heroSlides.filter(h => h.id !== slide.id);
-                                        setHomeConfig({...homeConfig, heroSlides: s});
-                                      }}
-                                      className="text-slate-600 hover:text-red-500"
-                                   >
-                                      <Trash2 size={14} />
-                                   </button>
-                                </div>
+                                <button onClick={() => { const s = homeConfig.heroSlides.filter(h => h.id !== slide.id); setHomeConfig({...homeConfig, heroSlides: s}); }} className="text-slate-600 hover:text-red-500"><Trash2 size={14} /></button>
                             </div>
                             <div>
                                 <label className="block text-[9px] font-bold text-slate-500 uppercase mb-1">Headline</label>
@@ -240,35 +233,22 @@ const AdminDashboard: React.FC = () => {
                             </div>
                         </div>
                     ))}
-                    <button 
-                        onClick={() => {
-                            const newSlide: HeroSlide = {
-                                id: Date.now(),
-                                image: "https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=2670&auto=format&fit=crop",
-                                title: "NEW OPERATION",
-                                subtitle: "Briefing description here.",
-                                accent: "text-white",
-                                buttonColor: "bg-brand-accent"
-                            };
-                            setHomeConfig({...homeConfig, heroSlides: [...homeConfig.heroSlides, newSlide]});
-                        }}
-                        className="border-2 border-dashed border-white/5 rounded-xl flex items-center justify-center p-8 hover:bg-white/5 text-slate-600 hover:text-white transition-all group min-h-[250px]"
-                    >
-                        <Plus className="mr-2 group-hover:scale-125 transition-all" size={20} /> Add Hero Module
-                    </button>
                 </div>
             </section>
 
             {/* Trust & Steps Editor */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <section className="bg-brand-surface border border-white/10 rounded-xl p-6">
-                    <h3 className="text-xs font-bold text-white mb-6 uppercase tracking-[0.3em] text-slate-400 border-b border-white/5 pb-4">
-                        <Star className="text-yellow-400" size={16} /> Trust Pillars
-                    </h3>
+                    <div className="flex justify-between items-center mb-6 border-b border-white/5 pb-4">
+                        <h3 className="text-xs font-bold text-white uppercase tracking-[0.3em] text-slate-400 flex items-center gap-2">
+                            <Star className="text-yellow-400" size={16} /> Trust Pillars
+                        </h3>
+                        <button onClick={() => setHomeConfig({...homeConfig, trustItems: [...homeConfig.trustItems, {label: "TITLE", sub: "SUBTEXT"}]})} className="text-[10px] font-bold text-yellow-400 hover:underline uppercase">+ ADD PILLAR</button>
+                    </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {homeConfig.trustItems.map((item, idx) => (
-                            <div key={idx} className="bg-brand-dark p-4 rounded-xl space-y-3">
-                                <label className="block text-[8px] font-bold text-slate-600 uppercase">LABEL 0{idx+1}</label>
+                            <div key={idx} className="bg-brand-dark p-4 rounded-xl space-y-3 group relative">
+                                <button onClick={() => { const t = homeConfig.trustItems.filter((_, i) => i !== idx); setHomeConfig({...homeConfig, trustItems: t}); }} className="absolute top-2 right-2 text-slate-700 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><X size={12}/></button>
                                 <input type="text" value={item.label} onChange={e => { const t = [...homeConfig.trustItems]; t[idx].label = e.target.value; setHomeConfig({...homeConfig, trustItems: t}); }} className="w-full bg-brand-surface border border-white/10 rounded px-3 py-1.5 text-white text-sm font-bold" />
                                 <input type="text" value={item.sub} onChange={e => { const t = [...homeConfig.trustItems]; t[idx].sub = e.target.value; setHomeConfig({...homeConfig, trustItems: t}); }} className="w-full bg-brand-surface border border-white/10 rounded px-3 py-1.5 text-slate-500 text-[10px] uppercase font-mono" />
                             </div>
@@ -291,41 +271,6 @@ const AdminDashboard: React.FC = () => {
                     </div>
                 </section>
             </div>
-
-            {/* Community Intel Editor */}
-            <section className="bg-brand-surface border border-white/10 rounded-xl p-6">
-                <div className="flex justify-between items-center mb-6 border-b border-white/5 pb-4">
-                    <h3 className="text-xs font-bold text-white uppercase tracking-[0.3em] text-slate-400 flex items-center gap-2">
-                        <MessageSquare className="text-brand-secondary" size={16} /> Community Intel (Reviews)
-                    </h3>
-                    <button 
-                        onClick={() => { setEditingReview({ type: 'text', name: '', rank: 'Silver', quote: '', rating: 5 }); setShowReviewModal(true); }}
-                        className="px-4 py-2 bg-brand-cyan/10 border border-brand-cyan/30 text-brand-cyan rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-brand-cyan hover:text-brand-dark transition-all"
-                    >
-                        + NEW INTEL
-                    </button>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {homeConfig.reviews.map((rev) => (
-                        <div key={rev.id} className="bg-brand-dark border border-white/5 p-5 rounded-xl group relative overflow-hidden">
-                            <div className="flex justify-between mb-4">
-                                <div className="flex items-center gap-3">
-                                    {rev.type === 'video' ? <Video size={16} className="text-brand-cyan" /> : <FileText size={16} className="text-brand-secondary" />}
-                                    <div>
-                                        <div className="text-white font-bold text-sm">{rev.name}</div>
-                                        <div className="text-[10px] text-slate-500 uppercase font-mono">{rev.rank}</div>
-                                    </div>
-                                </div>
-                                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button onClick={() => { setEditingReview(rev); setShowReviewModal(true); }} className="p-1.5 bg-brand-surface rounded hover:text-brand-cyan transition-colors"><Edit2 size={12} /></button>
-                                    <button onClick={() => { if(confirm('Delete review?')) { setHomeConfig({...homeConfig, reviews: homeConfig.reviews.filter(r => r.id !== rev.id)}); } }} className="p-1.5 bg-brand-surface rounded hover:text-brand-accent transition-colors"><Trash2 size={12} /></button>
-                                </div>
-                            </div>
-                            <p className="text-xs text-slate-400 italic line-clamp-2">"{rev.quote}"</p>
-                        </div>
-                    ))}
-                </div>
-            </section>
 
             {/* Terminal CTA Editor */}
             <section className="bg-brand-surface border border-white/10 rounded-xl p-6">
@@ -353,78 +298,6 @@ const AdminDashboard: React.FC = () => {
             </section>
          </div>
       )}
-
-      {/* Review Edit Modal */}
-      {showReviewModal && editingReview && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
-           <div className="bg-brand-surface border border-white/10 rounded-2xl w-full max-w-lg p-8 shadow-2xl relative animate-in zoom-in-95 duration-200">
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-brand-cyan to-transparent opacity-50"></div>
-              <h2 className="text-xl font-bold text-white mb-8 flex items-center gap-2">
-                 <MessageSquare className="text-brand-cyan" size={20} /> Intel Management
-              </h2>
-              <div className="space-y-5">
-                 <div className="grid grid-cols-2 gap-4">
-                    <div>
-                        <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2">Intel Type</label>
-                        <select value={editingReview.type} onChange={e => setEditingReview({...editingReview, type: e.target.value as any})} className="w-full bg-brand-dark border border-white/10 rounded px-4 py-2.5 text-white text-sm outline-none">
-                            <option value="text">TEXT DEBRIEF</option>
-                            <option value="video">VIDEO EVIDENCE</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2">Agent Rank</label>
-                        <input type="text" value={editingReview.rank || ''} onChange={e => setEditingReview({...editingReview, rank: e.target.value})} className="w-full bg-brand-dark border border-white/10 rounded px-4 py-2.5 text-white text-sm outline-none" placeholder="e.g. Radiant" />
-                    </div>
-                 </div>
-                 <div>
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2">Agent Callsign</label>
-                    <input type="text" value={editingReview.name || ''} onChange={e => setEditingReview({...editingReview, name: e.target.value})} className="w-full bg-brand-dark border border-white/10 rounded px-4 py-2.5 text-white text-sm outline-none" />
-                 </div>
-                 <div>
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2">Quote Content</label>
-                    <textarea value={editingReview.quote || ''} onChange={e => setEditingReview({...editingReview, quote: e.target.value})} className="w-full bg-brand-dark border border-white/10 rounded px-4 py-2.5 text-white text-sm h-24 resize-none outline-none" />
-                 </div>
-                 {editingReview.type === 'video' && (
-                    <div className="grid grid-cols-2 gap-4 animate-in slide-in-from-top-2">
-                        <div>
-                            <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2">Thumbnail URL</label>
-                            <input type="text" value={editingReview.thumbnail || ''} onChange={e => setEditingReview({...editingReview, thumbnail: e.target.value})} className="w-full bg-brand-dark border border-white/10 rounded px-4 py-2.5 text-brand-cyan text-[10px] font-mono outline-none" />
-                        </div>
-                        <div>
-                            <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2">Video MP4 URL</label>
-                            <input type="text" value={editingReview.videoUrl || ''} onChange={e => setEditingReview({...editingReview, videoUrl: e.target.value})} className="w-full bg-brand-dark border border-white/10 rounded px-4 py-2.5 text-brand-cyan text-[10px] font-mono outline-none" />
-                        </div>
-                    </div>
-                 )}
-              </div>
-              <div className="flex gap-4 mt-10">
-                 <button 
-                   onClick={() => {
-                        const reviews = [...homeConfig.reviews];
-                        const index = reviews.findIndex(r => r.id === editingReview.id);
-                        if (index >= 0) reviews[index] = editingReview as Review;
-                        else reviews.push({ ...editingReview, id: Date.now() } as Review);
-                        setHomeConfig({...homeConfig, reviews});
-                        setShowReviewModal(false);
-                   }} 
-                   className="flex-1 bg-brand-accent py-4 rounded-xl font-black text-white shadow-xl hover:bg-red-600 transition-all uppercase tracking-widest text-xs"
-                 >
-                    DEPLOY INTEL
-                 </button>
-                 <button 
-                   onClick={() => setShowReviewModal(false)} 
-                   className="flex-1 border border-white/10 py-4 rounded-xl text-slate-500 hover:text-white transition-colors uppercase tracking-widest text-xs"
-                 >
-                    ABORT
-                 </button>
-              </div>
-           </div>
-        </div>
-      )}
-
-      {showAddModal && <AddModal 
-        newAccount={newAccount} setNewAccount={setNewAccount} onClose={() => setShowAddModal(false)} 
-        onAdd={async () => { await StorageService.saveAccount({ ...newAccount, id: 'kv-'+Date.now(), isBooked: false, bookedUntil: null } as Account); refreshData(); setShowAddModal(false); }} />}
     </div>
   );
 };
@@ -455,44 +328,7 @@ const BookingTable = ({ bookings, onUpdateStatus }: any) => (
         ))}
       </tbody>
     </table>
-    {bookings.length === 0 && <div className="p-20 text-center text-slate-600 font-mono text-xs">NO ACTIVE DEPLOYMENTS FOUND.</div>}
   </div>
 );
-
-const AddModal = ({ newAccount, setNewAccount, onClose, onAdd }: any) => {
-    const [isSaving, setIsSaving] = useState(false);
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
-            <div className="bg-brand-surface border border-white/10 rounded-2xl w-full max-w-md p-8 relative shadow-2xl animate-in zoom-in-95">
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-brand-accent to-transparent opacity-50"></div>
-            <h2 className="text-xl font-bold mb-8 text-white flex items-center gap-3">
-                <Shield className="text-brand-accent" /> Agent Deployment
-            </h2>
-            <div className="space-y-5">
-                <div>
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2">Display Alias</label>
-                    <input className="w-full bg-brand-dark border border-white/10 rounded-lg p-3.5 text-white outline-none focus:border-brand-accent" placeholder="Account Name" value={newAccount.name} onChange={e => setNewAccount({...newAccount, name: e.target.value})} />
-                </div>
-                <div>
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2">Rank Bracket</label>
-                    <select className="w-full bg-brand-dark border border-white/10 rounded-lg p-3.5 text-white outline-none focus:border-brand-accent" value={newAccount.rank} onChange={e => setNewAccount({...newAccount, rank: e.target.value as Rank})}>
-                        {Object.values(Rank).map(r => <option key={r} value={r}>{r}</option>)}
-                    </select>
-                </div>
-                <div>
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2">Thumbnail URL</label>
-                    <input className="w-full bg-brand-dark border border-white/10 rounded-lg p-3.5 text-brand-cyan text-[10px] font-mono outline-none" value={newAccount.imageUrl} onChange={e => setNewAccount({...newAccount, imageUrl: e.target.value})} />
-                </div>
-            </div>
-            <div className="flex gap-4 mt-10">
-                <button onClick={async () => { setIsSaving(true); await onAdd(); setIsSaving(false); }} className="flex-1 bg-brand-accent py-4 rounded-xl font-black text-white shadow-xl hover:bg-red-600 uppercase tracking-widest text-xs flex items-center justify-center gap-2">
-                    {isSaving ? <Loader2 className="animate-spin" size={16} /> : 'DEPLOY AGENT'}
-                </button>
-                <button onClick={onClose} className="flex-1 border border-white/10 py-4 rounded-xl text-slate-500 hover:text-white uppercase tracking-widest text-xs">ABORT</button>
-            </div>
-            </div>
-        </div>
-    );
-};
 
 export default AdminDashboard;
