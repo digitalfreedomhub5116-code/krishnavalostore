@@ -1,13 +1,24 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
-// Declare process for TypeScript to avoid "Cannot find name 'process'" error
-declare var process: {
-  env: {
-    API_KEY: string;
-  };
+// Robust check for process to avoid "Cannot find name 'process'" error
+declare global {
+  interface Window {
+    process?: {
+      env: {
+        API_KEY: string;
+      };
+    };
+  }
+}
+
+const getApiKey = () => {
+  // Try to find the API key in various possible locations
+  if (typeof process !== 'undefined' && process.env?.API_KEY) return process.env.API_KEY;
+  if (typeof window !== 'undefined' && window.process?.env?.API_KEY) return window.process.env.API_KEY;
+  return "";
 };
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const ai = new GoogleGenAI({ apiKey: getApiKey() });
 
 export interface AuditResult {
   foundUtrs: string[];
