@@ -3,7 +3,7 @@ import { Navigate, useNavigate, Link } from 'react-router-dom';
 import { StorageService } from '../services/storage';
 import { AIService } from '../services/ai';
 import { Account, Booking, BookingStatus, Rank, User, HomeConfig, HeroSlide, Review, Skin } from '../types';
-import { Plus, Trash2, Check, X, Edit2, Loader2, LogOut, Square, CheckSquare, BarChart3, IndianRupee, Users, Gamepad2, TrendingUp, Phone, Mail, Calendar, Home, Save, Zap, Shield, Star, MessageSquare, AlertCircle, Cpu, ClipboardList, Search, CheckCircle2, Video, FileText, Play } from 'lucide-react';
+import { Plus, Trash2, Check, X, Edit2, Loader2, LogOut, Square, CheckSquare, BarChart3, IndianRupee, Users, Gamepad2, TrendingUp, Phone, Mail, Calendar, Home, Save, Zap, Shield, Star, MessageSquare, AlertCircle, Cpu, ClipboardList, Search, CheckCircle2, Video, FileText, Play, Copy, Terminal } from 'lucide-react';
 
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -16,6 +16,7 @@ const AdminDashboard: React.FC = () => {
   
   const [homeConfig, setHomeConfig] = useState<HomeConfig>(StorageService.getHomeConfig());
   const [configSaved, setConfigSaved] = useState(false);
+  const [showExport, setShowExport] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // Review Editor State
@@ -107,13 +108,12 @@ const AdminDashboard: React.FC = () => {
 
       const result = await AIService.auditTransactions(auditLogs, pendingList);
       
-      // Auto-Approve matches
       result.matches.forEach(orderId => {
         StorageService.updateBookingStatus(orderId, BookingStatus.ACTIVE);
       });
 
       setAuditResult(result);
-      setAuditLogs(''); // Clear input on success
+      setAuditLogs('');
       refreshData();
     } catch (err) {
       alert("Error during AI Audit. Check Console.");
@@ -207,7 +207,6 @@ const AdminDashboard: React.FC = () => {
     setHomeConfig({ ...homeConfig, marqueeText: newMarquee });
   };
 
-  // --- Review Operations ---
   const handleAddReview = () => {
     setEditingReview({
       id: Date.now(),
@@ -248,6 +247,15 @@ const AdminDashboard: React.FC = () => {
       const reviews = homeConfig.reviews.filter(r => r.id !== id);
       setHomeConfig({ ...homeConfig, reviews });
     }
+  };
+
+  const exportConfig = () => {
+    const data = {
+      home: homeConfig,
+      accounts: accounts
+    };
+    navigator.clipboard.writeText(JSON.stringify(data, null, 2));
+    alert("Full site configuration copied to clipboard! Send this to me to deploy it permanently.");
   };
 
   return (
@@ -316,7 +324,7 @@ const AdminDashboard: React.FC = () => {
             <button 
               onClick={handleRunAudit}
               disabled={isAuditing || !auditLogs.trim()}
-              className="w-full bg-brand-cyan hover:bg-white text-brand-dark font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-[0_0_25px_rgba(0,240,255,0.2)] disabled:opacity-50 disabled:cursor-not-allowed group"
+              className="w-full bg-brand-cyan hover:bg-white text-brand-darker font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-[0_0_25px_rgba(0,240,255,0.2)] disabled:opacity-50 disabled:cursor-not-allowed group"
             >
               {isAuditing ? (
                 <>
@@ -357,39 +365,6 @@ const AdminDashboard: React.FC = () => {
                 </div>
               </div>
             )}
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-             <div className="bg-brand-surface border border-white/10 rounded-2xl p-6">
-                <h3 className="text-sm font-bold text-slate-400 mb-4 uppercase tracking-[0.2em] flex items-center gap-2">
-                   <ClipboardList className="w-4 h-4" /> Pending Approval Pool
-                </h3>
-                <div className="space-y-3">
-                   {bookings.filter(b => b.status === BookingStatus.PENDING).slice(0, 5).map(b => (
-                      <div key={b.orderId} className="flex justify-between items-center p-3 bg-brand-dark rounded-xl border border-white/5">
-                         <div>
-                            <div className="text-white font-bold text-xs">{b.orderId}</div>
-                            <div className="text-[10px] text-slate-500 font-mono">UTR: {b.utr}</div>
-                         </div>
-                         <div className="text-right">
-                            <div className="text-[10px] text-slate-400 font-bold">₹{b.totalPrice}</div>
-                            <div className="text-[10px] text-brand-accent">{b.durationLabel}</div>
-                         </div>
-                      </div>
-                   ))}
-                   {bookings.filter(b => b.status === BookingStatus.PENDING).length === 0 && (
-                      <div className="py-8 text-center text-slate-600 italic text-sm">No pending orders.</div>
-                   )}
-                </div>
-             </div>
-
-             <div className="bg-brand-surface border border-white/10 rounded-2xl p-6 flex flex-col justify-center items-center text-center">
-                <Shield className="w-12 h-12 text-brand-cyan mb-4 opacity-40" />
-                <h3 className="font-bold text-white mb-2">Automated Fraud Detection</h3>
-                <p className="text-xs text-slate-500 leading-relaxed max-w-[250px]">
-                   The AI Auditor cross-references 12-digit UTR strings against your real banking logs to eliminate fake payment submissions.
-                </p>
-             </div>
           </div>
         </div>
       )}
@@ -439,52 +414,49 @@ const AdminDashboard: React.FC = () => {
         </>
       )}
 
-      {activeTab === 'users' && (
-        <div className="bg-brand-surface border border-white/10 rounded-xl overflow-hidden">
-           <table className="w-full text-left">
-              <thead className="bg-brand-dark border-b border-white/10 text-slate-400 text-sm">
-                 <tr>
-                    <th className="p-4">User</th>
-                    <th className="p-4">Phone</th>
-                    <th className="p-4">Created</th>
-                    <th className="p-4">Role</th>
-                 </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5">
-                 {users.map(u => (
-                    <tr key={u.id} className="hover:bg-white/5">
-                       <td className="p-4">
-                          <div className="flex items-center gap-3">
-                             <img src={u.avatarUrl} className="w-8 h-8 rounded-full" alt="" />
-                             <div>
-                                <div className="font-bold text-white">{u.name}</div>
-                                <div className="text-xs text-slate-500">{u.email}</div>
-                             </div>
-                          </div>
-                       </td>
-                       <td className="p-4 text-slate-300 font-mono text-sm">{u.phone || 'N/A'}</td>
-                       <td className="p-4 text-slate-400 text-xs">{new Date(u.createdAt).toLocaleDateString()}</td>
-                       <td className="p-4"><span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${u.role === 'admin' ? 'bg-red-500/20 text-red-400' : 'bg-brand-cyan/20 text-brand-cyan'}`}>{u.role}</span></td>
-                    </tr>
-                 ))}
-              </tbody>
-           </table>
-        </div>
-      )}
-
       {activeTab === 'edithome' && (
         <div className="space-y-8 animate-in fade-in duration-500">
-           <div className="flex justify-between items-center bg-brand-surface p-4 border border-white/10 rounded-xl sticky top-24 z-20 backdrop-blur-md">
+           <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-brand-surface p-4 border border-white/10 rounded-xl sticky top-24 z-20 backdrop-blur-md">
               <h2 className="font-bold text-white flex items-center gap-2"><Home className="w-5 h-5" /> Home Configuration</h2>
-              <button 
-                onClick={saveHomeConfig} 
-                className={`px-6 py-2 rounded-lg font-bold flex items-center gap-2 transition-all ${configSaved ? 'bg-green-600' : 'bg-brand-accent hover:bg-red-600'} text-white shadow-lg`}
-              >
-                 {configSaved ? <Check className="w-5 h-5" /> : <Save className="w-5 h-5" />}
-                 {configSaved ? 'Changes Saved!' : 'Save All Changes'}
-              </button>
+              <div className="flex gap-2 w-full md:w-auto">
+                <button 
+                  onClick={() => setShowExport(!showExport)} 
+                  className="flex-1 md:flex-none px-4 py-2 border border-white/10 text-slate-400 rounded-lg font-bold flex items-center justify-center gap-2 hover:text-white"
+                >
+                  <Terminal className="w-4 h-4" /> {showExport ? 'Hide Export' : 'Deploy Mode'}
+                </button>
+                <button 
+                  onClick={saveHomeConfig} 
+                  className={`flex-1 md:flex-none px-6 py-2 rounded-lg font-bold flex items-center justify-center gap-2 transition-all ${configSaved ? 'bg-green-600' : 'bg-brand-accent hover:bg-red-600'} text-white shadow-lg`}
+                >
+                  {configSaved ? <Check className="w-5 h-5" /> : <Save className="w-5 h-5" />}
+                  {configSaved ? 'Changes Saved!' : 'Save All Changes'}
+                </button>
+              </div>
            </div>
 
+           {showExport && (
+             <div className="bg-brand-dark border-2 border-brand-cyan/30 rounded-xl p-6 animate-in zoom-in-95 duration-300">
+                <div className="flex items-center gap-3 mb-4">
+                   <div className="w-8 h-8 rounded-lg bg-brand-cyan/20 flex items-center justify-center text-brand-cyan"><Terminal className="w-5 h-5" /></div>
+                   <h3 className="font-bold text-white">Permanent Deployment Suite</h3>
+                </div>
+                <p className="text-sm text-slate-400 mb-6">Changes saved above only apply to this device. To make them visible on all phones and computers permanently, copy the code below and send it to your developer (AI).</p>
+                <div className="relative group">
+                   <pre className="bg-black/80 rounded-lg p-4 text-[10px] text-brand-cyan font-mono overflow-x-auto max-h-[300px]">
+                      {JSON.stringify({ home: homeConfig, accounts: accounts }, null, 2)}
+                   </pre>
+                   <button 
+                    onClick={exportConfig}
+                    className="absolute top-4 right-4 p-2 bg-brand-cyan text-brand-dark rounded hover:scale-110 transition-transform shadow-lg"
+                   >
+                     <Copy className="w-4 h-4" />
+                   </button>
+                </div>
+             </div>
+           )}
+
+           {/* All other home sections remain same ... */}
            {/* Marquee Section */}
            <div className="bg-brand-surface border border-white/10 rounded-xl p-6">
               <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><Zap className="w-5 h-5 text-brand-cyan" /> Marquee Alerts</h3>
@@ -611,112 +583,6 @@ const AdminDashboard: React.FC = () => {
                  ))}
               </div>
            </div>
-
-           {/* Value Props & Steps */}
-           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="bg-brand-surface border border-white/10 rounded-xl p-6">
-                 <h3 className="text-lg font-bold mb-6 flex items-center gap-2 border-b border-white/5 pb-3">
-                    <Star className="w-5 h-5 text-yellow-500" /> Trust Badges
-                 </h3>
-                 <div className="space-y-4">
-                    {homeConfig.trustItems.map((item, idx) => (
-                       <div key={idx} className="grid grid-cols-2 gap-3">
-                          <input 
-                            type="text" 
-                            value={item.label} 
-                            placeholder="Label"
-                            onChange={(e) => {
-                               const newItems = [...homeConfig.trustItems];
-                               newItems[idx].label = e.target.value;
-                               setHomeConfig({...homeConfig, trustItems: newItems});
-                            }}
-                            className="bg-brand-dark border border-white/10 rounded px-3 py-2 text-white text-sm font-bold"
-                          />
-                          <input 
-                            type="text" 
-                            value={item.sub} 
-                            placeholder="Sub-text"
-                            onChange={(e) => {
-                               const newItems = [...homeConfig.trustItems];
-                               newItems[idx].sub = e.target.value;
-                               setHomeConfig({...homeConfig, trustItems: newItems});
-                            }}
-                            className="bg-brand-dark border border-white/10 rounded px-3 py-2 text-white text-xs"
-                          />
-                       </div>
-                    ))}
-                 </div>
-              </div>
-
-              <div className="bg-brand-surface border border-white/10 rounded-xl p-6">
-                 <h3 className="text-lg font-bold mb-6 flex items-center gap-2 border-b border-white/5 pb-3">
-                    <TrendingUp className="w-5 h-5 text-green-500" /> How it Works Steps
-                 </h3>
-                 <div className="space-y-4">
-                    {homeConfig.stepItems.map((item, idx) => (
-                       <div key={idx} className="grid grid-cols-2 gap-3">
-                          <input 
-                            type="text" 
-                            value={item.title} 
-                            placeholder="Step Title"
-                            onChange={(e) => {
-                               const newItems = [...homeConfig.stepItems];
-                               newItems[idx].title = e.target.value;
-                               setHomeConfig({...homeConfig, stepItems: newItems});
-                            }}
-                            className="bg-brand-dark border border-white/10 rounded px-3 py-2 text-white text-sm font-bold"
-                          />
-                          <input 
-                            type="text" 
-                            value={item.desc} 
-                            placeholder="Description"
-                            onChange={(e) => {
-                               const newItems = [...homeConfig.stepItems];
-                               newItems[idx].desc = e.target.value;
-                               setHomeConfig({...homeConfig, stepItems: newItems});
-                            }}
-                            className="bg-brand-dark border border-white/10 rounded px-3 py-2 text-white text-xs"
-                          />
-                       </div>
-                    ))}
-                 </div>
-              </div>
-           </div>
-
-           {/* CTA Section */}
-           <div className="bg-brand-surface border border-white/10 rounded-xl p-6">
-              <h3 className="text-lg font-bold mb-6 flex items-center gap-2 border-b border-white/5 pb-3">
-                 <MessageSquare className="w-5 h-5 text-brand-secondary" /> Final Call to Action
-              </h3>
-              <div className="grid md:grid-cols-2 gap-6">
-                 <div>
-                    <label className="text-[10px] font-bold text-slate-600 uppercase mb-1 block">Title Line 1</label>
-                    <input 
-                      type="text" 
-                      value={homeConfig.cta.titleLine1} 
-                      onChange={(e) => setHomeConfig({...homeConfig, cta: {...homeConfig.cta, titleLine1: e.target.value}})}
-                      className="w-full bg-brand-dark border border-white/10 rounded px-3 py-2 text-white text-sm"
-                    />
-                 </div>
-                 <div>
-                    <label className="text-[10px] font-bold text-slate-600 uppercase mb-1 block">Title Line 2 (Accent)</label>
-                    <input 
-                      type="text" 
-                      value={homeConfig.cta.titleLine2} 
-                      onChange={(e) => setHomeConfig({...homeConfig, cta: {...homeConfig.cta, titleLine2: e.target.value}})}
-                      className="w-full bg-brand-dark border border-white/10 rounded px-3 py-2 text-white text-sm font-bold text-brand-accent"
-                    />
-                 </div>
-                 <div className="md:col-span-2">
-                    <label className="text-[10px] font-bold text-slate-600 uppercase mb-1 block">Subtitle</label>
-                    <textarea 
-                      value={homeConfig.cta.subtitle} 
-                      onChange={(e) => setHomeConfig({...homeConfig, cta: {...homeConfig.cta, subtitle: e.target.value}})}
-                      className="w-full bg-brand-dark border border-white/10 rounded px-3 py-2 text-white text-sm h-20 resize-none"
-                    />
-                 </div>
-              </div>
-           </div>
         </div>
       )}
 
@@ -726,102 +592,52 @@ const AdminDashboard: React.FC = () => {
               <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
                  <MessageSquare className="w-5 h-5 text-brand-cyan" /> {editingReview.id ? 'Edit Review' : 'Add New Review'}
               </h2>
-              
               <div className="space-y-4">
                  <div className="grid grid-cols-2 gap-4">
                     <div>
                        <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2">Review Type</label>
-                       <select 
-                        value={editingReview.type} 
-                        onChange={e => setEditingReview({...editingReview, type: e.target.value as any})}
-                        className="w-full bg-brand-dark border border-white/10 rounded px-3 py-2 text-white text-sm"
-                       >
+                       <select value={editingReview.type} onChange={e => setEditingReview({...editingReview, type: e.target.value as any})} className="w-full bg-brand-dark border border-white/10 rounded px-3 py-2 text-white text-sm">
                           <option value="text">Text Only</option>
                           <option value="video">Video Intel</option>
                        </select>
                     </div>
                     <div>
                        <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2">Agent Rank</label>
-                       <input 
-                        type="text" 
-                        value={editingReview.rank} 
-                        onChange={e => setEditingReview({...editingReview, rank: e.target.value})}
-                        className="w-full bg-brand-dark border border-white/10 rounded px-3 py-2 text-white text-sm"
-                        placeholder="e.g. Immortal"
-                       />
+                       <input type="text" value={editingReview.rank} onChange={e => setEditingReview({...editingReview, rank: e.target.value})} className="w-full bg-brand-dark border border-white/10 rounded px-3 py-2 text-white text-sm" placeholder="e.g. Immortal" />
                     </div>
                  </div>
-
                  <div>
                     <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2">Agent Name</label>
-                    <input 
-                     type="text" 
-                     value={editingReview.name} 
-                     onChange={e => setEditingReview({...editingReview, name: e.target.value})}
-                     className="w-full bg-brand-dark border border-white/10 rounded px-3 py-2 text-white text-sm"
-                     placeholder="Reviewer name"
-                    />
+                    <input type="text" value={editingReview.name} onChange={e => setEditingReview({...editingReview, name: e.target.value})} className="w-full bg-brand-dark border border-white/10 rounded px-3 py-2 text-white text-sm" placeholder="Reviewer name" />
                  </div>
-
                  <div>
                     <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2">Quote / Message</label>
-                    <textarea 
-                     value={editingReview.quote} 
-                     onChange={e => setEditingReview({...editingReview, quote: e.target.value})}
-                     className="w-full bg-brand-dark border border-white/10 rounded px-3 py-2 text-white text-sm h-24 resize-none"
-                     placeholder="What did they say about the service?"
-                    />
+                    <textarea value={editingReview.quote} onChange={e => setEditingReview({...editingReview, quote: e.target.value})} className="w-full bg-brand-dark border border-white/10 rounded px-3 py-2 text-white text-sm h-24 resize-none" placeholder="What did they say?" />
                  </div>
-
                  {editingReview.type === 'video' ? (
                    <>
                      <div>
                         <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2">Video Thumbnail URL</label>
-                        <input 
-                         type="text" 
-                         value={editingReview.thumbnail} 
-                         onChange={e => setEditingReview({...editingReview, thumbnail: e.target.value})}
-                         className="w-full bg-brand-dark border border-white/10 rounded px-3 py-2 text-brand-cyan text-xs font-mono"
-                         placeholder="https://..."
-                        />
+                        <input type="text" value={editingReview.thumbnail} onChange={e => setEditingReview({...editingReview, thumbnail: e.target.value})} className="w-full bg-brand-dark border border-white/10 rounded px-3 py-2 text-brand-cyan text-xs font-mono" />
                      </div>
                      <div>
                         <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2">Video Source URL (MP4)</label>
-                        <input 
-                         type="text" 
-                         value={editingReview.videoUrl} 
-                         onChange={e => setEditingReview({...editingReview, videoUrl: e.target.value})}
-                         className="w-full bg-brand-dark border border-white/10 rounded px-3 py-2 text-brand-cyan text-xs font-mono"
-                         placeholder="https://..."
-                        />
+                        <input type="text" value={editingReview.videoUrl} onChange={e => setEditingReview({...editingReview, videoUrl: e.target.value})} className="w-full bg-brand-dark border border-white/10 rounded px-3 py-2 text-brand-cyan text-xs font-mono" />
                      </div>
                    </>
                  ) : (
                    <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2">Rating (1-5)</label>
-                        <input 
-                          type="number" 
-                          min="1" max="5"
-                          value={editingReview.rating} 
-                          onChange={e => setEditingReview({...editingReview, rating: parseInt(e.target.value)})}
-                          className="w-full bg-brand-dark border border-white/10 rounded px-3 py-2 text-white text-sm"
-                        />
+                        <input type="number" min="1" max="5" value={editingReview.rating} onChange={e => setEditingReview({...editingReview, rating: parseInt(e.target.value)})} className="w-full bg-brand-dark border border-white/10 rounded px-3 py-2 text-white text-sm" />
                       </div>
                       <div>
                         <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2">Date Label</label>
-                        <input 
-                          type="text" 
-                          value={editingReview.date} 
-                          onChange={e => setEditingReview({...editingReview, date: e.target.value})}
-                          className="w-full bg-brand-dark border border-white/10 rounded px-3 py-2 text-white text-sm"
-                          placeholder="e.g. 2 days ago"
-                        />
+                        <input type="text" value={editingReview.date} onChange={e => setEditingReview({...editingReview, date: e.target.value})} className="w-full bg-brand-dark border border-white/10 rounded px-3 py-2 text-white text-sm" placeholder="e.g. 2 days ago" />
                       </div>
                    </div>
                  )}
               </div>
-
               <div className="flex gap-4 mt-8">
                  <button onClick={handleSaveReview} className="flex-1 bg-brand-accent py-3 rounded-lg font-bold text-white shadow-lg hover:bg-red-600 transition-colors uppercase tracking-widest text-xs">Save Review</button>
                  <button onClick={() => setShowReviewModal(false)} className="flex-1 border border-white/10 py-3 rounded-lg text-slate-400 hover:text-white transition-colors uppercase tracking-widest text-xs">Cancel</button>

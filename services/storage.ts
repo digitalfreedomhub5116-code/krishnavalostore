@@ -10,6 +10,8 @@ const HOME_CONFIG_KEY = 'kv_home_config';
 // 20 Minutes timeout for admin verification
 const VERIFICATION_TIMEOUT_MS = 20 * 60 * 1000; 
 
+// --- START PERMANENT DEFAULTS ---
+// When you export from Admin, I can paste the JSON here to make it permanent for all users.
 const INITIAL_ACCOUNTS: Account[] = [
   {
     id: 'KV-001',
@@ -145,6 +147,7 @@ const DEFAULT_HOME_CONFIG: HomeConfig = {
     buttonText: "BROWSE ACCOUNTS"
   }
 };
+// --- END PERMANENT DEFAULTS ---
 
 export const StorageService = {
   init: () => {
@@ -181,15 +184,11 @@ export const StorageService = {
 
       let processedAcc = { ...acc, skins: formattedSkins };
 
-      // LOGIC: Check if account should be released
       if (processedAcc.isBooked) {
-        // 1. Regular release: Rental period ended
         if (processedAcc.bookedUntil && new Date(processedAcc.bookedUntil) < now) {
           processedAcc = { ...processedAcc, isBooked: false, bookedUntil: null };
         } 
         else {
-          // 2. Safety release: Check if trapped in PENDING for too long (fake UTR protection)
-          // Find the active/pending booking for this account
           const latestBooking = allBookings.find(b => b.accountId === processedAcc.id && (b.status === BookingStatus.PENDING || b.status === BookingStatus.ACTIVE));
           
           if (latestBooking && latestBooking.status === BookingStatus.PENDING) {
@@ -197,7 +196,6 @@ export const StorageService = {
              const timeSinceCreation = now.getTime() - createdTime;
              
              if (timeSinceCreation > VERIFICATION_TIMEOUT_MS) {
-                // AUTO-RELEASE: Admin hasn't verified this in 20 mins. Release ID for others.
                 processedAcc = { ...processedAcc, isBooked: false, bookedUntil: null };
              }
           }
@@ -218,6 +216,9 @@ export const StorageService = {
     if (index >= 0) accounts[index] = account;
     else accounts.push(account);
     localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts));
+    
+    // Trigger storage event for cross-tab sync
+    window.dispatchEvent(new Event('storage'));
   },
 
   deleteAccount: (id: string): Account[] => {
@@ -248,7 +249,6 @@ export const StorageService = {
     bookings.unshift(booking);
     localStorage.setItem(BOOKINGS_KEY, JSON.stringify(bookings));
     
-    // Lock the account immediately
     const accounts = StorageService.getAccounts();
     const accIndex = accounts.findIndex(a => a.id === booking.accountId);
     if (accIndex >= 0) {
@@ -256,6 +256,7 @@ export const StorageService = {
       accounts[accIndex].bookedUntil = booking.endTime;
       localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts));
     }
+    window.dispatchEvent(new Event('storage'));
   },
 
   updateBookingStatus: (orderId: string, status: BookingStatus) => {
@@ -265,7 +266,6 @@ export const StorageService = {
       booking.status = status;
       localStorage.setItem(BOOKINGS_KEY, JSON.stringify(bookings));
       
-      // If payment is rejected or finished, release the ID
       if (status === BookingStatus.COMPLETED || status === BookingStatus.CANCELLED) {
         const accounts = StorageService.getAccounts();
         const accIndex = accounts.findIndex(a => a.id === booking.accountId);
@@ -276,7 +276,6 @@ export const StorageService = {
         }
       }
       
-      // If status is set to ACTIVE, ensure the ID stays locked for the rental duration
       if (status === BookingStatus.ACTIVE) {
         const accounts = StorageService.getAccounts();
         const accIndex = accounts.findIndex(a => a.id === booking.accountId);
@@ -286,97 +285,8 @@ export const StorageService = {
           localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts));
         }
       }
+      window.dispatchEvent(new Event('storage'));
     }
-  },
-
-  getCurrentUser: (): User | null => {
-    const data = localStorage.getItem(CURRENT_USER_KEY);
-    return data ? JSON.parse(data) : null;
-  },
-
-  setCurrentUser: (user: User) => {
-    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
-  },
-
-  logoutUser: () => {
-    localStorage.removeItem(CURRENT_USER_KEY);
-  },
-
-  getAllUsers: (): User[] => {
-    const data = localStorage.getItem(USERS_KEY);
-    return data ? JSON.parse(data) : [];
-  },
-
-  registerUser: (name: string, email: string, phone: string, password: string): Promise<{user: User, code: string}> => {
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        const usersJSON = localStorage.getItem(USERS_KEY);
-        let users: User[] = usersJSON ? JSON.parse(usersJSON) : [];
-        if (users.find(u => u.email === email)) {
-          reject("Email already registered");
-          return;
-        }
-        const mockCode = Math.floor(100000 + Math.random() * 900000).toString();
-        const newUser: User = {
-          id: 'u_' + Date.now(),
-          name, email, phone, password,
-          avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${name}`,
-          role: 'customer',
-          isVerified: false,
-          verificationCode: mockCode,
-          createdAt: new Date().toISOString(),
-          lastLogin: new Date().toISOString()
-        };
-        users.push(newUser);
-        localStorage.setItem(USERS_KEY, JSON.stringify(users));
-        resolve({ user: newUser, code: mockCode });
-      }, 1000);
-    });
-  },
-
-  verifyUser: (email: string, code: string): Promise<User> => {
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        const usersJSON = localStorage.getItem(USERS_KEY);
-        let users: User[] = usersJSON ? JSON.parse(usersJSON) : [];
-        const userIndex = users.findIndex(u => u.email === email);
-        if (userIndex === -1) {
-          reject("User not found");
-          return;
-        }
-        if (users[userIndex].verificationCode === code) {
-          users[userIndex].isVerified = true;
-          delete users[userIndex].verificationCode;
-          localStorage.setItem(USERS_KEY, JSON.stringify(users));
-          StorageService.setCurrentUser(users[userIndex]);
-          resolve(users[userIndex]);
-        } else {
-          reject("Invalid verification code");
-        }
-      }, 1000);
-    });
-  },
-
-  loginUser: (email: string, password: string): Promise<User> => {
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        const usersJSON = localStorage.getItem(USERS_KEY);
-        let users: User[] = usersJSON ? JSON.parse(usersJSON) : [];
-        const user = users.find(u => u.email === email && u.password === password);
-        if (user) {
-          if (!user.isVerified) {
-            reject("EMAIL_NOT_VERIFIED");
-            return;
-          }
-          user.lastLogin = new Date().toISOString();
-          localStorage.setItem(USERS_KEY, JSON.stringify(users));
-          StorageService.setCurrentUser(user);
-          resolve(user);
-        } else {
-          reject("Invalid email or password");
-        }
-      }, 1000);
-    });
   },
 
   getHomeConfig: (): HomeConfig => {
@@ -386,6 +296,62 @@ export const StorageService = {
 
   saveHomeConfig: (config: HomeConfig) => {
     localStorage.setItem(HOME_CONFIG_KEY, JSON.stringify(config));
+    window.dispatchEvent(new Event('storage'));
+  },
+
+  // Added missing user management methods
+  getCurrentUser: (): User | null => {
+    const data = localStorage.getItem(CURRENT_USER_KEY);
+    return data ? JSON.parse(data) : null;
+  },
+
+  logoutUser: () => {
+    localStorage.removeItem(CURRENT_USER_KEY);
+    window.dispatchEvent(new Event('storage'));
+  },
+
+  getAllUsers: (): User[] => {
+    const data = localStorage.getItem(USERS_KEY);
+    return data ? JSON.parse(data) : [];
+  },
+
+  registerUser: async (name: string, email: string, phone: string, password: string): Promise<User> => {
+    const users = StorageService.getAllUsers();
+    if (users.find(u => u.email === email)) {
+      throw new Error("User with this email already exists");
+    }
+    const newUser: User = {
+      id: 'usr-' + Date.now(),
+      name,
+      email,
+      phone,
+      password,
+      avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${name}`,
+      role: 'customer',
+      isVerified: true,
+      createdAt: new Date().toISOString(),
+      lastLogin: new Date().toISOString()
+    };
+    users.push(newUser);
+    localStorage.setItem(USERS_KEY, JSON.stringify(users));
+    
+    // Auto login
+    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(newUser));
+    window.dispatchEvent(new Event('storage'));
+    return newUser;
+  },
+
+  loginUser: async (email: string, password: string): Promise<User> => {
+    const users = StorageService.getAllUsers();
+    const user = users.find(u => u.email === email && u.password === password);
+    if (!user) {
+      throw new Error("Invalid email or password");
+    }
+    user.lastLogin = new Date().toISOString();
+    localStorage.setItem(USERS_KEY, JSON.stringify(users));
+    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
+    window.dispatchEvent(new Event('storage'));
+    return user;
   }
 };
 

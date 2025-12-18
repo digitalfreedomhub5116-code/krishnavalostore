@@ -1,24 +1,8 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
 
-// Robust check for process to avoid "Cannot find name 'process'" error
-declare global {
-  interface Window {
-    process?: {
-      env: {
-        API_KEY: string;
-      };
-    };
-  }
-}
-
-const getApiKey = () => {
-  // Try to find the API key in various possible locations
-  if (typeof process !== 'undefined' && process.env?.API_KEY) return process.env.API_KEY;
-  if (typeof window !== 'undefined' && window.process?.env?.API_KEY) return window.process.env.API_KEY;
-  return "";
-};
-
-const ai = new GoogleGenAI({ apiKey: getApiKey() });
+// Initialize with the standard GenAI constructor using only process.env.API_KEY as per guidelines.
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 export interface AuditResult {
   foundUtrs: string[];
@@ -56,6 +40,7 @@ export const AIService = {
     `;
 
     try {
+      // Use the correct model name and directly call generateContent.
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
         contents: prompt,
@@ -73,6 +58,7 @@ export const AIService = {
         }
       });
 
+      // Extract text from the property .text (not a method).
       const result = JSON.parse(response.text || '{}');
       return {
         foundUtrs: result.foundUtrs || [],
