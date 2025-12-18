@@ -1,0 +1,172 @@
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/Valorant_logo_-_pink_color_version.svg/1200px-Valorant_logo_-_pink_color_version.svg.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Krishna Valo | Rent Premium Accounts</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+              display: ['Rajdhani', 'sans-serif'],
+            },
+            colors: {
+              brand: {
+                dark: '#020617', // Slate 950
+                darker: '#000000',
+                surface: '#0f172a', // Slate 900
+                accent: '#ff4655', // Valorant Red
+                cyan: '#00f0ff', // Cyber Cyan
+                secondary: '#a855f7', // Purple
+              }
+            },
+            animation: {
+              'float': 'float 6s ease-in-out infinite',
+              'nav-float': 'nav-float 5s ease-in-out infinite',
+              'pulse-glow': 'pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+              'marquee': 'marquee 30s linear infinite',
+              'glitch': 'glitch 1s linear infinite',
+              'scan': 'scan 4s linear infinite',
+            },
+            keyframes: {
+              float: {
+                '0%, 100%': { transform: 'translateY(0)' },
+                '50%': { transform: 'translateY(-10px)' },
+              },
+              'nav-float': {
+                '0%, 100%': { transform: 'translateY(0)' },
+                '50%': { transform: 'translateY(4px)' },
+              },
+              'pulse-glow': {
+                '0%, 100%': { opacity: '1', boxShadow: '0 0 20px rgba(255, 70, 85, 0.5)' },
+                '50%': { opacity: '.8', boxShadow: '0 0 10px rgba(255, 70, 85, 0.2)' },
+              },
+              marquee: {
+                '0%': { transform: 'translateX(0)' },
+                '100%': { transform: 'translateX(-50%)' },
+              },
+              scan: {
+                '0%': { transform: 'translateY(-100%)' },
+                '100%': { transform: 'translateY(100%)' },
+              }
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      body {
+        background-color: #000000;
+        color: #f8fafc;
+        overflow-x: hidden;
+      }
+      
+      /* Custom Scrollbar */
+      ::-webkit-scrollbar {
+        width: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #0f172a; 
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #334155; 
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #ff4655; 
+      }
+
+      /* Scanline Effect */
+      .scanlines {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+          to bottom,
+          rgba(255,255,255,0),
+          rgba(255,255,255,0) 50%,
+          rgba(0,0,0,0.2) 50%,
+          rgba(0,0,0,0.2)
+        );
+        background-size: 100% 4px;
+        pointer-events: none;
+        z-index: 9999;
+        opacity: 0.15;
+      }
+
+      /* Glitch Text Effect */
+      .glitch-text {
+        position: relative;
+      }
+      .glitch-text::before,
+      .glitch-text::after {
+        content: attr(data-text);
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+      }
+      .glitch-text::before {
+        left: 2px;
+        text-shadow: -1px 0 #ff4655;
+        clip: rect(44px, 450px, 56px, 0);
+        animation: glitch-anim 5s infinite linear alternate-reverse;
+      }
+      .glitch-text::after {
+        left: -2px;
+        text-shadow: -1px 0 #00f0ff;
+        clip: rect(44px, 450px, 56px, 0);
+        animation: glitch-anim2 5s infinite linear alternate-reverse;
+      }
+      
+      @keyframes glitch-anim {
+        0% { clip: rect(33px, 9999px, 11px, 0); }
+        20% { clip: rect(87px, 9999px, 96px, 0); }
+        40% { clip: rect(15px, 9999px, 66px, 0); }
+        60% { clip: rect(2px, 9999px, 81px, 0); }
+        80% { clip: rect(54px, 9999px, 26px, 0); }
+        100% { clip: rect(69px, 9999px, 4px, 0); }
+      }
+      @keyframes glitch-anim2 {
+        0% { clip: rect(22px, 9999px, 6px, 0); }
+        20% { clip: rect(65px, 9999px, 88px, 0); }
+        40% { clip: rect(2px, 9999px, 21px, 0); }
+        60% { clip: rect(98px, 9999px, 44px, 0); }
+        80% { clip: rect(43px, 9999px, 12px, 0); }
+        100% { clip: rect(11px, 9999px, 76px, 0); }
+      }
+
+      .glass-panel {
+        background: rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "react": "https://esm.sh/react@^19.2.3",
+    "lucide-react": "https://esm.sh/lucide-react@^0.561.0",
+    "react-router-dom": "https://esm.sh/react-router-dom@^7.10.1",
+    "react-dom": "https://esm.sh/react-dom@^19.2.3",
+    "@google/genai": "https://esm.sh/@google/genai@^1.34.0"
+  }
+}
+</script>
+</head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
