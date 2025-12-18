@@ -73,6 +73,14 @@ export const DEFAULT_HOME_CONFIG: HomeConfig = {
   }
 };
 
+interface SupabaseRow {
+  id?: string;
+  order_id?: string;
+  email?: string;
+  data: any;
+  status?: string;
+}
+
 export const StorageService = {
   init: async () => {
     await StorageService.getHomeConfig();
@@ -81,14 +89,14 @@ export const StorageService = {
   // --- Accounts ---
   getAccounts: async (): Promise<Account[]> => {
     const { data, error } = await supabase.from('accounts').select('*');
-    if (error || !data) {
-      console.error('Error fetching accounts:', error);
-      return [];
-    }
+    if (error || !data) return [];
     
     const now = new Date();
-    return (data as any[]).map((row: { data: any }) => {
+    const rows = data as SupabaseRow[];
+    
+    return rows.map(row => {
       const acc = row.data as Account;
+      // Self-healing: unlock accounts whose rental time has passed
       if (acc.isBooked && acc.bookedUntil && new Date(acc.bookedUntil) < now) {
         acc.isBooked = false;
         acc.bookedUntil = null;
@@ -105,11 +113,10 @@ export const StorageService = {
   },
 
   saveAccount: async (account: Account) => {
-    const { error } = await supabase.from('accounts').upsert({
+    await supabase.from('accounts').upsert({
       id: account.id,
       data: account
     });
-    if (error) console.error('Error saving account:', error);
     window.dispatchEvent(new Event('storage'));
   },
 
@@ -127,7 +134,7 @@ export const StorageService = {
   getBookings: async (): Promise<Booking[]> => {
     const { data, error } = await supabase.from('bookings').select('*').order('data->createdAt', { ascending: false });
     if (error || !data) return [];
-    return (data as any[]).map((row: { data: any }) => row.data as Booking);
+    return (data as SupabaseRow[]).map(row => row.data as Booking);
   },
 
   getUserBookings: async (userId: string): Promise<Booking[]> => {
@@ -152,9 +159,9 @@ export const StorageService = {
   },
 
   updateBookingStatus: async (orderId: string, status: BookingStatus) => {
-    const { data: bookingRow } = await supabase.from('bookings').select('data').eq('order_id', orderId).single();
-    if (bookingRow && bookingRow.data) {
-      const booking = bookingRow.data as Booking;
+    const { data: row } = await supabase.from('bookings').select('data').eq('order_id', orderId).single();
+    if (row && row.data) {
+      const booking = row.data as Booking;
       booking.status = status;
       
       await supabase.from('bookings').update({ 
@@ -186,7 +193,7 @@ export const StorageService = {
   // --- Home Config ---
   getHomeConfig: async (): Promise<HomeConfig> => {
     const { data, error } = await supabase.from('home_config').select('data').eq('id', 'global').single();
-    if (error || !data || !data.data || (data.data.heroSlides && data.data.heroSlides.length === 0)) {
+    if (error || !data || !data.data || !data.data.heroSlides || data.data.heroSlides.length === 0) {
       return DEFAULT_HOME_CONFIG;
     }
     return data.data as HomeConfig;
@@ -214,7 +221,7 @@ export const StorageService = {
   getAllUsers: async (): Promise<User[]> => {
     const { data, error } = await supabase.from('users').select('data');
     if (error || !data) return [];
-    return (data as any[]).map((row: { data: any }) => row.data as User);
+    return (data as SupabaseRow[]).map(row => row.data as User);
   },
 
   registerUser: async (name: string, email: string, phone: string, password: string): Promise<User> => {
@@ -247,7 +254,7 @@ export const StorageService = {
 
   loginUser: async (email: string, password: string): Promise<User> => {
     const { data, error } = await supabase.from('users').select('data').eq('email', email).single();
-    if (error || !data || !data.data) throw new Error("Invalid credentials");
+    if (error || !data) throw new Error("Invalid credentials");
     
     const user = data.data as User;
     if (user.password !== password) throw new Error("Invalid credentials");
