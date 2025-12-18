@@ -101,18 +101,6 @@ const Home: React.FC = () => {
 
   return (
     <div className="flex flex-col overflow-hidden">
-      {/* Marquee Header */}
-      <div className="bg-brand-accent/20 border-b border-brand-accent/30 py-1.5 overflow-hidden backdrop-blur-md relative z-20">
-        <div className="animate-marquee whitespace-nowrap flex gap-12 text-xs font-bold font-mono tracking-widest text-brand-cyan">
-           {(config.marqueeText || []).map((text, i) => (
-             <React.Fragment key={i}>
-               <span>{text}</span>
-               <span className="text-white opacity-30">•</span>
-             </React.Fragment>
-           ))}
-        </div>
-      </div>
-
       {/* Hero Section - Refined Cinematic Slides */}
       <section className="relative h-[720px] md:h-[800px] lg:h-[950px] flex items-center justify-center overflow-hidden bg-black">
         {/* Parallax Background Grid */}
@@ -131,8 +119,8 @@ const Home: React.FC = () => {
           </div>
         ))}
 
-        {/* Hero Content Overlay */}
-        <div className="relative z-30 text-center px-4 max-w-5xl mx-auto flex flex-col items-center">
+        {/* Hero Content Overlay - Added desktop padding to avoid overlap */}
+        <div className="relative z-30 text-center px-4 max-w-5xl mx-auto flex flex-col items-center md:pt-48">
           <div className="mb-6 md:mb-10 inline-flex items-center gap-1.5 md:gap-3 px-3 md:px-6 py-1.5 md:py-2 rounded-full border border-white/10 bg-black/60 backdrop-blur-2xl animate-reveal-up shadow-[0_0_30px_rgba(255,255,255,0.1)]">
              <div className="w-2 h-2 md:w-2.5 md:h-2.5 rounded-full bg-brand-cyan animate-pulse shadow-[0_0_15px_#00f0ff]"></div>
              <span className="text-[10px] md:text-[13px] font-bold tracking-[0.2em] md:tracking-[0.5em] text-white">KRISHNA VALO // SECURE RENTALS</span>

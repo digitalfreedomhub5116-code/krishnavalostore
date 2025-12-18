@@ -141,6 +141,44 @@ const AdminDashboard: React.FC = () => {
         </div>
       )}
 
+      {activeTab === 'users' && (
+        <div className="bg-brand-surface border border-white/10 rounded-xl overflow-hidden shadow-2xl">
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr className="bg-brand-darker text-slate-500 border-b border-white/10 uppercase font-bold tracking-widest text-[10px]">
+                <th className="p-5">Agent</th>
+                <th className="p-5">Contact</th>
+                <th className="p-5">Status</th>
+                <th className="p-5 text-right">Registered</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5">
+              {users.map(user => (
+                <tr key={user.id} className="hover:bg-white/5 transition-colors group">
+                  <td className="p-5">
+                    <div className="flex items-center gap-3">
+                      <img src={user.avatarUrl} className="w-8 h-8 rounded-full bg-brand-accent/20" alt="" />
+                      <div>
+                        <div className="text-white font-bold">{user.name}</div>
+                        <div className="text-[10px] text-slate-500 uppercase tracking-widest">{user.role}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="p-5">
+                    <div className="text-slate-300">{user.email}</div>
+                    <div className="text-[10px] text-slate-500 font-mono">{user.phone}</div>
+                  </td>
+                  <td className="p-5">
+                    <span className="px-2 py-1 bg-green-500/10 text-green-400 border border-green-500/20 rounded text-[10px] font-bold uppercase">Active</span>
+                  </td>
+                  <td className="p-5 text-right text-slate-500 font-mono text-xs">{new Date(user.createdAt).toLocaleDateString()}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
       {activeTab === 'edithome' && (
          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* Sticky Header with Save Button */}
@@ -189,6 +227,9 @@ const AdminDashboard: React.FC = () => {
                             <button onClick={() => { const m = homeConfig.marqueeText.filter((_, i) => i !== idx); setHomeConfig({...homeConfig, marqueeText: m}); }} className="text-slate-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 size={14}/></button>
                         </div>
                     ))}
+                    {homeConfig.marqueeText.length === 0 && (
+                      <p className="text-center py-6 text-slate-600 text-xs uppercase italic tracking-widest">No active broadcasts configured.</p>
+                    )}
                 </div>
             </section>
 
@@ -233,6 +274,13 @@ const AdminDashboard: React.FC = () => {
                             </div>
                         </div>
                     ))}
+                    <button 
+                      onClick={() => setHomeConfig({...homeConfig, heroSlides: [...homeConfig.heroSlides, { id: Date.now(), title: "NEW TITLE", subtitle: "NEW SUBTITLE", image: "", accent: "text-brand-accent", buttonColor: "bg-brand-accent" }]})}
+                      className="border-2 border-dashed border-white/10 rounded-xl p-6 flex flex-col items-center justify-center text-slate-600 hover:border-brand-cyan hover:text-brand-cyan transition-all"
+                    >
+                      <Plus size={24} />
+                      <span className="text-[10px] font-bold uppercase tracking-widest mt-2">Add New Slide</span>
+                    </button>
                 </div>
             </section>
 
@@ -326,6 +374,11 @@ const BookingTable = ({ bookings, onUpdateStatus }: any) => (
             <td className="p-5 text-right">{b.status === 'PENDING' && <button onClick={() => onUpdateStatus(b.orderId, 'ACTIVE')} className="px-5 py-2 bg-brand-accent text-white text-[10px] rounded font-black uppercase tracking-widest hover:bg-red-600 transition-all shadow-lg shadow-brand-accent/20">AUTHORIZE</button>}</td>
           </tr>
         ))}
+        {bookings.length === 0 && (
+          <tr>
+            <td colSpan={4} className="p-10 text-center text-slate-600 italic uppercase text-xs tracking-[0.2em]">No bookings transmitted to system.</td>
+          </tr>
+        )}
       </tbody>
     </table>
   </div>

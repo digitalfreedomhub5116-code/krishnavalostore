@@ -57,19 +57,14 @@ const SkinSearchFloatingBar: React.FC<SkinSearchFloatingBarProps> = ({ isHomePag
             onClick={() => setIsFocused(false)}
         />
 
-        {/* 
-            Floating Bar Container 
-            - Uses 'absolute' on Home Page so it scrolls with the page content.
-            - Uses 'fixed' on other pages to dock into the header.
-            - Transitions between absolute and fixed are handled smoothly by CSS.
-        */}
+        {/* Floating Bar Container */}
         <div 
             className={`${(isHomePage && !isFocused) ? 'absolute' : 'fixed'} z-[60] transition-all duration-[850ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] 
                 ${isFocused 
                     ? 'top-28 md:top-40 left-1/2 -translate-x-1/2 w-[calc(100%-1.5rem)] md:w-[600px] scale-100' 
                     : mode === 'hero'
-                        ? 'top-48 md:top-64 left-1/2 -translate-x-1/2 w-[calc(100%-4rem)] max-w-[320px] md:w-fit scale-100'
-                        : 'top-4 right-3 md:right-10 md:top-6 w-fit translate-x-0 scale-90 md:scale-100'
+                        ? 'top-48 md:top-80 left-1/2 -translate-x-1/2 w-[calc(100%-4rem)] max-w-[320px] md:w-fit scale-100'
+                        : 'top-4 right-3 md:right-8 w-fit translate-x-0 scale-90 md:scale-100'
                 }
             `}
         >
@@ -97,7 +92,7 @@ const SkinSearchFloatingBar: React.FC<SkinSearchFloatingBarProps> = ({ isHomePag
                             ? 'w-full ring-2 ring-brand-cyan/40 py-3 md:py-5 px-4 md:px-7 border-brand-cyan/40' 
                             : mode === 'hero'
                                 ? 'w-full md:w-[320px] py-3 md:py-4 px-4 md:px-6 border-white/10 hover:border-brand-accent/40 hover:shadow-[0_0_25px_rgba(255,70,85,0.3)]'
-                                : 'w-[40px] h-[40px] md:w-[48px] md:h-[48px] py-0 px-0 justify-center hover:bg-white/10 border-white/5 bg-black/40'
+                                : 'w-[40px] h-[40px] md:w-[44px] md:h-[44px] py-0 px-0 justify-center hover:bg-white/10 border-white/5 bg-black/40'
                         }
                     `}
                 >
@@ -105,10 +100,10 @@ const SkinSearchFloatingBar: React.FC<SkinSearchFloatingBarProps> = ({ isHomePag
                     <div className={`absolute inset-0 opacity-10 pointer-events-none transition-opacity duration-700 ${isFocused ? 'opacity-20' : 'opacity-0'}`} 
                          style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, #00f0ff 1px, transparent 0)', backgroundSize: '16px 16px' }} />
 
-                    {/* Search Icon with dynamic rotation */}
+                    {/* Search Icon */}
                     <div className={`flex items-center justify-center transition-all duration-[850ms] ${isFocused ? 'mr-3 md:mr-5 scale-110 rotate-90' : (mode === 'hero' ? 'mr-2 md:mr-3 rotate-0' : 'mr-0 rotate-0')}`}>
                          <div className={`transition-all duration-500 p-1.5 md:p-2 rounded-full ${isFocused ? 'bg-brand-cyan/20 text-brand-cyan' : 'bg-transparent text-slate-400 group-hover:text-white'}`}>
-                             <Search className={`${mode === 'header' && !isFocused ? 'w-4 h-4 md:w-6 md:h-6' : 'w-5 h-5 md:w-6 md:h-6'}`} strokeWidth={2.5} />
+                             <Search className={`${mode === 'header' && !isFocused ? 'w-4 h-4 md:w-5 md:h-5' : 'w-5 h-5 md:w-6 md:h-6'}`} strokeWidth={2.5} />
                          </div>
                     </div>
                     
@@ -153,10 +148,7 @@ const SkinSearchFloatingBar: React.FC<SkinSearchFloatingBarProps> = ({ isHomePag
                         )}
                     </div>
 
-                    {/* Scanning Line Effect (Focused only) */}
                     <div className={`absolute top-0 left-0 w-full h-[2px] bg-brand-cyan/30 transition-opacity duration-700 pointer-events-none ${isFocused ? 'opacity-100 animate-scan' : 'opacity-0'}`}></div>
-                    
-                    {/* Animated Edge Shimmer */}
                     <div className={`absolute bottom-0 left-0 h-[2px] bg-gradient-to-r from-transparent via-brand-cyan to-transparent w-full transition-all duration-1000 ${isFocused ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-full'}`}></div>
                 </form>
             </div>
