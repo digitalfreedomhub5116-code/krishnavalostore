@@ -1,46 +1,39 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
 
-// Initialize with the standard GenAI constructor using only process.env.API_KEY as per guidelines.
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Standard initialization with browser-safe environment variable access
+const getApiKey = () => {
+  try {
+    return (window as any).process?.env?.API_KEY || (globalThis as any).process?.env?.API_KEY || "";
+  } catch {
+    return "";
+  }
+};
+
+const ai = new GoogleGenAI({ apiKey: getApiKey() });
 
 export interface AuditResult {
   foundUtrs: string[];
-  matches: string[]; // Order IDs that matched
+  matches: string[]; 
   summary: string;
 }
 
 export const AIService = {
-  /**
-   * Scans raw text (like Bank SMS logs or App History) to find UTR matches
-   */
   auditTransactions: async (rawLogs: string, pendingUtrs: {utr: string, orderId: string}[]): Promise<AuditResult> => {
     const prompt = `
       You are a specialized Transaction Auditor for Krishna Valo Store. 
-      I will provide you with a raw text dump from a bank's transaction history or SMS logs. 
-      I will also provide a list of pending UTR numbers we are looking for.
+      Analyze the provided bank history/SMS logs.
+      
+      PENDING LIST: ${JSON.stringify(pendingUtrs)}
+      RAW LOGS: ${rawLogs}
 
       TASK:
-      1. Extract all 12-digit UTR numbers or transaction references from the logs.
-      2. Compare them against the "Pending List".
-      3. Return a JSON object identifying which ones matched.
-
-      PENDING LIST:
-      ${JSON.stringify(pendingUtrs)}
-
-      RAW BANK LOGS:
-      ${rawLogs}
-
-      Return exactly this JSON structure:
-      {
-        "foundUtrs": ["list of all 12-digit numbers found"],
-        "matchedOrderIds": ["list of orderIds where the UTR was found in logs"],
-        "summary": "A brief 1-sentence summary of what you found"
-      }
+      1. Find all 12-digit UTR numbers in logs.
+      2. Match them against the pending list.
+      3. Return JSON with foundUtrs, matchedOrderIds, and summary.
     `;
 
     try {
-      // Use the correct model name and directly call generateContent.
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
         contents: prompt,
@@ -58,16 +51,15 @@ export const AIService = {
         }
       });
 
-      // Extract text from the property .text (not a method).
       const result = JSON.parse(response.text || '{}');
       return {
         foundUtrs: result.foundUtrs || [],
         matches: result.matchedOrderIds || [],
-        summary: result.summary || "Scan complete."
+        summary: result.summary || "Audit complete."
       };
     } catch (error) {
       console.error("AI Audit Error:", error);
-      throw new Error("Failed to process logs with AI.");
+      throw new Error("AI Processing failed.");
     }
   }
 };

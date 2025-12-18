@@ -1,12 +1,11 @@
+
 import { createClient } from '@supabase/supabase-js';
 import { Account, Booking, Rank, BookingStatus, User, HomeConfig, Skin } from '../types';
 
 const SUPABASE_URL = 'https://akwdzwrkhpyhrrcyvkpx.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_EjqnCcOPSh6uoT9y-g2OFw_ACj0byDo';
 
-// Initialize Supabase client
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-
 const CURRENT_USER_KEY = 'kv_current_user';
 
 export const DEFAULT_HOME_CONFIG: HomeConfig = {
@@ -82,21 +81,12 @@ interface SupabaseRow {
 }
 
 export const StorageService = {
-  init: async () => {
-    await StorageService.getHomeConfig();
-  },
-
-  // --- Accounts ---
   getAccounts: async (): Promise<Account[]> => {
     const { data, error } = await supabase.from('accounts').select('*');
     if (error || !data) return [];
-    
     const now = new Date();
-    const rows = data as SupabaseRow[];
-    
-    return rows.map(row => {
+    return (data as SupabaseRow[]).map(row => {
       const acc = row.data as Account;
-      // Self-healing: unlock accounts whose rental time has passed
       if (acc.isBooked && acc.bookedUntil && new Date(acc.bookedUntil) < now) {
         acc.isBooked = false;
         acc.bookedUntil = null;
@@ -113,10 +103,7 @@ export const StorageService = {
   },
 
   saveAccount: async (account: Account) => {
-    await supabase.from('accounts').upsert({
-      id: account.id,
-      data: account
-    });
+    await supabase.from('accounts').upsert({ id: account.id, data: account });
     window.dispatchEvent(new Event('storage'));
   },
 
@@ -130,7 +117,6 @@ export const StorageService = {
     window.dispatchEvent(new Event('storage'));
   },
 
-  // --- Bookings ---
   getBookings: async (): Promise<Booking[]> => {
     const { data, error } = await supabase.from('bookings').select('*').order('data->createdAt', { ascending: false });
     if (error || !data) return [];
@@ -148,7 +134,6 @@ export const StorageService = {
       data: booking,
       status: booking.status
     });
-    
     const acc = await StorageService.getAccountById(booking.accountId);
     if (acc) {
       acc.isBooked = true;
@@ -160,15 +145,10 @@ export const StorageService = {
 
   updateBookingStatus: async (orderId: string, status: BookingStatus) => {
     const { data: row } = await supabase.from('bookings').select('data').eq('order_id', orderId).single();
-    if (row && row.data) {
+    if (row?.data) {
       const booking = row.data as Booking;
       booking.status = status;
-      
-      await supabase.from('bookings').update({ 
-        data: booking, 
-        status: status 
-      }).eq('order_id', orderId);
-      
+      await supabase.from('bookings').update({ data: booking, status: status }).eq('order_id', orderId);
       if (status === BookingStatus.COMPLETED || status === BookingStatus.CANCELLED) {
         const acc = await StorageService.getAccountById(booking.accountId);
         if (acc) {
@@ -177,37 +157,21 @@ export const StorageService = {
           await StorageService.saveAccount(acc);
         }
       }
-      
-      if (status === BookingStatus.ACTIVE) {
-        const acc = await StorageService.getAccountById(booking.accountId);
-        if (acc) {
-          acc.isBooked = true;
-          acc.bookedUntil = booking.endTime;
-          await StorageService.saveAccount(acc);
-        }
-      }
       window.dispatchEvent(new Event('storage'));
     }
   },
 
-  // --- Home Config ---
   getHomeConfig: async (): Promise<HomeConfig> => {
     const { data, error } = await supabase.from('home_config').select('data').eq('id', 'global').single();
-    if (error || !data || !data.data || !data.data.heroSlides || data.data.heroSlides.length === 0) {
-      return DEFAULT_HOME_CONFIG;
-    }
+    if (error || !data?.data?.heroSlides || data.data.heroSlides.length === 0) return DEFAULT_HOME_CONFIG;
     return data.data as HomeConfig;
   },
 
   saveHomeConfig: async (config: HomeConfig) => {
-    await supabase.from('home_config').upsert({
-      id: 'global',
-      data: config
-    });
+    await supabase.from('home_config').upsert({ id: 'global', data: config });
     window.dispatchEvent(new Event('storage'));
   },
 
-  // --- Users ---
   getCurrentUser: (): User | null => {
     const data = localStorage.getItem(CURRENT_USER_KEY);
     return data ? JSON.parse(data) : null;
@@ -227,26 +191,16 @@ export const StorageService = {
   registerUser: async (name: string, email: string, phone: string, password: string): Promise<User> => {
     const { data: existing } = await supabase.from('users').select('id').eq('email', email).single();
     if (existing) throw new Error("User already exists");
-
     const newUser: User = {
       id: 'usr-' + Date.now(),
-      name,
-      email,
-      phone,
-      password,
+      name, email, phone, password,
       avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${name}`,
       role: 'customer',
       isVerified: true,
       createdAt: new Date().toISOString(),
       lastLogin: new Date().toISOString()
     };
-
-    await supabase.from('users').insert({
-      id: newUser.id,
-      email: newUser.email,
-      data: newUser
-    });
-    
+    await supabase.from('users').insert({ id: newUser.id, email: newUser.email, data: newUser });
     localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(newUser));
     window.dispatchEvent(new Event('storage'));
     return newUser;
@@ -255,13 +209,10 @@ export const StorageService = {
   loginUser: async (email: string, password: string): Promise<User> => {
     const { data, error } = await supabase.from('users').select('data').eq('email', email).single();
     if (error || !data) throw new Error("Invalid credentials");
-    
     const user = data.data as User;
     if (user.password !== password) throw new Error("Invalid credentials");
-
     user.lastLogin = new Date().toISOString();
     await supabase.from('users').update({ data: user }).eq('id', user.id);
-
     localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
     window.dispatchEvent(new Event('storage'));
     return user;
