@@ -1,7 +1,12 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
 // Declare process for TypeScript to avoid "Cannot find name 'process'" error
-declare const process: any;
+declare const process: {
+  env: {
+    API_KEY: string;
+    [key: string]: string | undefined;
+  };
+};
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
