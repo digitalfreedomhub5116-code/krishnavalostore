@@ -49,13 +49,13 @@ const Home: React.FC = () => {
   const [selectedVideo, setSelectedVideo] = useState<Review | null>(null);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [activeStep, setActiveStep] = useState(-1);
-  const [trustVisible, setTrustVisible] = useState(false);
-  const trustRef = useRef<HTMLElement>(null);
 
   const loadConfig = async () => {
     try {
       const data = await StorageService.getHomeConfig();
       setConfig(data);
+    } catch (err) {
+      console.error("Home load error:", err);
     } finally {
       setLoading(false);
     }
@@ -76,20 +76,6 @@ const Home: React.FC = () => {
   }, [config.heroSlides?.length]);
 
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setTrustVisible(true);
-        }
-      },
-      { threshold: 0.1, rootMargin: '50px' }
-    );
-    if (trustRef.current) observer.observe(trustRef.current);
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    if (!config) return;
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
@@ -175,32 +161,19 @@ const Home: React.FC = () => {
             </Link>
           </div>
         </div>
-
-        <div className="absolute bottom-12 left-1/2 -translate-x-1/2 z-30 flex gap-4">
-          {(config.heroSlides || []).map((_, idx) => (
-            <button
-              key={idx}
-              onClick={() => setCurrentSlide(idx)}
-              className={`h-1.5 transition-all duration-500 ${idx === currentSlide ? 'w-16 bg-white shadow-[0_0_15px_white]' : 'w-6 bg-white/20 hover:bg-white/40'}`}
-            />
-          ))}
-        </div>
       </section>
 
-      {/* Trust Indicators */}
-      <section ref={trustRef} className="bg-brand-darker border-y border-white/5 py-16 relative overflow-visible">
+      {/* Trust Indicators - Forced Visibility */}
+      <section className="bg-brand-darker border-y border-white/5 py-16 relative overflow-visible">
         <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.03) 1px, transparent 0)', backgroundSize: '40px 40px' }}></div>
         <div className="max-w-7xl mx-auto px-4 grid grid-cols-2 md:grid-cols-4 gap-6 relative z-10">
           {(config.trustItems || []).map((item, i) => {
-            const Icon = trustIcons[i] || Star;
+            const Icon = trustIcons[i % trustIcons.length] || Star;
             const colors = ["text-brand-cyan", "text-brand-secondary", "text-green-400", "text-brand-accent"];
             return (
              <div 
                key={i} 
-               className={`glass-panel p-8 rounded-2xl flex flex-col items-center gap-4 hover:bg-white/5 group duration-700 border border-white/5 transition-all
-                 ${trustVisible ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-12 scale-95'}
-               `}
-               style={{ transitionDelay: `${i * 100}ms` }}
+               className="glass-panel p-8 rounded-2xl flex flex-col items-center gap-4 hover:bg-white/5 group duration-700 border border-white/5 transition-all opacity-100 translate-y-0 scale-100"
              >
                 <Icon className={`w-10 h-10 ${colors[i % 4]} group-hover:scale-110 transition-transform duration-500 group-hover:drop-shadow-[0_0_10px_currentColor]`} />
                 <div className="text-center">

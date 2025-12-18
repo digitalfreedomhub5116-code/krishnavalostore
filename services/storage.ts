@@ -55,15 +55,6 @@ export const DEFAULT_HOME_CONFIG: HomeConfig = {
       quote: 'Got the ID in 2 minutes. The Radiant knife skin is insane!',
       thumbnail: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=1000&auto=format&fit=crop',
       videoUrl: 'https://sample-videos.com/video321/mp4/720/big_buck_bunny_720p_1mb.mp4'
-    },
-    {
-      id: 2,
-      type: 'text',
-      name: 'Rohan Varma',
-      rank: 'Immortal',
-      quote: 'Best service for streamers. Always reliable and cheap rates.',
-      rating: 5,
-      date: '2 DAYS AGO'
     }
   ],
   cta: {
@@ -74,28 +65,11 @@ export const DEFAULT_HOME_CONFIG: HomeConfig = {
   }
 };
 
-interface SupabaseRow {
-  id?: string;
-  order_id?: string;
-  email?: string;
-  data: any;
-  status?: string;
-}
-
 export const StorageService = {
   getAccounts: async (): Promise<Account[]> => {
     const { data, error } = await supabase.from('accounts').select('*');
     if (error || !data) return [];
-    const now = new Date();
-    return (data as SupabaseRow[]).map(row => {
-      const acc = row.data as Account;
-      if (acc.isBooked && acc.bookedUntil && new Date(acc.bookedUntil) < now) {
-        acc.isBooked = false;
-        acc.bookedUntil = null;
-        StorageService.saveAccount(acc);
-      }
-      return acc;
-    });
+    return data.map(row => row.data as Account);
   },
 
   getAccountById: async (id: string): Promise<Account | undefined> => {
@@ -117,12 +91,17 @@ export const StorageService = {
   getBookings: async (): Promise<Booking[]> => {
     const { data, error } = await supabase.from('bookings').select('*').order('data->createdAt', { ascending: false });
     if (error || !data) return [];
-    return (data as SupabaseRow[]).map(row => row.data as Booking);
+    return data.map(row => row.data as Booking);
   },
 
   getUserBookings: async (userId: string): Promise<Booking[]> => {
     const bookings = await StorageService.getBookings();
     return bookings.filter(b => b.customerId === userId);
+  },
+
+  createBooking: async (booking: Booking) => {
+    await supabase.from('bookings').upsert({ order_id: booking.orderId, data: booking, status: booking.status });
+    window.dispatchEvent(new Event('storage'));
   },
 
   updateBookingStatus: async (orderId: string, status: BookingStatus) => {
@@ -131,14 +110,6 @@ export const StorageService = {
       const booking = row.data as Booking;
       booking.status = status;
       await supabase.from('bookings').update({ data: booking, status: status }).eq('order_id', orderId);
-      if (status === BookingStatus.COMPLETED || status === BookingStatus.CANCELLED) {
-        const acc = await StorageService.getAccountById(booking.accountId);
-        if (acc) {
-          acc.isBooked = false;
-          acc.bookedUntil = null;
-          await StorageService.saveAccount(acc);
-        }
-      }
       window.dispatchEvent(new Event('storage'));
     }
   },
@@ -146,19 +117,18 @@ export const StorageService = {
   getHomeConfig: async (): Promise<HomeConfig> => {
     try {
       const { data, error } = await supabase.from('home_config').select('data').eq('id', 'global').single();
-      if (error || !data?.data || !data.data.heroSlides) {
-        return DEFAULT_HOME_CONFIG;
-      }
-      // Ensure arrays exist to prevent map errors
+      if (error || !data?.data) return DEFAULT_HOME_CONFIG;
+      
       const config = data.data as HomeConfig;
+      // Deep merge to ensure all sections exist
       return {
         ...DEFAULT_HOME_CONFIG,
         ...config,
-        marqueeText: config.marqueeText || DEFAULT_HOME_CONFIG.marqueeText,
-        heroSlides: config.heroSlides || DEFAULT_HOME_CONFIG.heroSlides,
-        trustItems: config.trustItems || DEFAULT_HOME_CONFIG.trustItems,
-        stepItems: config.stepItems || DEFAULT_HOME_CONFIG.stepItems,
-        reviews: config.reviews || DEFAULT_HOME_CONFIG.reviews,
+        trustItems: config.trustItems && config.trustItems.length > 0 ? config.trustItems : DEFAULT_HOME_CONFIG.trustItems,
+        heroSlides: config.heroSlides && config.heroSlides.length > 0 ? config.heroSlides : DEFAULT_HOME_CONFIG.heroSlides,
+        marqueeText: config.marqueeText && config.marqueeText.length > 0 ? config.marqueeText : DEFAULT_HOME_CONFIG.marqueeText,
+        stepItems: config.stepItems && config.stepItems.length > 0 ? config.stepItems : DEFAULT_HOME_CONFIG.stepItems,
+        reviews: config.reviews && config.reviews.length > 0 ? config.reviews : DEFAULT_HOME_CONFIG.reviews,
         cta: config.cta || DEFAULT_HOME_CONFIG.cta
       };
     } catch {
@@ -185,12 +155,10 @@ export const StorageService = {
   getAllUsers: async (): Promise<User[]> => {
     const { data, error } = await supabase.from('users').select('data');
     if (error || !data) return [];
-    return (data as SupabaseRow[]).map(row => row.data as User);
+    return data.map(row => row.data as User);
   },
 
   registerUser: async (name: string, email: string, phone: string, password: string): Promise<User> => {
-    const { data: existing } = await supabase.from('users').select('id').eq('email', email).single();
-    if (existing) throw new Error("User already exists");
     const newUser: User = {
       id: 'usr-' + Date.now(),
       name, email, phone, password,
@@ -211,25 +179,8 @@ export const StorageService = {
     if (error || !data) throw new Error("Invalid credentials");
     const user = data.data as User;
     if (user.password !== password) throw new Error("Invalid credentials");
-    user.lastLogin = new Date().toISOString();
-    await supabase.from('users').update({ data: user }).eq('id', user.id);
     localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
     window.dispatchEvent(new Event('storage'));
     return user;
-  },
-
-  createBooking: async (booking: Booking) => {
-    await supabase.from('bookings').upsert({
-      order_id: booking.orderId,
-      data: booking,
-      status: booking.status
-    });
-    const acc = await StorageService.getAccountById(booking.accountId);
-    if (acc) {
-      acc.isBooked = true;
-      acc.bookedUntil = booking.endTime;
-      await StorageService.saveAccount(acc);
-    }
-    window.dispatchEvent(new Event('storage'));
-  },
+  }
 };
