@@ -106,10 +106,31 @@ export const StorageService = {
 
   updateBookingStatus: async (orderId: string, status: BookingStatus) => {
     const { data: row } = await supabase.from('bookings').select('data').eq('order_id', orderId).single();
+    
     if (row?.data) {
       const booking = row.data as Booking;
       booking.status = status;
+      
+      // 1. Update the booking status in the bookings table
       await supabase.from('bookings').update({ data: booking, status: status }).eq('order_id', orderId);
+      
+      // 2. Cascade update to the Account status
+      const account = await StorageService.getAccountById(booking.accountId);
+      
+      if (account) {
+        if (status === BookingStatus.ACTIVE) {
+          // Lock the account
+          account.isBooked = true;
+          account.bookedUntil = booking.endTime;
+          await StorageService.saveAccount(account);
+        } else if (status === BookingStatus.COMPLETED || status === BookingStatus.CANCELLED) {
+          // Release the account
+          account.isBooked = false;
+          account.bookedUntil = null;
+          await StorageService.saveAccount(account);
+        }
+      }
+      
       window.dispatchEvent(new Event('storage'));
     }
   },
