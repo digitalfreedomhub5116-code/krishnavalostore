@@ -150,10 +150,10 @@ const Home: React.FC = () => {
           </div>
 
           <div className="mt-12 md:mt-16 flex flex-col sm:flex-row gap-6 md:gap-10 justify-center items-center animate-reveal-up" style={{ animationDelay: '0.5s' }}>
-            <Link to="/browse" className={`relative overflow-hidden group/btn px-10 py-4 md:px-20 md:py-7 ${config.heroSlides?.[currentSlide]?.buttonColor || 'bg-brand-accent'} font-black rounded-none skew-x-[-12deg] uppercase tracking-[0.4em] transition-all shadow-[0_0_50px_rgba(0,0,0,0.6)] hover:shadow-[0_0_70px_rgba(255,70,85,0.4)] hover:scale-105 active:scale-95 flex items-center gap-4`}>
+            <Link to="/browse" className={`relative overflow-hidden group/btn px-3 py-3.5 md:px-12 md:py-7 ${config.heroSlides?.[currentSlide]?.buttonColor || 'bg-brand-accent'} font-black rounded-none skew-x-[-12deg] uppercase tracking-[0.3em] md:tracking-[0.4em] transition-all shadow-[0_0_50px_rgba(0,0,0,0.6)] hover:shadow-[0_0_70px_rgba(255,70,85,0.4)] hover:scale-105 active:scale-95 flex items-center gap-3 md:gap-4`}>
               <div className="absolute inset-0 z-0 bg-gradient-to-r from-transparent via-white/40 to-transparent w-full h-full animate-shimmer opacity-25 pointer-events-none"></div>
-              <div className="skew-x-[12deg] relative z-10 flex items-center gap-4 text-white text-lg md:text-2xl">
-                START OPERATION <ChevronRight className="w-5 h-5 md:w-8 md:h-8 group-hover/btn:translate-x-3 transition-transform duration-500" />
+              <div className="skew-x-[12deg] relative z-10 flex items-center gap-3 md:gap-4 text-white text-sm md:text-2xl">
+                START OPERATION <ChevronRight className="w-4 h-4 md:w-8 md:h-8 group-hover/btn:translate-x-3 transition-transform duration-500" />
               </div>
             </Link>
           </div>
@@ -380,9 +380,9 @@ const Home: React.FC = () => {
             </h2>
             <p className="text-slate-400 text-xl md:text-2xl font-light tracking-wide max-w-3xl mx-auto leading-relaxed">{config.cta?.subtitle}</p>
             
-            <Link to="/browse" className="inline-block relative px-12 py-5 md:px-20 md:py-8 bg-white hover:bg-brand-cyan text-brand-darker font-black text-lg md:text-2xl skew-x-[-12deg] transition-all hover:scale-110 shadow-[0_0_60px_rgba(255,255,255,0.2)] hover:shadow-[0_0_80px_rgba(0,240,255,0.4)] active:scale-95 uppercase tracking-[0.4em]">
-              <div className="skew-x-[12deg] flex items-center gap-4">
-                {config.cta?.buttonText} <ArrowRight className="w-6 h-6 md:w-8 md:h-8" />
+            <Link to="/browse" className="inline-block relative px-3 py-4 md:px-12 md:py-8 bg-white hover:bg-brand-cyan text-brand-darker font-black text-sm md:text-2xl skew-x-[-12deg] transition-all hover:scale-110 shadow-[0_0_60px_rgba(255,255,255,0.2)] hover:shadow-[0_0_80px_rgba(0,240,255,0.4)] active:scale-95 uppercase tracking-[0.3em] md:tracking-[0.4em]">
+              <div className="skew-x-[12deg] flex items-center gap-3 md:gap-4">
+                {config.cta?.buttonText} <ArrowRight className="w-5 h-5 md:w-8 md:h-8" />
               </div>
             </Link>
           </div>
