@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronRight, Gamepad2, Clock, QrCode, MessageCircle, Play, Star, Zap, Shield, TrendingUp, CheckCircle2 } from 'lucide-react';
+import { ChevronRight, Gamepad2, Clock, QrCode, MessageCircle, Play, Star, Zap, Shield, TrendingUp, CheckCircle2, Loader2 } from 'lucide-react';
 import CustomVideoPlayer from '../components/CustomVideoPlayer';
 import { StorageService } from '../services/storage';
 import { HomeConfig, Review } from '../types';
@@ -44,25 +43,36 @@ const LiquidArrow: React.FC<{ filled: boolean; mobile: boolean }> = ({ filled, m
 };
 
 const Home: React.FC = () => {
-  const [config, setConfig] = useState<HomeConfig>(StorageService.getHomeConfig());
+  const [config, setConfig] = useState<HomeConfig | null>(null);
+  const [loading, setLoading] = useState(true);
   const [selectedVideo, setSelectedVideo] = useState<Review | null>(null);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [activeStep, setActiveStep] = useState(-1);
   const [trustVisible, setTrustVisible] = useState(false);
   const trustRef = useRef<HTMLElement>(null);
 
+  const loadConfig = async () => {
+    try {
+      const data = await StorageService.getHomeConfig();
+      setConfig(data);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const load = () => setConfig(StorageService.getHomeConfig());
-    window.addEventListener('focus', load);
-    return () => window.removeEventListener('focus', load);
+    loadConfig();
+    window.addEventListener('storage', loadConfig);
+    return () => window.removeEventListener('storage', loadConfig);
   }, []);
 
   useEffect(() => {
+    if (!config || config.heroSlides.length === 0) return;
     const timer = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % config.heroSlides.length);
     }, 5000);
     return () => clearInterval(timer);
-  }, [config.heroSlides.length]);
+  }, [config?.heroSlides.length]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -78,6 +88,7 @@ const Home: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    if (!config) return;
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
@@ -88,7 +99,20 @@ const Home: React.FC = () => {
     }, { threshold: 0.5, rootMargin: "-10% 0px -10% 0px" });
     document.querySelectorAll('.step-item').forEach(el => observer.observe(el));
     return () => observer.disconnect();
-  }, [config.stepItems]);
+  }, [config?.stepItems]);
+
+  if (loading) {
+    return (
+      <div className="h-[650px] flex items-center justify-center bg-brand-dark">
+         <div className="flex flex-col items-center gap-4">
+            <Loader2 className="w-12 h-12 text-brand-accent animate-spin" />
+            <p className="text-slate-500 font-mono text-xs uppercase tracking-widest">Loading Storefront...</p>
+         </div>
+      </div>
+    );
+  }
+
+  if (!config) return null;
 
   const trustIcons = [Zap, Shield, TrendingUp, Star];
   const stepIcons = [Gamepad2, Clock, QrCode, MessageCircle];

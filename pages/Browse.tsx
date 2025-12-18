@@ -10,19 +10,24 @@ const Browse: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const searchQuery = searchParams.get('q') || '';
   
-  // Load accounts and refresh every minute to check availability
+  const loadAccounts = async () => {
+    const data = await StorageService.getAccounts();
+    setAccounts(data);
+  };
+
   useEffect(() => {
-    const load = () => setAccounts(StorageService.getAccounts());
-    load();
-    const interval = setInterval(load, 60000);
-    return () => clearInterval(interval);
+    loadAccounts();
+    const interval = setInterval(loadAccounts, 60000);
+    window.addEventListener('storage', loadAccounts);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('storage', loadAccounts);
+    };
   }, []);
 
-  // Filter accounts
   const filteredAccounts = accounts.filter(account => {
       if (!searchQuery) return true;
       const term = searchQuery.toLowerCase();
-      // Search in Name, Skins array (using name property), Rank, or ID
       return (
           account.name.toLowerCase().includes(term) ||
           account.skins.some(skin => skin.name.toLowerCase().includes(term)) ||
@@ -65,7 +70,6 @@ const Browse: React.FC = () => {
         </div>
       </div>
 
-      {/* Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredAccounts.map(account => (
           <AccountCard 
@@ -75,7 +79,6 @@ const Browse: React.FC = () => {
         ))}
       </div>
 
-      {/* Empty State */}
       {filteredAccounts.length === 0 && (
         <div className="flex flex-col items-center justify-center py-20 text-center animate-in zoom-in-95 duration-300">
           <div className="w-20 h-20 rounded-full bg-brand-surface border border-white/5 flex items-center justify-center mb-6">

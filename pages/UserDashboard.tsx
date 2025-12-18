@@ -18,19 +18,23 @@ const UserDashboard: React.FC = () => {
 
   // Load user data
   useEffect(() => {
-    const currentUser = StorageService.getCurrentUser();
-    if (currentUser) {
-      setUser(currentUser);
-      const userBookings = StorageService.getUserBookings(currentUser.id);
-      // Sort: Active first, then by date desc
-      userBookings.sort((a, b) => {
-        if (a.status === BookingStatus.ACTIVE && b.status !== BookingStatus.ACTIVE) return -1;
-        if (a.status !== BookingStatus.ACTIVE && b.status === BookingStatus.ACTIVE) return 1;
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-      });
-      setBookings(userBookings);
-    }
-    setLoading(false);
+    // Fix: Using an internal async function to properly await StorageService calls
+    const loadData = async () => {
+      const currentUser = StorageService.getCurrentUser();
+      if (currentUser) {
+        setUser(currentUser);
+        const userBookings = await StorageService.getUserBookings(currentUser.id);
+        // Sort: Active first, then by date desc
+        userBookings.sort((a, b) => {
+          if (a.status === BookingStatus.ACTIVE && b.status !== BookingStatus.ACTIVE) return -1;
+          if (a.status !== BookingStatus.ACTIVE && b.status === BookingStatus.ACTIVE) return 1;
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        });
+        setBookings(userBookings);
+      }
+      setLoading(false);
+    };
+    loadData();
   }, []);
 
   const handleLogout = () => {
@@ -277,11 +281,14 @@ const RentalCard: React.FC<{ booking: Booking, showCredentials?: boolean }> = ({
   const [accountDetails, setAccountDetails] = useState<Account | undefined>(undefined);
 
   useEffect(() => {
-    // Fetch account details for credentials
-    if (showCredentials) {
-       const acc = StorageService.getAccountById(booking.accountId);
-       setAccountDetails(acc);
-    }
+    // Fix: Awaiting async getAccountById call in subcomponent
+    const fetchAccount = async () => {
+      if (showCredentials) {
+         const acc = await StorageService.getAccountById(booking.accountId);
+         setAccountDetails(acc);
+      }
+    };
+    fetchAccount();
   }, [booking.accountId, showCredentials]);
 
   useEffect(() => {

@@ -1,52 +1,13 @@
-
+import { createClient } from '@supabase/supabase-js';
 import { Account, Booking, Rank, BookingStatus, User, HomeConfig, Skin } from '../types';
 
-const ACCOUNTS_KEY = 'kv_accounts';
-const BOOKINGS_KEY = 'kv_bookings';
-const USERS_KEY = 'kv_users';
+const SUPABASE_URL = 'https://akwdzwrkhpyhrrcyvkpx.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_EjqnCcOPSh6uoT9y-g2OFw_ACj0byDo';
+
+// Initialize Supabase client
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
 const CURRENT_USER_KEY = 'kv_current_user';
-const HOME_CONFIG_KEY = 'kv_home_config';
-
-// 20 Minutes timeout for admin verification
-const VERIFICATION_TIMEOUT_MS = 20 * 60 * 1000; 
-
-// --- START PERMANENT DEFAULTS ---
-// When you export from Admin, I can paste the JSON here to make it permanent for all users.
-const INITIAL_ACCOUNTS: Account[] = [
-  {
-    id: 'KV-001',
-    name: '58 PREMS & 10 BP',
-    rank: Rank.PLATINUM,
-    skins: [
-      { name: 'Radiant Entertainment system Knife', isHighlighted: true },
-      { name: 'Champs 22 Knife', isHighlighted: true },
-      { name: 'Xenohunter Knife', isHighlighted: true },
-      { name: 'Reaver Dagger', isHighlighted: false },
-      { name: 'oni katana', isHighlighted: false },
-      { name: 'Mystbloom Kunai', isHighlighted: false },
-      { name: 'Neo frontier Axe', isHighlighted: false },
-      { name: 'Araxys knife', isHighlighted: false },
-      { name: 'Blade of serket', isHighlighted: false },
-      { name: 'Sentinels of light knife', isHighlighted: false },
-      { name: 'Divergence vandal', isHighlighted: false },
-      { name: 'Exo Vandal', isHighlighted: false },
-      { name: 'Araxys Vandal', isHighlighted: false },
-      { name: 'Prelude Vandal', isHighlighted: false },
-      { name: 'Reaver Vandal', isHighlighted: false },
-      { name: 'Neptune Vandal', isHighlighted: false },
-      { name: 'Xerofang vandal', isHighlighted: false },
-      { name: 'Oni Vndal', isHighlighted: false }
-    ],
-    totalSkins: 18,
-    description: 'Elite collection featuring the legendary Radiant Entertainment System Knife and full Vandal stack. High-tier lobbies and instant access.',
-    pricing: { hours3: 49, hours12: 99, hours24: 149 },
-    imageUrl: 'https://images.unsplash.com/photo-1624138784181-2999e930a9f7?q=80&w=1200&auto=format&fit=crop',
-    isBooked: false,
-    bookedUntil: null,
-    username: 'kv_plat_001',
-    password: 'Password123#'
-  }
-];
 
 const DEFAULT_HOME_CONFIG: HomeConfig = {
   marqueeText: [
@@ -102,42 +63,6 @@ const DEFAULT_HOME_CONFIG: HomeConfig = {
       quote: 'Got the ID in 2 minutes. The Radiant knife skin is insane!',
       thumbnail: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=1000&auto=format&fit=crop',
       videoUrl: 'https://sample-videos.com/video321/mp4/720/big_buck_bunny_720p_1mb.mp4'
-    },
-    {
-      id: 2,
-      type: 'text',
-      name: 'Rahul K.',
-      rank: 'Immortal',
-      quote: 'Best service in India. Trusted and cheap rates compared to others.',
-      rating: 5,
-      date: '2 days ago'
-    },
-    {
-      id: 3,
-      type: 'video',
-      name: 'Pratik Meshram',
-      rank: 'Ascendant',
-      quote: 'Check out this inventory! Totally worth the price.',
-      thumbnail: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=1000&auto=format&fit=crop',
-      videoUrl: 'https://sample-videos.com/video321/mp4/720/big_buck_bunny_720p_1mb.mp4'
-    },
-    {
-      id: 4,
-      type: 'text',
-      name: 'Siddharth M.',
-      rank: 'Gold',
-      quote: 'Login was seamless. Will definitely rent again for my weekend streams.',
-      rating: 5,
-      date: '1 week ago'
-    },
-    {
-      id: 5,
-      type: 'text',
-      name: 'Ishaan V.',
-      rank: 'Platinum',
-      quote: 'Support team on WhatsApp is very helpful. They helped me with the UPI scan issue immediately.',
-      rating: 4,
-      date: '3 days ago'
     }
   ],
   cta: {
@@ -147,159 +72,135 @@ const DEFAULT_HOME_CONFIG: HomeConfig = {
     buttonText: "BROWSE ACCOUNTS"
   }
 };
-// --- END PERMANENT DEFAULTS ---
 
 export const StorageService = {
-  init: () => {
-    if (!localStorage.getItem(ACCOUNTS_KEY)) {
-      localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(INITIAL_ACCOUNTS));
-    }
-    if (!localStorage.getItem(BOOKINGS_KEY)) {
-      localStorage.setItem(BOOKINGS_KEY, JSON.stringify([]));
-    }
-    if (!localStorage.getItem(USERS_KEY)) {
-      localStorage.setItem(USERS_KEY, JSON.stringify([]));
-    }
-    if (!localStorage.getItem(HOME_CONFIG_KEY)) {
-      localStorage.setItem(HOME_CONFIG_KEY, JSON.stringify(DEFAULT_HOME_CONFIG));
-    }
+  init: async () => {
+    await StorageService.getHomeConfig();
   },
 
-  getAccounts: (): Account[] => {
-    const data = localStorage.getItem(ACCOUNTS_KEY);
-    const bookingsData = localStorage.getItem(BOOKINGS_KEY);
+  // --- Accounts ---
+  getAccounts: async (): Promise<Account[]> => {
+    const { data, error } = await supabase.from('accounts').select('*');
+    if (error) {
+      console.error('Error fetching accounts:', error);
+      return [];
+    }
     
-    const rawAccounts: any[] = data ? JSON.parse(data) : [];
-    const allBookings: Booking[] = bookingsData ? JSON.parse(bookingsData) : [];
     const now = new Date();
-    
-    return rawAccounts.map(acc => {
-      // Migrate skins string[] to Skin[] if needed
-      let formattedSkins: Skin[] = acc.skins.map((skin: any) => {
-        if (typeof skin === 'string') {
-          return { name: skin, isHighlighted: false };
-        }
-        return skin;
-      });
-
-      let processedAcc = { ...acc, skins: formattedSkins };
-
-      if (processedAcc.isBooked) {
-        if (processedAcc.bookedUntil && new Date(processedAcc.bookedUntil) < now) {
-          processedAcc = { ...processedAcc, isBooked: false, bookedUntil: null };
-        } 
-        else {
-          const latestBooking = allBookings.find(b => b.accountId === processedAcc.id && (b.status === BookingStatus.PENDING || b.status === BookingStatus.ACTIVE));
-          
-          if (latestBooking && latestBooking.status === BookingStatus.PENDING) {
-             const createdTime = new Date(latestBooking.createdAt).getTime();
-             const timeSinceCreation = now.getTime() - createdTime;
-             
-             if (timeSinceCreation > VERIFICATION_TIMEOUT_MS) {
-                processedAcc = { ...processedAcc, isBooked: false, bookedUntil: null };
-             }
-          }
-        }
+    return data.map(row => {
+      const acc = row.data as Account;
+      if (acc.isBooked && acc.bookedUntil && new Date(acc.bookedUntil) < now) {
+        acc.isBooked = false;
+        acc.bookedUntil = null;
+        StorageService.saveAccount(acc);
       }
-      
-      return processedAcc;
+      return acc;
     });
   },
 
-  getAccountById: (id: string): Account | undefined => {
-    return StorageService.getAccounts().find(a => a.id === id);
+  getAccountById: async (id: string): Promise<Account | undefined> => {
+    const { data, error } = await supabase.from('accounts').select('data').eq('id', id).single();
+    if (error) return undefined;
+    return data.data as Account;
   },
 
-  saveAccount: (account: Account) => {
-    const accounts = StorageService.getAccounts();
-    const index = accounts.findIndex(a => a.id === account.id);
-    if (index >= 0) accounts[index] = account;
-    else accounts.push(account);
-    localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts));
-    
-    // Trigger storage event for cross-tab sync
+  saveAccount: async (account: Account) => {
+    const { error } = await supabase.from('accounts').upsert({
+      id: account.id,
+      data: account
+    });
+    if (error) console.error('Error saving account:', error);
     window.dispatchEvent(new Event('storage'));
   },
 
-  deleteAccount: (id: string): Account[] => {
-    const accounts = StorageService.getAccounts();
-    const newAccounts = accounts.filter(a => a.id !== id);
-    localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(newAccounts));
-    return newAccounts;
+  deleteAccount: async (id: string) => {
+    await supabase.from('accounts').delete().eq('id', id);
+    window.dispatchEvent(new Event('storage'));
   },
 
-  deleteAccounts: (ids: string[]): Account[] => {
-    const accounts = StorageService.getAccounts();
-    const newAccounts = accounts.filter(a => !ids.includes(a.id));
-    localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(newAccounts));
-    return newAccounts;
+  deleteAccounts: async (ids: string[]) => {
+    await supabase.from('accounts').delete().in('id', ids);
+    window.dispatchEvent(new Event('storage'));
   },
 
-  getBookings: (): Booking[] => {
-    const data = localStorage.getItem(BOOKINGS_KEY);
-    return data ? JSON.parse(data) : [];
+  // --- Bookings ---
+  getBookings: async (): Promise<Booking[]> => {
+    const { data, error } = await supabase.from('bookings').select('*').order('data->createdAt', { ascending: false });
+    if (error) return [];
+    return data.map(row => row.data as Booking);
   },
 
-  getUserBookings: (userId: string): Booking[] => {
-    return StorageService.getBookings().filter(b => b.customerId === userId);
+  getUserBookings: async (userId: string): Promise<Booking[]> => {
+    const bookings = await StorageService.getBookings();
+    return bookings.filter(b => b.customerId === userId);
   },
 
-  createBooking: (booking: Booking) => {
-    const bookings = StorageService.getBookings();
-    bookings.unshift(booking);
-    localStorage.setItem(BOOKINGS_KEY, JSON.stringify(bookings));
+  createBooking: async (booking: Booking) => {
+    await supabase.from('bookings').upsert({
+      order_id: booking.orderId,
+      data: booking,
+      status: booking.status
+    });
     
-    const accounts = StorageService.getAccounts();
-    const accIndex = accounts.findIndex(a => a.id === booking.accountId);
-    if (accIndex >= 0) {
-      accounts[accIndex].isBooked = true;
-      accounts[accIndex].bookedUntil = booking.endTime;
-      localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts));
+    const acc = await StorageService.getAccountById(booking.accountId);
+    if (acc) {
+      acc.isBooked = true;
+      acc.bookedUntil = booking.endTime;
+      await StorageService.saveAccount(acc);
     }
     window.dispatchEvent(new Event('storage'));
   },
 
-  updateBookingStatus: (orderId: string, status: BookingStatus) => {
-    const bookings = StorageService.getBookings();
-    const booking = bookings.find(b => b.orderId === orderId);
-    if (booking) {
+  updateBookingStatus: async (orderId: string, status: BookingStatus) => {
+    const { data: bookingRow } = await supabase.from('bookings').select('data').eq('order_id', orderId).single();
+    if (bookingRow) {
+      const booking = bookingRow.data as Booking;
       booking.status = status;
-      localStorage.setItem(BOOKINGS_KEY, JSON.stringify(bookings));
+      
+      await supabase.from('bookings').update({ 
+        data: booking, 
+        status: status 
+      }).eq('order_id', orderId);
       
       if (status === BookingStatus.COMPLETED || status === BookingStatus.CANCELLED) {
-        const accounts = StorageService.getAccounts();
-        const accIndex = accounts.findIndex(a => a.id === booking.accountId);
-        if (accIndex >= 0) {
-          accounts[accIndex].isBooked = false;
-          accounts[accIndex].bookedUntil = null;
-          localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts));
+        const acc = await StorageService.getAccountById(booking.accountId);
+        if (acc) {
+          acc.isBooked = false;
+          acc.bookedUntil = null;
+          await StorageService.saveAccount(acc);
         }
       }
       
       if (status === BookingStatus.ACTIVE) {
-        const accounts = StorageService.getAccounts();
-        const accIndex = accounts.findIndex(a => a.id === booking.accountId);
-        if (accIndex >= 0) {
-          accounts[accIndex].isBooked = true;
-          accounts[accIndex].bookedUntil = booking.endTime;
-          localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts));
+        const acc = await StorageService.getAccountById(booking.accountId);
+        if (acc) {
+          acc.isBooked = true;
+          acc.bookedUntil = booking.endTime;
+          await StorageService.saveAccount(acc);
         }
       }
       window.dispatchEvent(new Event('storage'));
     }
   },
 
-  getHomeConfig: (): HomeConfig => {
-    const data = localStorage.getItem(HOME_CONFIG_KEY);
-    return data ? JSON.parse(data) : DEFAULT_HOME_CONFIG;
+  // --- Home Config ---
+  getHomeConfig: async (): Promise<HomeConfig> => {
+    const { data, error } = await supabase.from('home_config').select('data').eq('id', 'global').single();
+    if (error || !data || !data.data || (data.data.heroSlides && data.data.heroSlides.length === 0)) {
+      return DEFAULT_HOME_CONFIG;
+    }
+    return data.data as HomeConfig;
   },
 
-  saveHomeConfig: (config: HomeConfig) => {
-    localStorage.setItem(HOME_CONFIG_KEY, JSON.stringify(config));
+  saveHomeConfig: async (config: HomeConfig) => {
+    await supabase.from('home_config').upsert({
+      id: 'global',
+      data: config
+    });
     window.dispatchEvent(new Event('storage'));
   },
 
-  // Added missing user management methods
+  // --- Users ---
   getCurrentUser: (): User | null => {
     const data = localStorage.getItem(CURRENT_USER_KEY);
     return data ? JSON.parse(data) : null;
@@ -310,16 +211,16 @@ export const StorageService = {
     window.dispatchEvent(new Event('storage'));
   },
 
-  getAllUsers: (): User[] => {
-    const data = localStorage.getItem(USERS_KEY);
-    return data ? JSON.parse(data) : [];
+  getAllUsers: async (): Promise<User[]> => {
+    const { data, error } = await supabase.from('users').select('data');
+    if (error) return [];
+    return data.map(row => row.data as User);
   },
 
   registerUser: async (name: string, email: string, phone: string, password: string): Promise<User> => {
-    const users = StorageService.getAllUsers();
-    if (users.find(u => u.email === email)) {
-      throw new Error("User with this email already exists");
-    }
+    const { data: existing } = await supabase.from('users').select('id').eq('email', email).single();
+    if (existing) throw new Error("User already exists");
+
     const newUser: User = {
       id: 'usr-' + Date.now(),
       name,
@@ -332,27 +233,30 @@ export const StorageService = {
       createdAt: new Date().toISOString(),
       lastLogin: new Date().toISOString()
     };
-    users.push(newUser);
-    localStorage.setItem(USERS_KEY, JSON.stringify(users));
+
+    await supabase.from('users').insert({
+      id: newUser.id,
+      email: newUser.email,
+      data: newUser
+    });
     
-    // Auto login
     localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(newUser));
     window.dispatchEvent(new Event('storage'));
     return newUser;
   },
 
   loginUser: async (email: string, password: string): Promise<User> => {
-    const users = StorageService.getAllUsers();
-    const user = users.find(u => u.email === email && u.password === password);
-    if (!user) {
-      throw new Error("Invalid email or password");
-    }
+    const { data, error } = await supabase.from('users').select('data').eq('email', email).single();
+    if (error || !data) throw new Error("Invalid credentials");
+    
+    const user = data.data as User;
+    if (user.password !== password) throw new Error("Invalid credentials");
+
     user.lastLogin = new Date().toISOString();
-    localStorage.setItem(USERS_KEY, JSON.stringify(users));
+    await supabase.from('users').update({ data: user }).eq('id', user.id);
+
     localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
     window.dispatchEvent(new Event('storage'));
     return user;
   }
 };
-
-StorageService.init();
