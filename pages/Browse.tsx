@@ -22,7 +22,7 @@ const Browse: React.FC = () => {
   const filteredAccounts = accounts.filter(account => {
       if (!searchQuery) return true;
       const term = searchQuery.toLowerCase();
-      // Search in Name, Skins array, Rank, or ID
+      // Search in Name, Skins array (using name property), Rank, or ID
       return (
           account.name.toLowerCase().includes(term) ||
           account.skins.some(skin => skin.name.toLowerCase().includes(term)) ||
