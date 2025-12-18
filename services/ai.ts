@@ -1,17 +1,6 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
 
-// Standard initialization with browser-safe environment variable access
-const getApiKey = () => {
-  try {
-    return (window as any).process?.env?.API_KEY || (globalThis as any).process?.env?.API_KEY || "";
-  } catch {
-    return "";
-  }
-};
-
-const ai = new GoogleGenAI({ apiKey: getApiKey() });
-
 export interface AuditResult {
   foundUtrs: string[];
   matches: string[]; 
@@ -20,6 +9,9 @@ export interface AuditResult {
 
 export const AIService = {
   auditTransactions: async (rawLogs: string, pendingUtrs: {utr: string, orderId: string}[]): Promise<AuditResult> => {
+    // Guidelines: Always use const ai = new GoogleGenAI({apiKey: process.env.API_KEY});
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    
     const prompt = `
       You are a specialized Transaction Auditor for Krishna Valo Store. 
       Analyze the provided bank history/SMS logs.
@@ -51,6 +43,7 @@ export const AIService = {
         }
       });
 
+      // Guidelines: Extracting text from response.text property
       const result = JSON.parse(response.text || '{}');
       return {
         foundUtrs: result.foundUtrs || [],
