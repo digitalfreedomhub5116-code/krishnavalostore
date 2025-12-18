@@ -6,7 +6,7 @@ import { StorageService, DEFAULT_HOME_CONFIG } from '../services/storage';
 import { AIService } from '../services/ai';
 import { Account, Booking, BookingStatus, Rank, User, HomeConfig, Review, Skin, HeroSlide, TrustItem, StepItem } from '../types';
 // Fixed: Added missing 'Lock' icon to the lucide-react imports to resolve JSX element errors.
-import { Plus, Trash2, Check, X, Edit2, Loader2, LogOut, Square, CheckSquare, BarChart3, IndianRupee, Users, Gamepad2, Home, Save, Zap, Shield, Star, MessageSquare, AlertCircle, Cpu, Search, Video, FileText, Play, Copy, Terminal, Layout, Image as ImageIcon, ShieldCheck, Lock } from 'lucide-react';
+import { Plus, Trash2, Check, X, Edit2, Loader2, LogOut, Square, CheckSquare, BarChart3, IndianRupee, Users, Gamepad2, Home, Save, Zap, Shield, Star, MessageSquare, AlertCircle, Cpu, Search, Video, FileText, Play, Copy, Terminal, Layout, Image as ImageIcon, ShieldCheck, Lock, Ban } from 'lucide-react';
 
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -323,8 +323,40 @@ const BookingTable = ({ bookings, onUpdateStatus }: any) => (
           <tr key={b.orderId} className="hover:bg-white/5 transition-colors group">
             <td className="p-5 font-mono text-xs text-brand-cyan">{b.orderId}</td>
             <td className="p-5"><div className="text-white font-bold">{b.accountName}</div><div className="text-[10px] text-slate-500 font-mono">UTR: {b.utr}</div></td>
-            <td className="p-5"><span className={`px-3 py-1 rounded text-[10px] font-black uppercase tracking-tighter ${b.status === 'ACTIVE' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20'}`}>{b.status}</span></td>
-            <td className="p-5 text-right">{b.status === 'PENDING' && <button onClick={() => onUpdateStatus(b.orderId, 'ACTIVE')} className="px-5 py-2 bg-brand-accent text-white text-[10px] rounded font-black uppercase tracking-widest hover:bg-red-600 transition-all shadow-lg shadow-brand-accent/20">AUTHORIZE</button>}</td>
+            <td className="p-5">
+              <span className={`px-3 py-1 rounded text-[10px] font-black uppercase tracking-tighter ${
+                b.status === 'ACTIVE' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 
+                b.status === 'CANCELLED' ? 'bg-slate-700/50 text-slate-400 border border-white/10' :
+                'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20'
+              }`}>
+                {b.status === 'CANCELLED' && <Ban size={10} className="inline mr-1" />}
+                {b.status}
+              </span>
+            </td>
+            <td className="p-5 text-right">
+              <div className="flex justify-end gap-2">
+                {b.status === 'PENDING' && (
+                  <button 
+                    onClick={() => onUpdateStatus(b.orderId, BookingStatus.ACTIVE)} 
+                    className="px-4 py-2 bg-brand-cyan text-brand-dark text-[10px] rounded font-black uppercase tracking-widest hover:bg-cyan-400 transition-all shadow-lg"
+                  >
+                    AUTHORIZE
+                  </button>
+                )}
+                {b.status === 'ACTIVE' && (
+                  <button 
+                    onClick={() => {
+                      if(window.confirm("Terminate this session? The account will be released immediately for new bookings.")) {
+                        onUpdateStatus(b.orderId, BookingStatus.CANCELLED);
+                      }
+                    }} 
+                    className="px-4 py-2 bg-brand-accent text-white text-[10px] rounded font-black uppercase tracking-widest hover:bg-red-600 transition-all shadow-lg flex items-center gap-1.5"
+                  >
+                    <Ban size={12} /> CANCEL
+                  </button>
+                )}
+              </div>
+            </td>
           </tr>
         ))}
       </tbody>
