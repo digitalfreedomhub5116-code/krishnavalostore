@@ -9,7 +9,7 @@ export interface AuditResult {
 
 export const AIService = {
   auditTransactions: async (rawLogs: string, pendingUtrs: {utr: string, orderId: string}[]): Promise<AuditResult> => {
-    // Guidelines: Always use const ai = new GoogleGenAI({apiKey: process.env.API_KEY});
+    // Standard initialization inside method as per instructions
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     const prompt = `
@@ -43,7 +43,6 @@ export const AIService = {
         }
       });
 
-      // Guidelines: Extracting text from response.text property
       const result = JSON.parse(response.text || '{}');
       return {
         foundUtrs: result.foundUtrs || [],

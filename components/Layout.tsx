@@ -24,14 +24,27 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     }
   };
 
-  // Listen for user changes and config changes
-  useEffect(() => {
+  const syncData = () => {
     setCurrentUser(StorageService.getCurrentUser());
     loadConfig();
+  };
+
+  // Listen for user changes and config changes
+  useEffect(() => {
+    syncData();
     
-    // Listen for storage events (emitted by StorageService on save)
-    window.addEventListener('storage', loadConfig);
-    return () => window.removeEventListener('storage', loadConfig);
+    // Subscribe to internal StorageService updates (replaces direct Event constructor)
+    const unsubscribe = StorageService.subscribe(() => {
+      syncData();
+    });
+
+    // Native storage event (dispatched by browser for other tabs) is still safe to listen to
+    window.addEventListener('storage', syncData);
+    
+    return () => {
+      unsubscribe();
+      window.removeEventListener('storage', syncData);
+    };
   }, [location.pathname]);
 
   const handleLogout = () => {

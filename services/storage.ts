@@ -1,12 +1,40 @@
 
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { Account, Booking, Rank, BookingStatus, User, HomeConfig, Skin } from '../types';
 
 const SUPABASE_URL = 'https://akwdzwrkhpyhrrcyvkpx.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_EjqnCcOPSh6uoT9y-g2OFw_ACj0byDo';
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+// Lazy load Supabase to avoid constructor issues at module-level load
+let supabaseInstance: SupabaseClient | null = null;
+const getSupabase = () => {
+  if (!supabaseInstance) {
+    supabaseInstance = createClient(SUPABASE_URL, SUPABASE_KEY);
+  }
+  return supabaseInstance;
+};
+
 const CURRENT_USER_KEY = 'kv_current_user';
+
+// Internal listener system to avoid manual Event constructor usage
+type StorageListener = () => void;
+const listeners = new Set<StorageListener>();
+
+const notifyStorageChange = () => {
+  listeners.forEach(listener => {
+    try {
+      listener();
+    } catch (e) {
+      // Ignore listener errors
+    }
+  });
+
+  try {
+    localStorage.setItem('valo_storage_sync', Date.now().toString());
+  } catch (e) {
+    // Ignore storage errors
+  }
+};
 
 export const DEFAULT_HOME_CONFIG: HomeConfig = {
   marqueeText: [
@@ -66,30 +94,35 @@ export const DEFAULT_HOME_CONFIG: HomeConfig = {
 };
 
 export const StorageService = {
+  subscribe: (callback: StorageListener) => {
+    listeners.add(callback);
+    return () => listeners.delete(callback);
+  },
+
   getAccounts: async (): Promise<Account[]> => {
-    const { data, error } = await supabase.from('accounts').select('*');
+    const { data, error } = await getSupabase().from('accounts').select('*');
     if (error || !data) return [];
     return data.map(row => row.data as Account);
   },
 
   getAccountById: async (id: string): Promise<Account | undefined> => {
-    const { data, error } = await supabase.from('accounts').select('data').eq('id', id).single();
+    const { data, error } = await getSupabase().from('accounts').select('data').eq('id', id).single();
     if (error || !data) return undefined;
     return data.data as Account;
   },
 
   saveAccount: async (account: Account) => {
-    await supabase.from('accounts').upsert({ id: account.id, data: account });
-    window.dispatchEvent(new Event('storage'));
+    await getSupabase().from('accounts').upsert({ id: account.id, data: account });
+    notifyStorageChange();
   },
 
   deleteAccount: async (id: string) => {
-    await supabase.from('accounts').delete().eq('id', id);
-    window.dispatchEvent(new Event('storage'));
+    await getSupabase().from('accounts').delete().eq('id', id);
+    notifyStorageChange();
   },
 
   getBookings: async (): Promise<Booking[]> => {
-    const { data, error } = await supabase.from('bookings').select('*').order('data->createdAt', { ascending: false });
+    const { data, error } = await getSupabase().from('bookings').select('*').order('data->createdAt', { ascending: false });
     if (error || !data) return [];
     return data.map(row => row.data as Booking);
   },
@@ -100,48 +133,43 @@ export const StorageService = {
   },
 
   createBooking: async (booking: Booking) => {
-    await supabase.from('bookings').upsert({ order_id: booking.orderId, data: booking, status: booking.status });
-    window.dispatchEvent(new Event('storage'));
+    await getSupabase().from('bookings').upsert({ order_id: booking.orderId, data: booking, status: booking.status });
+    notifyStorageChange();
   },
 
   updateBookingStatus: async (orderId: string, status: BookingStatus) => {
-    const { data: row } = await supabase.from('bookings').select('data').eq('order_id', orderId).single();
+    const { data: row } = await getSupabase().from('bookings').select('data').eq('order_id', orderId).single();
     
     if (row?.data) {
       const booking = row.data as Booking;
       booking.status = status;
       
-      // 1. Update the booking status in the bookings table
-      await supabase.from('bookings').update({ data: booking, status: status }).eq('order_id', orderId);
+      await getSupabase().from('bookings').update({ data: booking, status: status }).eq('order_id', orderId);
       
-      // 2. Cascade update to the Account status
       const account = await StorageService.getAccountById(booking.accountId);
       
       if (account) {
         if (status === BookingStatus.ACTIVE) {
-          // Lock the account
           account.isBooked = true;
           account.bookedUntil = booking.endTime;
           await StorageService.saveAccount(account);
         } else if (status === BookingStatus.COMPLETED || status === BookingStatus.CANCELLED) {
-          // Release the account
           account.isBooked = false;
           account.bookedUntil = null;
           await StorageService.saveAccount(account);
         }
       }
       
-      window.dispatchEvent(new Event('storage'));
+      notifyStorageChange();
     }
   },
 
   getHomeConfig: async (): Promise<HomeConfig> => {
     try {
-      const { data, error } = await supabase.from('home_config').select('data').eq('id', 'global').single();
+      const { data, error } = await getSupabase().from('home_config').select('data').eq('id', 'global').single();
       if (error || !data?.data) return DEFAULT_HOME_CONFIG;
       
       const config = data.data as HomeConfig;
-      // Deep merge to ensure all sections exist
       return {
         ...DEFAULT_HOME_CONFIG,
         ...config,
@@ -158,9 +186,9 @@ export const StorageService = {
   },
 
   saveHomeConfig: async (config: HomeConfig) => {
-    const { error } = await supabase.from('home_config').upsert({ id: 'global', data: config });
+    const { error } = await getSupabase().from('home_config').upsert({ id: 'global', data: config });
     if (error) throw error;
-    window.dispatchEvent(new Event('storage'));
+    notifyStorageChange();
   },
 
   getCurrentUser: (): User | null => {
@@ -170,11 +198,11 @@ export const StorageService = {
 
   logoutUser: () => {
     localStorage.removeItem(CURRENT_USER_KEY);
-    window.dispatchEvent(new Event('storage'));
+    notifyStorageChange();
   },
 
   getAllUsers: async (): Promise<User[]> => {
-    const { data, error } = await supabase.from('users').select('data');
+    const { data, error } = await getSupabase().from('users').select('data');
     if (error || !data) return [];
     return data.map(row => row.data as User);
   },
@@ -189,19 +217,19 @@ export const StorageService = {
       createdAt: new Date().toISOString(),
       lastLogin: new Date().toISOString()
     };
-    await supabase.from('users').insert({ id: newUser.id, email: newUser.email, data: newUser });
+    await getSupabase().from('users').insert({ id: newUser.id, email: newUser.email, data: newUser });
     localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(newUser));
-    window.dispatchEvent(new Event('storage'));
+    notifyStorageChange();
     return newUser;
   },
 
   loginUser: async (email: string, password: string): Promise<User> => {
-    const { data, error } = await supabase.from('users').select('data').eq('email', email).single();
+    const { data, error } = await getSupabase().from('users').select('data').eq('email', email).single();
     if (error || !data) throw new Error("Invalid credentials");
     const user = data.data as User;
     if (user.password !== password) throw new Error("Invalid credentials");
     localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
-    window.dispatchEvent(new Event('storage'));
+    notifyStorageChange();
     return user;
   }
 };

@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { StorageService } from '../services/storage';
@@ -17,9 +18,17 @@ const Browse: React.FC = () => {
 
   useEffect(() => {
     loadAccounts();
+    
+    // Subscribe to internal StorageService updates
+    const unsubscribe = StorageService.subscribe(() => {
+      loadAccounts();
+    });
+
     const interval = setInterval(loadAccounts, 60000);
     window.addEventListener('storage', loadAccounts);
+    
     return () => {
+      unsubscribe();
       clearInterval(interval);
       window.removeEventListener('storage', loadAccounts);
     };
