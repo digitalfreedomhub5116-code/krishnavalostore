@@ -1,15 +1,45 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Account } from '../types';
-import { Trophy, Gem, Lock, Eye, Sparkles } from 'lucide-react';
+import { Trophy, Gem, Lock, Eye, Sparkles, Clock } from 'lucide-react';
 
 interface AccountCardProps {
   account: Account;
 }
 
 const AccountCard: React.FC<AccountCardProps> = ({ account }) => {
-  const isAvailable = !account.isBooked;
+  const [timeLeft, setTimeLeft] = useState<string | null>(null);
+  const [isEffectivelyAvailable, setIsEffectivelyAvailable] = useState(!account.isBooked);
+
+  useEffect(() => {
+    if (!account.isBooked || !account.bookedUntil) {
+      setIsEffectivelyAvailable(true);
+      setTimeLeft(null);
+      return;
+    }
+
+    const updateTimer = () => {
+      const now = new Date().getTime();
+      const end = new Date(account.bookedUntil!).getTime();
+      const diff = end - now;
+
+      if (diff <= 0) {
+        setIsEffectivelyAvailable(true);
+        setTimeLeft(null);
+      } else {
+        setIsEffectivelyAvailable(false);
+        const h = Math.floor(diff / (1000 * 60 * 60));
+        const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const s = Math.floor((diff % (1000 * 60)) / 1000);
+        setTimeLeft(`${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`);
+      }
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+    return () => clearInterval(interval);
+  }, [account.isBooked, account.bookedUntil]);
 
   const getRankColor = (rank: string) => {
     if (rank.includes('Gold')) return 'text-yellow-400';
@@ -23,7 +53,7 @@ const AccountCard: React.FC<AccountCardProps> = ({ account }) => {
   const skinCount = account.totalSkins || account.skins.length;
 
   return (
-    <div className={`group relative rounded-none overflow-hidden border transition-all duration-300 ${isAvailable ? 'border-white/10 bg-brand-surface hover:border-brand-accent/50 hover:shadow-[0_0_30px_rgba(255,70,85,0.15)] hover:-translate-y-2' : 'border-red-900/30 bg-brand-dark opacity-75 grayscale'}`}>
+    <div className={`group relative rounded-none overflow-hidden border transition-all duration-300 ${isEffectivelyAvailable ? 'border-white/10 bg-brand-surface hover:border-brand-accent/50 hover:shadow-[0_0_30px_rgba(255,70,85,0.15)] hover:-translate-y-2' : 'border-white/5 bg-brand-dark opacity-90'}`}>
       
       <Link to={`/account/${account.id}`} className="block h-full">
         {/* Corner Accents (Cyberpunk Style) */}
@@ -44,16 +74,21 @@ const AccountCard: React.FC<AccountCardProps> = ({ account }) => {
           
           {/* Status Badge */}
           <div className="absolute top-3 right-3 z-20">
-            {isAvailable ? (
+            {isEffectivelyAvailable ? (
               <span className="inline-flex items-center px-3 py-1 bg-black/50 backdrop-blur-md border border-green-500/50 text-green-400 text-[10px] font-bold uppercase tracking-wider skew-x-[-10deg]">
                 <span className="w-1.5 h-1.5 rounded-full bg-green-400 mr-2 animate-pulse" />
                 Available
               </span>
             ) : (
-              <span className="inline-flex items-center px-3 py-1 bg-black/50 backdrop-blur-md border border-red-500/50 text-red-400 text-[10px] font-bold uppercase tracking-wider skew-x-[-10deg]">
-                <Lock className="w-3 h-3 mr-1" />
-                Booked
-              </span>
+              <div className="flex flex-col items-end gap-1">
+                <span className="inline-flex items-center px-3 py-1 bg-brand-accent/20 backdrop-blur-md border border-brand-accent/50 text-brand-accent text-[9px] font-black uppercase tracking-widest skew-x-[-10deg] shadow-[0_0_15px_rgba(255,70,85,0.3)]">
+                  <Clock className="w-3 h-3 mr-1.5 animate-pulse" />
+                  Opens In
+                </span>
+                <span className="bg-black/80 px-2 py-0.5 rounded font-mono text-xs text-white border border-white/10 tabular-nums">
+                  {timeLeft}
+                </span>
+              </div>
             )}
           </div>
 
@@ -75,7 +110,6 @@ const AccountCard: React.FC<AccountCardProps> = ({ account }) => {
                 <Gem className="w-3 h-3" />
                 Loadout
               </div>
-              {/* Skin Count Highlight */}
               <div className="text-[10px] font-bold text-yellow-400 bg-yellow-400/10 px-2 py-0.5 border border-yellow-400/20 rounded-sm shadow-[0_0_10px_rgba(250,204,21,0.1)]">
                 {skinCount} PREMIUM SKINS
               </div>
@@ -127,20 +161,13 @@ const AccountCard: React.FC<AccountCardProps> = ({ account }) => {
           {/* Action Button */}
           <div
             className={`w-full py-3 px-4 font-bold uppercase tracking-wider text-sm transition-all duration-200 flex items-center justify-center gap-2 skew-x-[-10deg]
-              ${isAvailable 
+              ${isEffectivelyAvailable 
                 ? 'bg-white text-brand-darker group-hover:bg-brand-accent group-hover:text-white shadow-[0_0_15px_rgba(255,255,255,0.1)] group-hover:shadow-[0_0_25px_rgba(255,70,85,0.4)]' 
-                : 'bg-slate-800 text-slate-500 cursor-not-allowed border border-white/5'}`}
+                : 'bg-slate-800 text-slate-400 border border-white/5 hover:bg-slate-700'}`}
           >
             <div className="skew-x-[10deg] flex items-center gap-2">
-              {isAvailable ? (
-                <>
-                  <Eye className="w-4 h-4" /> View Details
-                </>
-              ) : (
-                <>
-                  <Lock className="w-4 h-4" /> Locked
-                </>
-              )}
+              <Eye className="w-4 h-4" /> 
+              {isEffectivelyAvailable ? 'View Details' : 'Check Slot'}
             </div>
           </div>
         </div>
