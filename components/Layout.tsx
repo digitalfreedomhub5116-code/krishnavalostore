@@ -61,77 +61,75 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       </div>
 
       {/* Navbar - Sticky Navigation links ONLY (HIDDEN ON MOBILE to remove gap) */}
-      {isHomePage && (
-        <nav className="hidden md:block sticky top-0 w-full z-30 bg-brand-dark/80 backdrop-blur-xl border-b border-white/10 shadow-[0_4px_30px_rgba(0,0,0,0.3)]">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-between h-16">
-              {/* Left Spacer for Desktop centering */}
-              <div className="hidden md:block w-10"></div>
-              
-              {/* Desktop Menu - Centered Navigation */}
-              <div className="flex items-center gap-12">
-                <Link to="/" className={`${isActive('/')} px-2 py-1 text-xs font-bold uppercase tracking-[0.2em] transition-all duration-300`}>Home</Link>
-                <Link to="/browse" className={`${isActive('/browse')} px-2 py-1 text-xs font-bold uppercase tracking-[0.2em] transition-all duration-300`}>Available IDs</Link>
-                <Link to="/admin" className={`${isActive('/admin')} px-2 py-1 text-xs font-bold uppercase tracking-[0.2em] transition-all duration-300 flex items-center gap-1.5`}>
-                  <UserCog size={14} /> Admin
+      <nav className="hidden md:block sticky top-0 w-full z-30 bg-brand-dark/80 backdrop-blur-xl border-b border-white/10 shadow-[0_4px_30px_rgba(0,0,0,0.3)]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            {/* Left Spacer for Desktop centering */}
+            <div className="hidden md:block w-10"></div>
+            
+            {/* Desktop Menu - Centered Navigation */}
+            <div className="flex items-center gap-12">
+              <Link to="/" className={`${isActive('/')} px-2 py-1 text-xs font-bold uppercase tracking-[0.2em] transition-all duration-300`}>Home</Link>
+              <Link to="/browse" className={`${isActive('/browse')} px-2 py-1 text-xs font-bold uppercase tracking-[0.2em] transition-all duration-300`}>Available IDs</Link>
+              <Link to="/admin" className={`${isActive('/admin')} px-2 py-1 text-xs font-bold uppercase tracking-[0.2em] transition-all duration-300 flex items-center gap-1.5`}>
+                <UserCog size={14} /> Admin
+              </Link>
+            </div>
+
+            {/* User Profile / Login Button - Desktop Only */}
+            <div className="flex items-center">
+              {currentUser ? (
+                <div className="relative">
+                    <button 
+                        onClick={() => setShowProfileMenu(!showProfileMenu)}
+                        className="flex items-center gap-3 bg-brand-dark/50 border border-white/10 hover:border-brand-accent/50 rounded-full pl-2 pr-4 py-1.5 transition-all group backdrop-blur-sm"
+                    >
+                        <img 
+                            src={currentUser.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser.name}`} 
+                            alt="Avatar" 
+                            className="w-7 h-7 rounded-full bg-brand-accent/20"
+                        />
+                        <span className="text-xs font-bold text-white group-hover:text-brand-accent truncate max-w-[80px]">
+                            {currentUser.name}
+                        </span>
+                    </button>
+
+                    {/* Dropdown */}
+                    {showProfileMenu && (
+                        <div className="absolute right-0 mt-2 w-48 bg-brand-surface/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl py-1 animate-in fade-in zoom-in-95 duration-200">
+                            <div className="px-4 py-2 border-b border-white/5">
+                                <p className="text-[10px] text-slate-400 uppercase font-bold">Signed in as</p>
+                                <p className="text-xs font-bold text-white truncate">{currentUser.email}</p>
+                            </div>
+                            <Link 
+                                to="/dashboard"
+                                onClick={() => setShowProfileMenu(false)}
+                                className="w-full text-left px-4 py-2 text-sm text-white hover:bg-white/5 flex items-center gap-2"
+                            >
+                                <LayoutDashboard className="w-4 h-4" /> My Dashboard
+                            </Link>
+                            <button 
+                                onClick={handleLogout}
+                                className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-white/5 flex items-center gap-2"
+                            >
+                                <LogOut className="w-4 h-4" /> Sign Out
+                            </button>
+                        </div>
+                    )}
+                </div>
+              ) : (
+                <Link 
+                    to="/login"
+                    className="flex items-center gap-2 px-5 py-2 bg-white text-brand-darker font-bold text-xs rounded-full hover:bg-brand-cyan hover:scale-105 transition-all shadow-[0_0_15px_rgba(255,255,255,0.2)] uppercase tracking-widest"
+                >
+                    <UserIcon className="w-3.5 h-3.5" />
+                    LOGIN
                 </Link>
-              </div>
-
-              {/* User Profile / Login Button - Desktop Only */}
-              <div className="flex items-center">
-                {currentUser ? (
-                  <div className="relative">
-                      <button 
-                          onClick={() => setShowProfileMenu(!showProfileMenu)}
-                          className="flex items-center gap-3 bg-brand-dark/50 border border-white/10 hover:border-brand-accent/50 rounded-full pl-2 pr-4 py-1.5 transition-all group backdrop-blur-sm"
-                      >
-                          <img 
-                              src={currentUser.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser.name}`} 
-                              alt="Avatar" 
-                              className="w-7 h-7 rounded-full bg-brand-accent/20"
-                          />
-                          <span className="text-xs font-bold text-white group-hover:text-brand-accent truncate max-w-[80px]">
-                              {currentUser.name}
-                          </span>
-                      </button>
-
-                      {/* Dropdown */}
-                      {showProfileMenu && (
-                          <div className="absolute right-0 mt-2 w-48 bg-brand-surface/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl py-1 animate-in fade-in zoom-in-95 duration-200">
-                              <div className="px-4 py-2 border-b border-white/5">
-                                  <p className="text-[10px] text-slate-400 uppercase font-bold">Signed in as</p>
-                                  <p className="text-xs font-bold text-white truncate">{currentUser.email}</p>
-                              </div>
-                              <Link 
-                                  to="/dashboard"
-                                  onClick={() => setShowProfileMenu(false)}
-                                  className="w-full text-left px-4 py-2 text-sm text-white hover:bg-white/5 flex items-center gap-2"
-                              >
-                                  <LayoutDashboard className="w-4 h-4" /> My Dashboard
-                              </Link>
-                              <button 
-                                  onClick={handleLogout}
-                                  className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-white/5 flex items-center gap-2"
-                              >
-                                  <LogOut className="w-4 h-4" /> Sign Out
-                              </button>
-                          </div>
-                      )}
-                  </div>
-                ) : (
-                  <Link 
-                      to="/login"
-                      className="flex items-center gap-2 px-5 py-2 bg-white text-brand-darker font-bold text-xs rounded-full hover:bg-brand-cyan hover:scale-105 transition-all shadow-[0_0_15px_rgba(255,255,255,0.2)] uppercase tracking-widest"
-                  >
-                      <UserIcon className="w-3.5 h-3.5" />
-                      LOGIN
-                  </Link>
-                )}
-              </div>
+              )}
             </div>
           </div>
-        </nav>
-      )}
+        </div>
+      </nav>
 
       {/* Global Search Bar - Persistent and Animated with Magnetic Docking */}
       <SkinSearchFloatingBar isHomePage={isHomePage} />

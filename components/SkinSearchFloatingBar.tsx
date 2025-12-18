@@ -66,10 +66,10 @@ const SkinSearchFloatingBar: React.FC<SkinSearchFloatingBarProps> = ({ isHomePag
         <div 
             className={`${(isHomePage && !isFocused) ? 'absolute' : 'fixed'} z-[60] transition-all duration-[850ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] 
                 ${isFocused 
-                    ? 'top-24 md:top-32 left-1/2 -translate-x-1/2 w-[calc(100%-2.5rem)] md:w-[600px] scale-100' 
+                    ? 'top-28 md:top-40 left-1/2 -translate-x-1/2 w-[calc(100%-1.5rem)] md:w-[600px] scale-100' 
                     : mode === 'hero'
-                        ? 'top-40 md:top-48 left-1/2 -translate-x-1/2 w-fit scale-100'
-                        : 'top-3 right-3 md:right-10 md:top-3.5 w-fit translate-x-0 scale-90 md:scale-100'
+                        ? 'top-48 md:top-64 left-1/2 -translate-x-1/2 w-[calc(100%-4rem)] max-w-[320px] md:w-fit scale-100'
+                        : 'top-4 right-3 md:right-10 md:top-6 w-fit translate-x-0 scale-90 md:scale-100'
                 }
             `}
         >
@@ -94,10 +94,10 @@ const SkinSearchFloatingBar: React.FC<SkinSearchFloatingBarProps> = ({ isHomePag
                     onClick={() => !isFocused && setIsFocused(true)}
                     className={`relative flex items-center bg-brand-darker/80 backdrop-blur-2xl border rounded-full shadow-[0_15px_50px_rgba(0,0,0,0.6)] overflow-hidden transition-all duration-[850ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] cursor-text group
                         ${isFocused 
-                            ? 'w-full ring-2 ring-brand-cyan/40 py-5 px-7 border-brand-cyan/40' 
+                            ? 'w-full ring-2 ring-brand-cyan/40 py-3 md:py-5 px-4 md:px-7 border-brand-cyan/40' 
                             : mode === 'hero'
-                                ? 'w-[64px] md:w-[320px] py-4 px-4 md:px-6 border-white/10 hover:border-brand-accent/40 hover:shadow-[0_0_25px_rgba(255,70,85,0.3)]'
-                                : 'w-[44px] h-[44px] md:w-[48px] md:h-[48px] py-0 px-0 justify-center hover:bg-white/10 border-white/5 bg-black/40'
+                                ? 'w-full md:w-[320px] py-3 md:py-4 px-4 md:px-6 border-white/10 hover:border-brand-accent/40 hover:shadow-[0_0_25px_rgba(255,70,85,0.3)]'
+                                : 'w-[40px] h-[40px] md:w-[48px] md:h-[48px] py-0 px-0 justify-center hover:bg-white/10 border-white/5 bg-black/40'
                         }
                     `}
                 >
@@ -106,9 +106,9 @@ const SkinSearchFloatingBar: React.FC<SkinSearchFloatingBarProps> = ({ isHomePag
                          style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, #00f0ff 1px, transparent 0)', backgroundSize: '16px 16px' }} />
 
                     {/* Search Icon with dynamic rotation */}
-                    <div className={`flex items-center justify-center transition-all duration-[850ms] ${isFocused ? 'mr-5 scale-110 rotate-90' : (mode === 'hero' ? 'mr-0 md:mr-3 rotate-0' : 'mr-0 rotate-0')}`}>
-                         <div className={`transition-all duration-500 p-2 rounded-full ${isFocused ? 'bg-brand-cyan/20 text-brand-cyan' : 'bg-transparent text-slate-400 group-hover:text-white'}`}>
-                             <Search className={`${mode === 'header' && !isFocused ? 'w-5 h-5 md:w-6 h-6' : 'w-5 h-5 md:w-6 md:h-6'}`} strokeWidth={2.5} />
+                    <div className={`flex items-center justify-center transition-all duration-[850ms] ${isFocused ? 'mr-3 md:mr-5 scale-110 rotate-90' : (mode === 'hero' ? 'mr-2 md:mr-3 rotate-0' : 'mr-0 rotate-0')}`}>
+                         <div className={`transition-all duration-500 p-1.5 md:p-2 rounded-full ${isFocused ? 'bg-brand-cyan/20 text-brand-cyan' : 'bg-transparent text-slate-400 group-hover:text-white'}`}>
+                             <Search className={`${mode === 'header' && !isFocused ? 'w-4 h-4 md:w-6 md:h-6' : 'w-5 h-5 md:w-6 md:h-6'}`} strokeWidth={2.5} />
                          </div>
                     </div>
                     
@@ -121,34 +121,34 @@ const SkinSearchFloatingBar: React.FC<SkinSearchFloatingBarProps> = ({ isHomePag
                         onFocus={() => setIsFocused(true)}
                         placeholder="Search Skins..."
                         autoComplete="off"
-                        className={`bg-transparent border-none outline-none text-white placeholder-slate-500 font-display font-bold text-lg tracking-wide transition-all duration-[850ms]
+                        className={`bg-transparent border-none outline-none text-white placeholder-slate-500 font-display font-bold text-base md:text-lg tracking-wide transition-all duration-[850ms]
                             ${isFocused 
                                 ? 'flex-1 opacity-100' 
                                 : mode === 'hero'
-                                    ? 'hidden md:block w-full opacity-100 md:w-48 cursor-text'
+                                    ? 'flex-1 opacity-100 md:w-48 cursor-text'
                                     : 'hidden'
                             }
                         `}
                     />
 
                     {/* Actions / Submit */}
-                    <div className={`flex items-center gap-3 transition-all duration-500 ${isFocused || (mode === 'hero' && query) ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-10 w-0'}`}>
+                    <div className={`flex items-center gap-2 md:gap-3 transition-all duration-500 ${isFocused || (mode === 'hero' && query) ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-10 w-0'}`}>
                         {query && isFocused && (
                             <button 
                                 type="button"
                                 onClick={(e) => { e.stopPropagation(); handleClear(); }}
-                                className="p-2 hover:bg-white/10 rounded-full text-slate-500 hover:text-white transition-all hover:scale-110"
+                                className="p-1.5 md:p-2 hover:bg-white/10 rounded-full text-slate-500 hover:text-white transition-all hover:scale-110"
                             >
-                                <X className="w-5 h-5" />
+                                <X className="w-4 h-4 md:w-5 md:h-5" />
                             </button>
                         )}
                         
                         {isFocused && (
                             <button 
                                 type="submit"
-                                className="bg-brand-cyan hover:bg-white text-brand-darker rounded-full p-2.5 shadow-[0_0_20px_rgba(0,240,255,0.4)] transition-all hover:scale-110 active:scale-95"
+                                className="bg-brand-cyan hover:bg-white text-brand-darker rounded-full p-2 md:p-2.5 shadow-[0_0_20px_rgba(0,240,255,0.4)] transition-all hover:scale-110 active:scale-95"
                             >
-                                <ArrowRight className="w-5 h-5" strokeWidth={3} />
+                                <ArrowRight className="w-4 h-4 md:w-5 md:h-5" strokeWidth={3} />
                             </button>
                         )}
                     </div>
