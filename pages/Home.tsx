@@ -119,9 +119,10 @@ const Home: React.FC = () => {
           </div>
         ))}
 
-        {/* Hero Content Overlay - Added desktop padding to avoid overlap */}
+        {/* Hero Content Overlay */}
         <div className="relative z-30 text-center px-4 max-w-5xl mx-auto flex flex-col items-center md:pt-48">
-          <div className="mb-6 md:mb-10 inline-flex items-center gap-1.5 md:gap-3 px-3 md:px-6 py-1.5 md:py-2 rounded-full border border-white/10 bg-black/60 backdrop-blur-2xl animate-reveal-up shadow-[0_0_30px_rgba(255,255,255,0.1)]">
+          {/* SECURE RENTALS BADGE - HIDDEN ON DESKTOP (md:hidden) */}
+          <div className="md:hidden mb-6 md:mb-10 inline-flex items-center gap-1.5 md:gap-3 px-3 md:px-6 py-1.5 md:py-2 rounded-full border border-white/10 bg-black/60 backdrop-blur-2xl animate-reveal-up shadow-[0_0_30px_rgba(255,255,255,0.1)]">
              <div className="w-2 h-2 md:w-2.5 md:h-2.5 rounded-full bg-brand-cyan animate-pulse shadow-[0_0_15px_#00f0ff]"></div>
              <span className="text-[10px] md:text-[13px] font-bold tracking-[0.2em] md:tracking-[0.5em] text-white">KRISHNA VALO // SECURE RENTALS</span>
           </div>
@@ -146,7 +147,7 @@ const Home: React.FC = () => {
             </Link>
           </div>
 
-          {/* Restored Animated Slide Indicator */}
+          {/* Animated Slide Indicator */}
           <div className="mt-16 md:mt-24 flex items-center justify-center gap-4 animate-reveal-up" style={{ animationDelay: '0.7s' }}>
             {(config.heroSlides || []).map((slide, idx) => (
               <button
@@ -163,7 +164,6 @@ const Home: React.FC = () => {
                 {idx === currentSlide && (
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent w-full h-full animate-shimmer"></div>
                 )}
-                {/* Tooltip hint on hover */}
                 <span className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/indicator:opacity-100 transition-opacity pointer-events-none">
                    <span className="w-full h-full bg-white/10"></span>
                 </span>
@@ -173,7 +173,7 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* Trust Indicators - Enhanced Scroll Animations */}
+      {/* Trust Indicators */}
       <section className="bg-brand-darker border-y border-white/5 py-16 md:py-24 relative">
         <div className="max-w-7xl mx-auto px-4 grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 relative z-10">
           {(config.trustItems || []).map((item, i) => {
@@ -197,9 +197,8 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* Operation Procedure - Refined High-Density Zigzag */}
+      {/* Operation Procedure */}
       <section ref={procedureRef} id="how-it-works" className="relative py-24 md:py-32 bg-black overflow-hidden">
-        {/* Parallax Grid */}
         <div className="absolute inset-0 opacity-10 pointer-events-none hero-grid transition-transform duration-500" style={{ transform: `translateY(${scrollProgress * 100}px)` }}></div>
 
         <div className="max-w-6xl mx-auto px-4 relative z-10">
@@ -215,7 +214,6 @@ const Home: React.FC = () => {
           </div>
 
           <div className="relative">
-            {/* Central Connectivity Line */}
             <div className="absolute left-1/2 -translate-x-1/2 top-4 bottom-4 w-px md:w-1 bg-white/5 rounded-full overflow-hidden">
                <div 
                   className="absolute top-0 left-0 w-full bg-gradient-to-b from-brand-cyan via-brand-accent to-brand-secondary shadow-[0_0_20px_#00f0ff] transition-all duration-300" 
@@ -225,7 +223,6 @@ const Home: React.FC = () => {
                </div>
             </div>
 
-            {/* Tight Zigzag Steps */}
             <div className="relative space-y-4 md:space-y-0">
               {(config.stepItems || []).map((step, idx) => {
                 const Icon = stepIcons[idx] || Gamepad2;
@@ -238,9 +235,6 @@ const Home: React.FC = () => {
                     key={idx} 
                     className={`flex items-center justify-center w-full py-6 md:py-12 transition-all duration-1000 ${isActive ? 'opacity-100' : 'opacity-10'}`}
                   >
-                    {/* Content Logic: On desktop/mobile, we always zigzag now */}
-                    
-                    {/* LEFT CONTENT (Visible for Even items) */}
                     <div className={`w-[calc(50%-2rem)] md:w-1/2 pr-6 md:pr-16 text-right transition-all duration-1000 transform-gpu ${isEven ? 'translate-x-0 opacity-100' : 'translate-x-10 opacity-0 pointer-events-none'}`}>
                        {isEven && (
                          <div className="space-y-2 md:space-y-4">
@@ -251,7 +245,6 @@ const Home: React.FC = () => {
                        )}
                     </div>
 
-                    {/* Central Circuit Node */}
                     <div className="relative z-20 flex-shrink-0">
                        <div className={`w-12 h-12 md:w-24 md:h-24 rounded-full border-2 transition-all duration-700 flex items-center justify-center bg-black ${isActive ? 'border-brand-cyan shadow-[0_0_40px_rgba(0,240,255,0.4)] scale-110' : 'border-white/10 scale-90'}`}>
                           {isActive && <div className="absolute inset-0 rounded-full border-2 border-brand-cyan/20 animate-ping"></div>}
@@ -259,7 +252,6 @@ const Home: React.FC = () => {
                        </div>
                     </div>
 
-                    {/* RIGHT CONTENT (Visible for Odd items) */}
                     <div className={`w-[calc(50%-2rem)] md:w-1/2 pl-6 md:pl-16 text-left transition-all duration-1000 transform-gpu ${!isEven ? 'translate-x-0 opacity-100' : '-translate-x-10 opacity-0 pointer-events-none'}`}>
                        {!isEven && (
                          <div className="space-y-2 md:space-y-4">
@@ -269,7 +261,6 @@ const Home: React.FC = () => {
                          </div>
                        )}
                     </div>
-
                   </div>
                 );
               })}
@@ -278,7 +269,7 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* Community Intel Marquee - Horizontal Reveal */}
+      {/* Community Intel Marquee */}
       <section className="py-24 bg-black overflow-hidden border-y border-white/5 relative">
         <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10"></div>
         <div className="text-center mb-16 relative z-10 animate-on-scroll reveal-up">
@@ -355,7 +346,7 @@ const Home: React.FC = () => {
         </div>
       )}
 
-      {/* CTA Section - Final Reveal */}
+      {/* CTA Section */}
       <section className="py-32 md:py-48 bg-brand-darker relative overflow-hidden">
         <div className="absolute inset-0 bg-brand-accent/5"></div>
         <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-brand-accent to-transparent opacity-40"></div>
