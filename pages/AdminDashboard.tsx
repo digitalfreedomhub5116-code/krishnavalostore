@@ -42,17 +42,21 @@ const AdminDashboard: React.FC = () => {
   const [skinInput, setSkinInput] = useState('');
 
   const refreshData = async () => {
-    const [b, a, u, h] = await Promise.all([
-      StorageService.getBookings(),
-      StorageService.getAccounts(),
-      StorageService.getAllUsers(),
-      StorageService.getHomeConfig()
-    ]);
-    setBookings(b);
-    setAccounts(a);
-    setUsers(u);
-    setHomeConfig(h);
-    setSelectedIds(new Set());
+    try {
+      const [b, a, u, h] = await Promise.all([
+        StorageService.getBookings(),
+        StorageService.getAccounts(),
+        StorageService.getAllUsers(),
+        StorageService.getHomeConfig()
+      ]);
+      setBookings(b);
+      setAccounts(a);
+      setUsers(u);
+      setHomeConfig(h);
+      setSelectedIds(new Set());
+    } catch (error) {
+      console.error("Failed to refresh admin data", error);
+    }
   };
 
   useEffect(() => {
@@ -93,7 +97,7 @@ const AdminDashboard: React.FC = () => {
 
   const handleStatusUpdate = async (orderId: string, status: BookingStatus) => {
     await StorageService.updateBookingStatus(orderId, status);
-    refreshData();
+    await refreshData();
   };
 
   const handleRunAudit = async () => {
@@ -120,7 +124,7 @@ const AdminDashboard: React.FC = () => {
 
       setAuditResult(result);
       setAuditLogs('');
-      refreshData();
+      await refreshData();
     } catch (err) {
       alert("Error during AI Audit. Check Console.");
     } finally {
@@ -133,7 +137,7 @@ const AdminDashboard: React.FC = () => {
     e.preventDefault();
     if (window.confirm('Are you sure you want to delete this account?')) {
       await StorageService.deleteAccount(id);
-      refreshData();
+      await refreshData();
     }
   };
 
@@ -163,7 +167,7 @@ const AdminDashboard: React.FC = () => {
     if (selectedIds.size === 0) return;
     if (window.confirm(`Delete ${selectedIds.size} accounts?`)) {
        await StorageService.deleteAccounts(Array.from(selectedIds));
-       refreshData();
+       await refreshData();
     }
   };
 
@@ -174,7 +178,7 @@ const AdminDashboard: React.FC = () => {
     const account: Account = {
       id: 'kv-' + Date.now(),
       name: newAccount.name!,
-      rank: newAccount.rank as Rank,
+      rank: (newAccount.rank as Rank) || Rank.IRON,
       skins: newAccount.skins || [],
       totalSkins: newAccount.totalSkins,
       description: newAccount.description,
@@ -606,37 +610,37 @@ const AdminDashboard: React.FC = () => {
                     </div>
                     <div>
                        <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2">Agent Rank</label>
-                       <input type="text" value={editingReview.rank} onChange={e => setEditingReview({...editingReview, rank: e.target.value})} className="w-full bg-brand-dark border border-white/10 rounded px-3 py-2 text-white text-sm" placeholder="e.g. Immortal" />
+                       <input type="text" value={editingReview.rank || ''} onChange={e => setEditingReview({...editingReview, rank: e.target.value})} className="w-full bg-brand-dark border border-white/10 rounded px-3 py-2 text-white text-sm" placeholder="e.g. Immortal" />
                     </div>
                  </div>
                  <div>
                     <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2">Agent Name</label>
-                    <input type="text" value={editingReview.name} onChange={e => setEditingReview({...editingReview, name: e.target.value})} className="w-full bg-brand-dark border border-white/10 rounded px-3 py-2 text-white text-sm" placeholder="Reviewer name" />
+                    <input type="text" value={editingReview.name || ''} onChange={e => setEditingReview({...editingReview, name: e.target.value})} className="w-full bg-brand-dark border border-white/10 rounded px-3 py-2 text-white text-sm" placeholder="Reviewer name" />
                  </div>
                  <div>
                     <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2">Quote / Message</label>
-                    <textarea value={editingReview.quote} onChange={e => setEditingReview({...editingReview, quote: e.target.value})} className="w-full bg-brand-dark border border-white/10 rounded px-3 py-2 text-white text-sm h-24 resize-none" placeholder="What did they say?" />
+                    <textarea value={editingReview.quote || ''} onChange={e => setEditingReview({...editingReview, quote: e.target.value})} className="w-full bg-brand-dark border border-white/10 rounded px-3 py-2 text-white text-sm h-24 resize-none" placeholder="What did they say?" />
                  </div>
                  {editingReview.type === 'video' ? (
                    <>
                      <div>
                         <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2">Video Thumbnail URL</label>
-                        <input type="text" value={editingReview.thumbnail} onChange={e => setEditingReview({...editingReview, thumbnail: e.target.value})} className="w-full bg-brand-dark border border-white/10 rounded px-3 py-2 text-brand-cyan text-xs font-mono" />
+                        <input type="text" value={editingReview.thumbnail || ''} onChange={e => setEditingReview({...editingReview, thumbnail: e.target.value})} className="w-full bg-brand-dark border border-white/10 rounded px-3 py-2 text-brand-cyan text-xs font-mono" />
                      </div>
                      <div>
                         <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2">Video Source URL (MP4)</label>
-                        <input type="text" value={editingReview.videoUrl} onChange={e => setEditingReview({...editingReview, videoUrl: e.target.value})} className="w-full bg-brand-dark border border-white/10 rounded px-3 py-2 text-brand-cyan text-xs font-mono" />
+                        <input type="text" value={editingReview.videoUrl || ''} onChange={e => setEditingReview({...editingReview, videoUrl: e.target.value})} className="w-full bg-brand-dark border border-white/10 rounded px-3 py-2 text-brand-cyan text-xs font-mono" />
                      </div>
                    </>
                  ) : (
                    <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2">Rating (1-5)</label>
-                        <input type="number" min="1" max="5" value={editingReview.rating} onChange={e => setEditingReview({...editingReview, rating: parseInt(e.target.value)})} className="w-full bg-brand-dark border border-white/10 rounded px-3 py-2 text-white text-sm" />
+                        <input type="number" min="1" max="5" value={editingReview.rating || 5} onChange={e => setEditingReview({...editingReview, rating: parseInt(e.target.value)})} className="w-full bg-brand-dark border border-white/10 rounded px-3 py-2 text-white text-sm" />
                       </div>
                       <div>
                         <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2">Date Label</label>
-                        <input type="text" value={editingReview.date} onChange={e => setEditingReview({...editingReview, date: e.target.value})} className="w-full bg-brand-dark border border-white/10 rounded px-3 py-2 text-white text-sm" placeholder="e.g. 2 days ago" />
+                        <input type="text" value={editingReview.date || ''} onChange={e => setEditingReview({...editingReview, date: e.target.value})} className="w-full bg-brand-dark border border-white/10 rounded px-3 py-2 text-white text-sm" placeholder="e.g. 2 days ago" />
                       </div>
                    </div>
                  )}
@@ -750,8 +754,8 @@ const AddModal = ({ newAccount, setNewAccount, onClose, onAdd, skinInput, setSki
     <div className="bg-brand-surface border border-white/10 rounded-2xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
       <h2 className="text-xl font-bold mb-4">Add New Account</h2>
       <div className="space-y-4">
-        <input className="w-full bg-brand-dark border border-white/10 rounded p-2 text-white" placeholder="Name" value={newAccount.name} onChange={e => setNewAccount({...newAccount, name: e.target.value})} />
-        <select className="w-full bg-brand-dark border border-white/10 rounded p-2 text-white" value={newAccount.rank} onChange={e => setNewAccount({...newAccount, rank: e.target.value as Rank})}>{Object.values(Rank).map(r => <option key={r} value={r}>{r}</option>)}</select>
+        <input className="w-full bg-brand-dark border border-white/10 rounded p-2 text-white" placeholder="Name" value={newAccount.name || ''} onChange={e => setNewAccount({...newAccount, name: e.target.value})} />
+        <select className="w-full bg-brand-dark border border-white/10 rounded p-2 text-white" value={newAccount.rank || Rank.IRON} onChange={e => setNewAccount({...newAccount, rank: e.target.value as Rank})}>{Object.values(Rank).map(r => <option key={r} value={r}>{r}</option>)}</select>
         <div className="flex gap-2">
           <input className="flex-1 bg-brand-dark border border-white/10 rounded p-2 text-white" placeholder="Skin" value={skinInput} onChange={e => setSkinInput(e.target.value)} />
           <button onClick={addSkin} className="bg-brand-accent px-4 rounded text-white">+</button>

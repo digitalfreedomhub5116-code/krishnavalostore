@@ -3,12 +3,14 @@ import { createPortal } from 'react-dom';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { StorageService } from '../services/storage';
 import { Account, Pricing } from '../types';
-import { ArrowLeft, Gem, Clock, Calendar, ChevronRight, MessageCircle, X, ArrowRight, Lock, Maximize2, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
+// Added missing Loader2 import
+import { ArrowLeft, Gem, Clock, Calendar, ChevronRight, MessageCircle, X, ArrowRight, Lock, Maximize2, ChevronDown, ChevronUp, Sparkles, Loader2 } from 'lucide-react';
 
 const ProductDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [account, setAccount] = useState<Account | undefined>(undefined);
+  const [loading, setLoading] = useState(true);
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   
@@ -24,9 +26,13 @@ const ProductDetails: React.FC = () => {
 
   useEffect(() => {
     const loadAccount = async () => {
-      if (id) {
-        const acc = await StorageService.getAccountById(id);
-        setAccount(acc);
+      try {
+        if (id) {
+          const acc = await StorageService.getAccountById(id);
+          setAccount(acc);
+        }
+      } finally {
+        setLoading(false);
       }
     };
     
@@ -44,6 +50,14 @@ const ProductDetails: React.FC = () => {
   useEffect(() => {
      window.scrollTo(0, 0);
   }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-[50vh] flex flex-col items-center justify-center">
+        <Loader2 className="w-10 h-10 text-brand-accent animate-spin" />
+      </div>
+    );
+  }
 
   if (!account) {
     return (
@@ -155,8 +169,8 @@ const ProductDetails: React.FC = () => {
            {step === 1 && (
               <div className="p-6 overflow-y-auto">
                  <div className="space-y-3 mb-8">
-                    {['hours3', 'hours12', 'hours24'].map((hid) => {
-                       const option = { id: hid, label: hid === 'hours3' ? '3 Hours' : hid === 'hours12' ? '12 Hours' : '24 Hours', price: account.pricing[hid as keyof Pricing] };
+                    {(['hours3', 'hours12', 'hours24'] as (keyof Pricing)[]).map((hid) => {
+                       const option = { id: hid, label: hid === 'hours3' ? '3 Hours' : hid === 'hours12' ? '12 Hours' : '24 Hours', price: account.pricing[hid] };
                        const isDiscounted = option.id === 'hours24';
                        const finalPrice = isDiscounted ? Math.floor(option.price * 0.9) : option.price;
                        return (

@@ -81,13 +81,13 @@ export const StorageService = {
   // --- Accounts ---
   getAccounts: async (): Promise<Account[]> => {
     const { data, error } = await supabase.from('accounts').select('*');
-    if (error) {
+    if (error || !data) {
       console.error('Error fetching accounts:', error);
       return [];
     }
     
     const now = new Date();
-    return (data as any[]).map(row => {
+    return (data as any[]).map((row: { data: any }) => {
       const acc = row.data as Account;
       if (acc.isBooked && acc.bookedUntil && new Date(acc.bookedUntil) < now) {
         acc.isBooked = false;
@@ -100,7 +100,7 @@ export const StorageService = {
 
   getAccountById: async (id: string): Promise<Account | undefined> => {
     const { data, error } = await supabase.from('accounts').select('data').eq('id', id).single();
-    if (error) return undefined;
+    if (error || !data) return undefined;
     return data.data as Account;
   },
 
@@ -126,8 +126,8 @@ export const StorageService = {
   // --- Bookings ---
   getBookings: async (): Promise<Booking[]> => {
     const { data, error } = await supabase.from('bookings').select('*').order('data->createdAt', { ascending: false });
-    if (error) return [];
-    return (data as any[]).map(row => row.data as Booking);
+    if (error || !data) return [];
+    return (data as any[]).map((row: { data: any }) => row.data as Booking);
   },
 
   getUserBookings: async (userId: string): Promise<Booking[]> => {
@@ -153,7 +153,7 @@ export const StorageService = {
 
   updateBookingStatus: async (orderId: string, status: BookingStatus) => {
     const { data: bookingRow } = await supabase.from('bookings').select('data').eq('order_id', orderId).single();
-    if (bookingRow) {
+    if (bookingRow && bookingRow.data) {
       const booking = bookingRow.data as Booking;
       booking.status = status;
       
@@ -213,8 +213,8 @@ export const StorageService = {
 
   getAllUsers: async (): Promise<User[]> => {
     const { data, error } = await supabase.from('users').select('data');
-    if (error) return [];
-    return (data as any[]).map(row => row.data as User);
+    if (error || !data) return [];
+    return (data as any[]).map((row: { data: any }) => row.data as User);
   },
 
   registerUser: async (name: string, email: string, phone: string, password: string): Promise<User> => {
@@ -247,7 +247,7 @@ export const StorageService = {
 
   loginUser: async (email: string, password: string): Promise<User> => {
     const { data, error } = await supabase.from('users').select('data').eq('email', email).single();
-    if (error || !data) throw new Error("Invalid credentials");
+    if (error || !data || !data.data) throw new Error("Invalid credentials");
     
     const user = data.data as User;
     if (user.password !== password) throw new Error("Invalid credentials");
