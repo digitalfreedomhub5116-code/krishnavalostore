@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useParams, useNavigate, Link } from 'react-router-dom';
@@ -24,10 +23,14 @@ const ProductDetails: React.FC = () => {
   const [scheduledTime, setScheduledTime] = useState('');
 
   useEffect(() => {
-    if (id) {
-      const acc = StorageService.getAccountById(id);
-      setAccount(acc);
-    }
+    const loadAccount = async () => {
+      if (id) {
+        const acc = await StorageService.getAccountById(id);
+        setAccount(acc);
+      }
+    };
+    
+    loadAccount();
     
     // Set skin limit based on screen size
     const handleResize = () => {
@@ -213,10 +216,10 @@ const ProductDetails: React.FC = () => {
         <span className="text-slate-600 text-[10px] font-mono tracking-widest uppercase">SECURE_ID: {account.id}</span>
       </div>
 
-      {/* Main Container - Mobile reordering happens here */}
+      {/* Main Container */}
       <div className="flex flex-col lg:grid lg:grid-cols-2 gap-8 lg:gap-12">
          
-         {/* Identity Header (Mobile Only - Top Placement) */}
+         {/* Identity Header (Mobile Only) */}
          <div className="lg:hidden animate-in fade-in slide-in-from-top-4 duration-500">
             <div className="flex items-center gap-3 mb-3">
                <span className={`px-3 py-1 rounded text-[10px] font-bold uppercase border bg-opacity-10 ${account.rank.includes('Immortal') ? 'border-red-500 text-red-400 bg-red-500' : account.rank.includes('Ascendant') ? 'border-emerald-500 text-emerald-400 bg-emerald-500' : 'border-brand-cyan text-brand-cyan bg-brand-cyan'}`}>{account.rank}</span>
@@ -226,7 +229,7 @@ const ProductDetails: React.FC = () => {
             <div className="h-[1px] w-full bg-gradient-to-r from-white/10 via-transparent to-transparent"></div>
          </div>
 
-         {/* Visual Assets (Left on Desktop, 2nd on Mobile) */}
+         {/* Visual Assets */}
          <div className="space-y-8">
             <div className="relative rounded-2xl overflow-hidden border border-white/5 bg-brand-dark group cursor-zoom-in shadow-2xl shadow-black/50" onClick={() => setIsImageModalOpen(true)}>
                <img src={account.imageUrl} alt={account.name} className="w-full aspect-video object-cover transition-transform duration-700 group-hover:scale-105" />
@@ -288,7 +291,7 @@ const ProductDetails: React.FC = () => {
             </div>
          </div>
 
-         {/* Content & Action Section (Right on Desktop, 3rd on Mobile) */}
+         {/* Content & Action Section */}
          <div className="space-y-8">
             {/* Identity Header (Desktop Only) */}
             <div className="hidden lg:block">
@@ -300,7 +303,7 @@ const ProductDetails: React.FC = () => {
                {account.description && <p className="text-slate-400 text-sm leading-relaxed border-l-2 border-brand-accent pl-4 italic mb-8">{account.description}</p>}
             </div>
 
-            {/* Mobile Description (Shown here if present) */}
+            {/* Mobile Description */}
             {account.description && <div className="lg:hidden"><p className="text-slate-400 text-xs leading-relaxed italic border-l-2 border-brand-accent pl-3">{account.description}</p></div>}
 
             {/* Pricing Card */}

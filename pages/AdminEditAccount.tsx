@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { StorageService } from '../services/storage';
@@ -21,14 +20,18 @@ const AdminEditAccount: React.FC = () => {
       return;
     }
 
-    if (id) {
-      const data = StorageService.getAccountById(id);
-      if (data) {
-        // Deep copy to avoid mutating original state before save
-        setAccount(JSON.parse(JSON.stringify(data)));
+    const loadAccount = async () => {
+      if (id) {
+        const data = await StorageService.getAccountById(id);
+        if (data) {
+          // Deep copy to avoid mutating original state before save
+          setAccount(JSON.parse(JSON.stringify(data)));
+        }
+        setLoading(false);
       }
-      setLoading(false);
-    }
+    };
+
+    loadAccount();
   }, [id, isAuthenticated, navigate]);
 
   if (loading) return (
@@ -79,14 +82,12 @@ const AdminEditAccount: React.FC = () => {
     setAccount({ ...account, skins: newSkins });
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    if (!account) return;
     setSaving(true);
-    // Simulate API delay
-    setTimeout(() => {
-      StorageService.saveAccount(account);
-      setSaving(false);
-      navigate('/admin/dashboard');
-    }, 1000);
+    await StorageService.saveAccount(account);
+    setSaving(false);
+    navigate('/admin/dashboard');
   };
 
   return (
@@ -316,9 +317,9 @@ const AdminEditAccount: React.FC = () => {
               </h3>
               <p className="text-xs text-slate-500 mb-4">Deleting an account will remove all booking history associated with it. This cannot be undone.</p>
               <button 
-                onClick={() => {
+                onClick={async () => {
                    if(window.confirm("Permanently delete this account?")) {
-                      StorageService.deleteAccount(account.id);
+                      await StorageService.deleteAccount(account.id);
                       navigate('/admin/dashboard');
                    }
                 }}

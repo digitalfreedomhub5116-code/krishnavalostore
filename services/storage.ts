@@ -9,7 +9,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const CURRENT_USER_KEY = 'kv_current_user';
 
-const DEFAULT_HOME_CONFIG: HomeConfig = {
+export const DEFAULT_HOME_CONFIG: HomeConfig = {
   marqueeText: [
     "⚡ NEW SKINS ADDED: RADIANT ENTERTAINMENT SYSTEM",
     "🔥 FLAT 10% OFF ON 24H RENTALS",
@@ -87,7 +87,7 @@ export const StorageService = {
     }
     
     const now = new Date();
-    return data.map(row => {
+    return (data as any[]).map(row => {
       const acc = row.data as Account;
       if (acc.isBooked && acc.bookedUntil && new Date(acc.bookedUntil) < now) {
         acc.isBooked = false;
@@ -127,7 +127,7 @@ export const StorageService = {
   getBookings: async (): Promise<Booking[]> => {
     const { data, error } = await supabase.from('bookings').select('*').order('data->createdAt', { ascending: false });
     if (error) return [];
-    return data.map(row => row.data as Booking);
+    return (data as any[]).map(row => row.data as Booking);
   },
 
   getUserBookings: async (userId: string): Promise<Booking[]> => {
@@ -214,7 +214,7 @@ export const StorageService = {
   getAllUsers: async (): Promise<User[]> => {
     const { data, error } = await supabase.from('users').select('data');
     if (error) return [];
-    return data.map(row => row.data as User);
+    return (data as any[]).map(row => row.data as User);
   },
 
   registerUser: async (name: string, email: string, phone: string, password: string): Promise<User> => {

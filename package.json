@@ -1,3 +1,4 @@
+
 {
   "name": "krishna-valo-store",
   "private": true,
@@ -13,7 +14,8 @@
     "react-dom": "19.0.0",
     "react-router-dom": "7.0.1",
     "lucide-react": "0.460.0",
-    "@google/genai": "1.3.0"
+    "@google/genai": "1.3.0",
+    "@supabase/supabase-js": "2.48.1"
   },
   "devDependencies": {
     "@types/node": "22.10.2",

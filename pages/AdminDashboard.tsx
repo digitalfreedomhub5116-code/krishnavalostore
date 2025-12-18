@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Navigate, useNavigate, Link } from 'react-router-dom';
-import { StorageService } from '../services/storage';
+import { StorageService, DEFAULT_HOME_CONFIG } from '../services/storage';
 import { AIService } from '../services/ai';
 import { Account, Booking, BookingStatus, Rank, User, HomeConfig, HeroSlide, Review, Skin } from '../types';
 import { Plus, Trash2, Check, X, Edit2, Loader2, LogOut, Square, CheckSquare, BarChart3, IndianRupee, Users, Gamepad2, TrendingUp, Phone, Mail, Calendar, Home, Save, Zap, Shield, Star, MessageSquare, AlertCircle, Cpu, ClipboardList, Search, CheckCircle2, Video, FileText, Play, Copy, Terminal } from 'lucide-react';
@@ -14,7 +14,7 @@ const AdminDashboard: React.FC = () => {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   
-  const [homeConfig, setHomeConfig] = useState<HomeConfig>(StorageService.getHomeConfig());
+  const [homeConfig, setHomeConfig] = useState<HomeConfig>(DEFAULT_HOME_CONFIG);
   const [configSaved, setConfigSaved] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -41,11 +41,17 @@ const AdminDashboard: React.FC = () => {
   });
   const [skinInput, setSkinInput] = useState('');
 
-  const refreshData = () => {
-    setBookings(StorageService.getBookings());
-    setAccounts(StorageService.getAccounts());
-    setUsers(StorageService.getAllUsers());
-    setHomeConfig(StorageService.getHomeConfig());
+  const refreshData = async () => {
+    const [b, a, u, h] = await Promise.all([
+      StorageService.getBookings(),
+      StorageService.getAccounts(),
+      StorageService.getAllUsers(),
+      StorageService.getHomeConfig()
+    ]);
+    setBookings(b);
+    setAccounts(a);
+    setUsers(u);
+    setHomeConfig(h);
     setSelectedIds(new Set());
   };
 
@@ -85,8 +91,8 @@ const AdminDashboard: React.FC = () => {
     navigate('/admin');
   };
 
-  const handleStatusUpdate = (orderId: string, status: BookingStatus) => {
-    StorageService.updateBookingStatus(orderId, status);
+  const handleStatusUpdate = async (orderId: string, status: BookingStatus) => {
+    await StorageService.updateBookingStatus(orderId, status);
     refreshData();
   };
 
@@ -108,9 +114,9 @@ const AdminDashboard: React.FC = () => {
 
       const result = await AIService.auditTransactions(auditLogs, pendingList);
       
-      result.matches.forEach(orderId => {
-        StorageService.updateBookingStatus(orderId, BookingStatus.ACTIVE);
-      });
+      await Promise.all(result.matches.map(orderId => 
+        StorageService.updateBookingStatus(orderId, BookingStatus.ACTIVE)
+      ));
 
       setAuditResult(result);
       setAuditLogs('');
@@ -122,12 +128,12 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
-  const handleDeleteAccount = (id: string, e: React.MouseEvent) => {
+  const handleDeleteAccount = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
     if (window.confirm('Are you sure you want to delete this account?')) {
-      const updatedAccounts = StorageService.deleteAccount(id);
-      setAccounts(updatedAccounts);
+      await StorageService.deleteAccount(id);
+      refreshData();
     }
   };
 
@@ -153,50 +159,48 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
-  const handleBulkDelete = () => {
+  const handleBulkDelete = async () => {
     if (selectedIds.size === 0) return;
     if (window.confirm(`Delete ${selectedIds.size} accounts?`)) {
-       const updatedAccounts = StorageService.deleteAccounts(Array.from(selectedIds));
-       setAccounts(updatedAccounts);
-       setSelectedIds(new Set());
+       await StorageService.deleteAccounts(Array.from(selectedIds));
+       refreshData();
     }
   };
 
-  const handleAddAccount = () => {
+  const handleAddAccount = async () => {
     if (!newAccount.name || !newAccount.pricing) return;
     setIsSubmitting(true);
-    setTimeout(() => {
-      const account: Account = {
-        id: 'kv-' + Date.now(),
-        name: newAccount.name!,
-        rank: newAccount.rank as Rank,
-        skins: newAccount.skins || [],
-        totalSkins: newAccount.totalSkins,
-        description: newAccount.description,
-        pricing: newAccount.pricing as any,
-        imageUrl: newAccount.imageUrl || '',
-        isBooked: false,
-        bookedUntil: null
-      };
-      StorageService.saveAccount(account);
-      setNewAccount({
-        name: '',
-        rank: Rank.IRON,
-        skins: [],
-        totalSkins: undefined,
-        description: '',
-        pricing: { hours3: 0, hours12: 0, hours24: 0 },
-        imageUrl: 'https://picsum.photos/400/300'
-      });
-      setSkinInput('');
-      refreshData();
-      setIsSubmitting(false);
-      setShowAddModal(false);
-    }, 1000);
+    
+    const account: Account = {
+      id: 'kv-' + Date.now(),
+      name: newAccount.name!,
+      rank: newAccount.rank as Rank,
+      skins: newAccount.skins || [],
+      totalSkins: newAccount.totalSkins,
+      description: newAccount.description,
+      pricing: newAccount.pricing as any,
+      imageUrl: newAccount.imageUrl || '',
+      isBooked: false,
+      bookedUntil: null
+    };
+    await StorageService.saveAccount(account);
+    setNewAccount({
+      name: '',
+      rank: Rank.IRON,
+      skins: [],
+      totalSkins: undefined,
+      description: '',
+      pricing: { hours3: 0, hours12: 0, hours24: 0 },
+      imageUrl: 'https://picsum.photos/400/300'
+    });
+    setSkinInput('');
+    await refreshData();
+    setIsSubmitting(false);
+    setShowAddModal(false);
   };
 
-  const saveHomeConfig = () => {
-    StorageService.saveHomeConfig(homeConfig);
+  const saveHomeConfig = async () => {
+    await StorageService.saveHomeConfig(homeConfig);
     setConfigSaved(true);
     setTimeout(() => setConfigSaved(false), 2000);
   };
@@ -456,7 +460,6 @@ const AdminDashboard: React.FC = () => {
              </div>
            )}
 
-           {/* All other home sections remain same ... */}
            {/* Marquee Section */}
            <div className="bg-brand-surface border border-white/10 rounded-xl p-6">
               <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><Zap className="w-5 h-5 text-brand-cyan" /> Marquee Alerts</h3>
