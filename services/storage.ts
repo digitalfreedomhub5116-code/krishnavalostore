@@ -10,48 +10,49 @@ const CURRENT_USER_KEY = 'kv_current_user';
 
 export const DEFAULT_HOME_CONFIG: HomeConfig = {
   marqueeText: [
-    "⚡ NEW SKINS ADDED: RADIANT ENTERTAINMENT SYSTEM",
-    "🔥 FLAT 10% OFF ON 24H RENTALS",
-    "🛡️ 100% BAN PROOF ACCOUNTS",
-    "⚡ INSTANT WHATSAPP DELIVERY"
+    "⚡ NEW RADIANT BUNDLES ADDED TO INVENTORY",
+    "🔥 GET 10% OFF ON ALL 24-HOUR RENTALS",
+    "🛡️ VANGUARD BYPASS SECURED - 0% BAN RATE",
+    "⚡ INSTANT CREDENTIAL DELIVERY VIA WHATSAPP",
+    "🏆 TRUSTED BY 5000+ PREMIUM AGENTS"
   ],
   heroSlides: [
     {
       id: 1,
       image: "https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=2670&auto=format&fit=crop",
       title: "UNLEASH RADIANT POWER",
-      subtitle: "Dominate the lobby with 58 premium skins.",
+      subtitle: "Dominate the lobby with 50+ premium skins and verified immortal MMR.",
       accent: "text-brand-accent",
       buttonColor: "bg-brand-accent hover:bg-red-600"
     },
     {
       id: 2,
       image: "https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=2670&auto=format&fit=crop",
-      title: "INSTANT ACCESS SECURED",
-      subtitle: "Get credentials delivered to your WhatsApp in seconds.",
+      title: "INSTANT DEPLOYMENT",
+      subtitle: "Get credentials delivered to your WhatsApp in under 120 seconds.",
       accent: "text-brand-cyan",
       buttonColor: "bg-brand-cyan hover:bg-cyan-400 text-brand-darker"
     },
     {
       id: 3,
       image: "https://images.unsplash.com/photo-1538370910416-0411a7ee2188?q=80&w=2670&auto=format&fit=crop",
-      title: "PREMIUM INVENTORY ONLY",
-      subtitle: "Verified Immortal and Ascendant IDs with rare knife bundles.",
+      title: "PREMIUM LOADOUTS ONLY",
+      subtitle: "Rare knife skins and fully upgraded weapon bundles at your fingertips.",
       accent: "text-brand-secondary",
       buttonColor: "bg-brand-secondary hover:bg-purple-600 text-white"
     }
   ],
   trustItems: [
     { label: "Instant", sub: "Auto-Delivery" },
-    { label: "Secure", sub: "No-Ban Policy" },
-    { label: "Cheap", sub: "From ₹49" },
-    { label: "Premium", sub: "Top Skins" }
+    { label: "Secure", sub: "Anti-Ban Tech" },
+    { label: "Cheap", sub: "Starts ₹49" },
+    { label: "Elite", sub: "Verified MMR" }
   ],
   stepItems: [
-    { title: "SELECT ID", desc: "Browse inventory." },
-    { title: "SET TIME", desc: "3h / 12h / 24h." },
-    { title: "SCAN QR", desc: "UPI Payment." },
-    { title: "PLAY NOW", desc: "Credentials via WA." }
+    { title: "SELECT AGENT", desc: "Browse our premium inventory." },
+    { title: "CHOOSE TIME", desc: "Pick 3h, 12h, or 24h plans." },
+    { title: "SECURE PAY", desc: "Scan QR and enter UTR ID." },
+    { title: "PLAY NOW", desc: "Get details on WhatsApp." }
   ],
   reviews: [
     {
@@ -62,13 +63,31 @@ export const DEFAULT_HOME_CONFIG: HomeConfig = {
       quote: 'Got the ID in 2 minutes. The Radiant knife skin is insane!',
       thumbnail: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=1000&auto=format&fit=crop',
       videoUrl: 'https://sample-videos.com/video321/mp4/720/big_buck_bunny_720p_1mb.mp4'
+    },
+    {
+      id: 2,
+      type: 'text',
+      name: 'Rohan Varma',
+      rank: 'Immortal',
+      quote: 'Best service for streamers. Always reliable and cheap rates.',
+      rating: 5,
+      date: '2 DAYS AGO'
+    },
+    {
+      id: 3,
+      type: 'text',
+      name: 'Ishan K.',
+      rank: 'Platinum',
+      quote: 'Used it for 3 days straight. No issues, instant support.',
+      rating: 5,
+      date: '5 HOURS AGO'
     }
   ],
   cta: {
     titleLine1: "Dont Just Play.",
     titleLine2: "DOMINATE.",
     subtitle: "Inventory updated every 24 hours. Grab your main before it's gone.",
-    buttonText: "BROWSE ACCOUNTS"
+    buttonText: "VIEW LIVE INVENTORY"
   }
 };
 
@@ -162,13 +181,20 @@ export const StorageService = {
   },
 
   getHomeConfig: async (): Promise<HomeConfig> => {
-    const { data, error } = await supabase.from('home_config').select('data').eq('id', 'global').single();
-    if (error || !data?.data?.heroSlides || data.data.heroSlides.length === 0) return DEFAULT_HOME_CONFIG;
-    return data.data as HomeConfig;
+    try {
+      const { data, error } = await supabase.from('home_config').select('data').eq('id', 'global').single();
+      if (error || !data?.data || !data.data.heroSlides || data.data.heroSlides.length === 0) {
+        return DEFAULT_HOME_CONFIG;
+      }
+      return data.data as HomeConfig;
+    } catch {
+      return DEFAULT_HOME_CONFIG;
+    }
   },
 
   saveHomeConfig: async (config: HomeConfig) => {
-    await supabase.from('home_config').upsert({ id: 'global', data: config });
+    const { error } = await supabase.from('home_config').upsert({ id: 'global', data: config });
+    if (error) throw error;
     window.dispatchEvent(new Event('storage'));
   },
 
