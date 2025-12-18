@@ -26,7 +26,7 @@ const Browse: React.FC = () => {
       // Search in Name, Skins array, Rank, or ID
       return (
           account.name.toLowerCase().includes(term) ||
-          account.skins.some(skin => skin.toLowerCase().includes(term)) ||
+          account.skins.some(skin => skin.name.toLowerCase().includes(term)) ||
           account.rank.toLowerCase().includes(term) ||
           account.id.toLowerCase().includes(term)
       );
