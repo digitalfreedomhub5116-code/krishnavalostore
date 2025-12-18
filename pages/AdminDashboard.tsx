@@ -1,10 +1,9 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { Navigate, useNavigate, Link } from 'react-router-dom';
 import { StorageService } from '../services/storage';
 import { AIService } from '../services/ai';
 import { Account, Booking, BookingStatus, Rank, User, HomeConfig, HeroSlide, Review, Skin } from '../types';
-import { Plus, Trash2, Check, X, Edit2, Loader2, LogOut, Square, CheckSquare, BarChart3, IndianRupee, Users, Gamepad2, TrendingUp, Phone, Mail, Calendar, Home, Save, Zap, Shield, Star, MessageSquare, AlertCircle, Cpu, ClipboardList, Search, CheckCircle2 } from 'lucide-react';
+import { Plus, Trash2, Check, X, Edit2, Loader2, LogOut, Square, CheckSquare, BarChart3, IndianRupee, Users, Gamepad2, TrendingUp, Phone, Mail, Calendar, Home, Save, Zap, Shield, Star, MessageSquare, AlertCircle, Cpu, ClipboardList, Search, CheckCircle2, Video, FileText, Play } from 'lucide-react';
 
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -18,6 +17,10 @@ const AdminDashboard: React.FC = () => {
   const [homeConfig, setHomeConfig] = useState<HomeConfig>(StorageService.getHomeConfig());
   const [configSaved, setConfigSaved] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // Review Editor State
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [editingReview, setEditingReview] = useState<Partial<Review> | null>(null);
 
   // Auditor State
   const [auditLogs, setAuditLogs] = useState('');
@@ -202,6 +205,49 @@ const AdminDashboard: React.FC = () => {
     const newMarquee = [...homeConfig.marqueeText];
     newMarquee[idx] = text;
     setHomeConfig({ ...homeConfig, marqueeText: newMarquee });
+  };
+
+  // --- Review Operations ---
+  const handleAddReview = () => {
+    setEditingReview({
+      id: Date.now(),
+      type: 'text',
+      name: '',
+      rank: 'Diamond',
+      quote: '',
+      rating: 5,
+      date: 'Just now'
+    });
+    setShowReviewModal(true);
+  };
+
+  const handleEditReview = (review: Review) => {
+    setEditingReview({ ...review });
+    setShowReviewModal(true);
+  };
+
+  const handleSaveReview = () => {
+    if (!editingReview || !editingReview.name || !editingReview.quote) return;
+    
+    const reviews = [...homeConfig.reviews];
+    const index = reviews.findIndex(r => r.id === editingReview.id);
+    
+    if (index >= 0) {
+      reviews[index] = editingReview as Review;
+    } else {
+      reviews.push(editingReview as Review);
+    }
+    
+    setHomeConfig({ ...homeConfig, reviews });
+    setShowReviewModal(false);
+    setEditingReview(null);
+  };
+
+  const handleDeleteReview = (id: number) => {
+    if (window.confirm("Remove this review from community intel?")) {
+      const reviews = homeConfig.reviews.filter(r => r.id !== id);
+      setHomeConfig({ ...homeConfig, reviews });
+    }
   };
 
   return (
@@ -513,6 +559,59 @@ const AdminDashboard: React.FC = () => {
               </div>
            </div>
 
+           {/* Community Intel Section */}
+           <div className="bg-brand-surface border border-white/10 rounded-xl p-6">
+              <div className="flex justify-between items-center mb-6 border-b border-white/5 pb-3">
+                 <h3 className="text-lg font-bold flex items-center gap-2">
+                    <Star className="w-5 h-5 text-brand-cyan" /> Community Intel
+                 </h3>
+                 <button 
+                  onClick={handleAddReview}
+                  className="px-4 py-2 bg-brand-cyan/10 border border-brand-cyan/30 text-brand-cyan rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-brand-cyan hover:text-brand-dark transition-all flex items-center gap-2"
+                 >
+                    <Plus className="w-4 h-4" /> Add Review
+                 </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                 {homeConfig.reviews.map((review) => (
+                    <div key={review.id} className="bg-brand-dark border border-white/5 rounded-xl p-4 flex flex-col group relative overflow-hidden">
+                       <div className="flex justify-between items-start mb-4">
+                          <div className="flex items-center gap-3">
+                             {review.type === 'video' ? <Video className="w-4 h-4 text-brand-cyan" /> : <FileText className="w-4 h-4 text-brand-secondary" />}
+                             <div>
+                                <div className="text-white font-bold text-sm">{review.name}</div>
+                                <div className="text-[10px] text-slate-500 uppercase">{review.rank}</div>
+                             </div>
+                          </div>
+                          <div className="flex gap-1">
+                             <button onClick={() => handleEditReview(review)} className="p-1.5 text-slate-500 hover:text-white transition-colors"><Edit2 className="w-4 h-4" /></button>
+                             <button onClick={() => handleDeleteReview(review.id)} className="p-1.5 text-slate-500 hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                          </div>
+                       </div>
+                       
+                       {review.type === 'video' && review.thumbnail && (
+                          <div className="relative aspect-video rounded-lg overflow-hidden mb-3 bg-black">
+                             <img src={review.thumbnail} className="w-full h-full object-cover opacity-60" alt="" />
+                             <div className="absolute inset-0 flex items-center justify-center"><Play className="w-6 h-6 text-white" /></div>
+                          </div>
+                       )}
+
+                       <p className="text-xs text-slate-400 italic line-clamp-3 mb-4 flex-1">"{review.quote}"</p>
+                       
+                       <div className="flex justify-between items-center pt-3 border-t border-white/5">
+                          <span className="text-[10px] font-mono text-slate-600">{review.date || 'Recent'}</span>
+                          {review.rating && (
+                             <div className="flex gap-0.5 text-yellow-500">
+                                {Array.from({length: review.rating}).map((_, i) => <Star key={i} size={8} fill="currentColor" />)}
+                             </div>
+                          )}
+                       </div>
+                    </div>
+                 ))}
+              </div>
+           </div>
+
            {/* Value Props & Steps */}
            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="bg-brand-surface border border-white/10 rounded-xl p-6">
@@ -616,6 +715,116 @@ const AdminDashboard: React.FC = () => {
                       className="w-full bg-brand-dark border border-white/10 rounded px-3 py-2 text-white text-sm h-20 resize-none"
                     />
                  </div>
+              </div>
+           </div>
+        </div>
+      )}
+
+      {showReviewModal && editingReview && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+           <div className="bg-brand-surface border border-white/10 rounded-2xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
+              <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
+                 <MessageSquare className="w-5 h-5 text-brand-cyan" /> {editingReview.id ? 'Edit Review' : 'Add New Review'}
+              </h2>
+              
+              <div className="space-y-4">
+                 <div className="grid grid-cols-2 gap-4">
+                    <div>
+                       <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2">Review Type</label>
+                       <select 
+                        value={editingReview.type} 
+                        onChange={e => setEditingReview({...editingReview, type: e.target.value as any})}
+                        className="w-full bg-brand-dark border border-white/10 rounded px-3 py-2 text-white text-sm"
+                       >
+                          <option value="text">Text Only</option>
+                          <option value="video">Video Intel</option>
+                       </select>
+                    </div>
+                    <div>
+                       <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2">Agent Rank</label>
+                       <input 
+                        type="text" 
+                        value={editingReview.rank} 
+                        onChange={e => setEditingReview({...editingReview, rank: e.target.value})}
+                        className="w-full bg-brand-dark border border-white/10 rounded px-3 py-2 text-white text-sm"
+                        placeholder="e.g. Immortal"
+                       />
+                    </div>
+                 </div>
+
+                 <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2">Agent Name</label>
+                    <input 
+                     type="text" 
+                     value={editingReview.name} 
+                     onChange={e => setEditingReview({...editingReview, name: e.target.value})}
+                     className="w-full bg-brand-dark border border-white/10 rounded px-3 py-2 text-white text-sm"
+                     placeholder="Reviewer name"
+                    />
+                 </div>
+
+                 <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2">Quote / Message</label>
+                    <textarea 
+                     value={editingReview.quote} 
+                     onChange={e => setEditingReview({...editingReview, quote: e.target.value})}
+                     className="w-full bg-brand-dark border border-white/10 rounded px-3 py-2 text-white text-sm h-24 resize-none"
+                     placeholder="What did they say about the service?"
+                    />
+                 </div>
+
+                 {editingReview.type === 'video' ? (
+                   <>
+                     <div>
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2">Video Thumbnail URL</label>
+                        <input 
+                         type="text" 
+                         value={editingReview.thumbnail} 
+                         onChange={e => setEditingReview({...editingReview, thumbnail: e.target.value})}
+                         className="w-full bg-brand-dark border border-white/10 rounded px-3 py-2 text-brand-cyan text-xs font-mono"
+                         placeholder="https://..."
+                        />
+                     </div>
+                     <div>
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2">Video Source URL (MP4)</label>
+                        <input 
+                         type="text" 
+                         value={editingReview.videoUrl} 
+                         onChange={e => setEditingReview({...editingReview, videoUrl: e.target.value})}
+                         className="w-full bg-brand-dark border border-white/10 rounded px-3 py-2 text-brand-cyan text-xs font-mono"
+                         placeholder="https://..."
+                        />
+                     </div>
+                   </>
+                 ) : (
+                   <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2">Rating (1-5)</label>
+                        <input 
+                          type="number" 
+                          min="1" max="5"
+                          value={editingReview.rating} 
+                          onChange={e => setEditingReview({...editingReview, rating: parseInt(e.target.value)})}
+                          className="w-full bg-brand-dark border border-white/10 rounded px-3 py-2 text-white text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2">Date Label</label>
+                        <input 
+                          type="text" 
+                          value={editingReview.date} 
+                          onChange={e => setEditingReview({...editingReview, date: e.target.value})}
+                          className="w-full bg-brand-dark border border-white/10 rounded px-3 py-2 text-white text-sm"
+                          placeholder="e.g. 2 days ago"
+                        />
+                      </div>
+                   </div>
+                 )}
+              </div>
+
+              <div className="flex gap-4 mt-8">
+                 <button onClick={handleSaveReview} className="flex-1 bg-brand-accent py-3 rounded-lg font-bold text-white shadow-lg hover:bg-red-600 transition-colors uppercase tracking-widest text-xs">Save Review</button>
+                 <button onClick={() => setShowReviewModal(false)} className="flex-1 border border-white/10 py-3 rounded-lg text-slate-400 hover:text-white transition-colors uppercase tracking-widest text-xs">Cancel</button>
               </div>
            </div>
         </div>
