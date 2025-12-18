@@ -39,15 +39,15 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       <div className="scanlines"></div>
 
       {/* GLOBAL BRAND HEADER - Non-sticky, scrolls with the page */}
-      <div className="w-full bg-black/80 border-b border-white/5 py-4 md:py-6 flex justify-center items-center relative z-40 overflow-hidden">
+      <div className="w-full bg-black/80 border-b border-white/5 py-6 md:py-10 lg:py-12 flex justify-center items-center relative z-40 overflow-hidden">
         <div className="absolute inset-0 bg-brand-accent/5 pointer-events-none"></div>
         {/* Animated Background Shimmer for the Header */}
         <div className="absolute inset-y-0 left-0 w-1/3 bg-gradient-to-r from-transparent via-white/5 to-transparent -skew-x-12 animate-[marquee_5s_linear_infinite] opacity-30"></div>
         
         <div className="max-w-7xl w-full px-4 flex items-center justify-center relative">
-          <Link to="/" className="flex items-center gap-3 group relative z-10 transition-transform duration-300 hover:scale-105">
-            <Shield className="h-7 w-7 md:h-8 md:w-8 text-brand-accent transition-all duration-500 group-hover:rotate-12 group-hover:drop-shadow-[0_0_15px_rgba(255,70,85,0.6)]" />
-            <span className="font-display font-bold text-xl md:text-2xl lg:text-3xl tracking-tighter text-white whitespace-nowrap">
+          <Link to="/" className="flex items-center gap-4 md:gap-6 group relative z-10 transition-transform duration-300 hover:scale-105">
+            <Shield className="h-8 w-8 md:h-12 md:w-12 text-brand-accent transition-all duration-500 group-hover:rotate-12 group-hover:drop-shadow-[0_0_20px_rgba(255,70,85,0.7)]" />
+            <span className="font-display font-black text-2xl md:text-5xl lg:text-6xl tracking-tighter text-white whitespace-nowrap uppercase italic">
               KRISHNA <span className="text-brand-accent">VALO</span> STORE
             </span>
           </Link>

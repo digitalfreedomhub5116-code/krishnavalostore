@@ -40,6 +40,9 @@ const ProductDetails: React.FC = () => {
 
   const isAvailable = !account.isBooked;
   const displayPrice = selectedDuration === 'hours24' ? Math.floor(account.pricing.hours24 * 0.9) : account.pricing[selectedDuration];
+  
+  // Use the admin-configured limit or default to 10
+  const initialSkinsLimit = account.initialSkinsCount || 10;
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6 pb-32">
@@ -57,11 +60,18 @@ const ProductDetails: React.FC = () => {
             <div className="bg-brand-surface/40 border border-white/5 rounded-2xl p-6">
                <h3 className="text-sm font-bold text-white mb-6 uppercase tracking-widest flex items-center gap-2"><Gem size={16} className="text-brand-cyan" /> Loadout</h3>
                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {account.skins.slice(0, isSkinsExpanded ? undefined : 10).map((s, i) => (
+                  {account.skins.slice(0, isSkinsExpanded ? undefined : initialSkinsLimit).map((s, i) => (
                     <div key={i} className={`p-3 rounded-xl text-xs border ${s.isHighlighted ? 'bg-brand-cyan/10 border-brand-cyan/30 text-brand-cyan' : 'bg-brand-dark/50 border-white/5 text-slate-300'}`}>{s.name}</div>
                   ))}
                </div>
-               {account.skins.length > 10 && <button onClick={() => setIsSkinsExpanded(!isSkinsExpanded)} className="w-full mt-4 text-[10px] font-bold text-slate-500 uppercase">{isSkinsExpanded ? 'Show Less' : `Show All (${account.skins.length})`}</button>}
+               {account.skins.length > initialSkinsLimit && (
+                 <button 
+                   onClick={() => setIsSkinsExpanded(!isSkinsExpanded)} 
+                   className="w-full mt-6 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-[11px] font-bold text-slate-300 uppercase tracking-widest transition-all flex items-center justify-center gap-2"
+                 >
+                   {isSkinsExpanded ? <><ChevronUp size={14} /> View Less</> : <><ChevronDown size={14} /> View All Skins ({account.skins.length})</>}
+                 </button>
+               )}
             </div>
          </div>
 

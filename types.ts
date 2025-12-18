@@ -28,6 +28,7 @@ export interface Account {
   rank: Rank;
   skins: Skin[];
   totalSkins?: number; 
+  initialSkinsCount?: number; // Added: Control for initial skins display limit
   description?: string; 
   pricing: Pricing;
   imageUrl: string;

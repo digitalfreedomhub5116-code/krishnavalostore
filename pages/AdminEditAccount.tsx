@@ -1,8 +1,9 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { StorageService } from '../services/storage';
 import { Account, Rank, Pricing, Skin } from '../types';
-import { ArrowLeft, Save, Trash2, Plus, X, Loader2, Image as ImageIcon, Gem, Shield, Clock, Star } from 'lucide-react';
+import { ArrowLeft, Save, Trash2, Plus, X, Loader2, Image as ImageIcon, Gem, Shield, Clock, Star, List } from 'lucide-react';
 
 const AdminEditAccount: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -195,6 +196,25 @@ const AdminEditAccount: React.FC = () => {
                </div>
             </div>
             <p className="mt-4 text-xs text-slate-500 italic">Note: The system automatically applies a 10% discount on the 24h rate for the user interface if configured in checkout logic.</p>
+          </div>
+
+          <div className="bg-brand-surface border border-white/10 rounded-xl p-6">
+            <div className="flex justify-between items-center mb-6 border-b border-white/5 pb-3">
+               <h3 className="text-lg font-bold flex items-center gap-2">
+                  <List className="w-5 h-5 text-brand-cyan" /> Display Settings
+               </h3>
+            </div>
+            <div className="max-w-xs">
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Initial Skins Visible (Expand Limit)</label>
+              <input 
+                type="number" 
+                value={account.initialSkinsCount || 10}
+                onChange={(e) => handleUpdateField('initialSkinsCount', parseInt(e.target.value) || 0)}
+                className="w-full bg-brand-dark border border-white/10 rounded-lg px-4 py-3 text-white font-mono outline-none focus:border-brand-cyan"
+                placeholder="Default: 10"
+              />
+              <p className="mt-2 text-[10px] text-slate-500 uppercase">Controls how many skins show before the "View More" button appears.</p>
+            </div>
           </div>
 
           <div className="bg-brand-surface border border-white/10 rounded-xl p-6">
