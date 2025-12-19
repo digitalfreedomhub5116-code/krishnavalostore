@@ -1,4 +1,5 @@
 
+
 export enum Rank {
   IRON = 'Iron',
   BRONZE = 'Bronze',
@@ -112,12 +113,25 @@ export interface StepItem {
   desc: string;
 }
 
+export interface UltraPointsConfig {
+  tagline: string;
+  titlePart1: string;
+  titleHighlight: string;
+  titlePart2: string;
+  description: string;
+  card1Title: string;
+  card1Desc: string;
+  card2Title: string;
+  card2Desc: string;
+}
+
 export interface HomeConfig {
   marqueeText: string[];
   heroSlides: HeroSlide[];
   trustItems: TrustItem[]; 
   stepItems: StepItem[];   
   reviews: Review[];
+  ultraPoints?: UltraPointsConfig;
   cta: {
     titleLine1: string;
     titleLine2: string; 

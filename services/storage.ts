@@ -1,4 +1,5 @@
 
+
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { Account, Booking, Rank, BookingStatus, User, HomeConfig, Skin } from '../types';
 
@@ -85,6 +86,17 @@ export const DEFAULT_HOME_CONFIG: HomeConfig = {
       videoUrl: 'https://sample-videos.com/video321/mp4/720/big_buck_bunny_720p_1mb.mp4'
     }
   ],
+  ultraPoints: {
+    tagline: "NEW REWARDS PROTOCOL",
+    titlePart1: "EARN",
+    titleHighlight: "ULTRA POINTS",
+    titlePart2: "WHILE YOU PLAY",
+    description: "Join the most rewarding rental ecosystem. Every deployment earns you points that convert directly into Valorant Points (VP) for your main account.",
+    card1Title: "Earn 1 UP for ₹9",
+    card1Desc: "Simply rent any ID. Points are calculated as Amount / 9 and added on approval.",
+    card2Title: "1 UP = 2 VP",
+    card2Desc: "Your earned points double in value when converting to Valorant Point vouchers."
+  },
   cta: {
     titleLine1: "Dont Just Play.",
     titleLine2: "DOMINATE.",
@@ -210,6 +222,7 @@ export const StorageService = {
         marqueeText: config.marqueeText && config.marqueeText.length > 0 ? config.marqueeText : DEFAULT_HOME_CONFIG.marqueeText,
         stepItems: config.stepItems && config.stepItems.length > 0 ? config.stepItems : DEFAULT_HOME_CONFIG.stepItems,
         reviews: config.reviews && config.reviews.length > 0 ? config.reviews : DEFAULT_HOME_CONFIG.reviews,
+        ultraPoints: config.ultraPoints || DEFAULT_HOME_CONFIG.ultraPoints,
         cta: config.cta || DEFAULT_HOME_CONFIG.cta
       };
     } catch {

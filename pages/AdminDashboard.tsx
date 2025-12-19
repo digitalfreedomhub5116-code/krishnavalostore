@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { Navigate, useNavigate, Link } from 'react-router-dom';
 import { createPortal } from 'react-dom';
@@ -299,6 +300,61 @@ const AdminDashboard: React.FC = () => {
                         </div>
                     ))}
                     <button onClick={() => setHomeConfig({...homeConfig, heroSlides: [...homeConfig.heroSlides, { id: Date.now(), title: "NEW TITLE", subtitle: "NEW SUBTITLE", image: "", accent: "text-brand-accent", buttonColor: "bg-brand-accent" }]})} className="border-2 border-dashed border-white/10 rounded-xl p-6 flex flex-col items-center justify-center text-slate-600 hover:border-brand-cyan hover:text-brand-cyan transition-all"><Plus size={24} /><span className="text-[10px] font-bold uppercase tracking-widest mt-2">Add New Slide</span></button>
+                </div>
+            </section>
+
+            <section className="bg-brand-surface border border-white/10 rounded-xl p-6">
+                <div className="flex justify-between items-center mb-6 border-b border-white/5 pb-4">
+                    <h3 className="text-xs font-bold text-white flex items-center gap-2 uppercase tracking-[0.3em] text-slate-400"><Award className="text-yellow-500" size={16} /> Ultra Points Section</h3>
+                </div>
+                <div className="space-y-4">
+                    <div>
+                        <label className="block text-[9px] font-bold text-slate-500 uppercase mb-1">Tagline</label>
+                        <input type="text" value={homeConfig.ultraPoints?.tagline || ''} onChange={e => setHomeConfig({...homeConfig, ultraPoints: {...(homeConfig.ultraPoints || DEFAULT_HOME_CONFIG.ultraPoints!), tagline: e.target.value}})} className="w-full bg-brand-dark border border-white/10 rounded-lg px-4 py-2.5 text-sm text-yellow-500 focus:border-yellow-500 outline-none transition-all" />
+                    </div>
+                    <div className="grid grid-cols-3 gap-4">
+                         <div>
+                            <label className="block text-[9px] font-bold text-slate-500 uppercase mb-1">Title Part 1</label>
+                            <input type="text" value={homeConfig.ultraPoints?.titlePart1 || ''} onChange={e => setHomeConfig({...homeConfig, ultraPoints: {...(homeConfig.ultraPoints || DEFAULT_HOME_CONFIG.ultraPoints!), titlePart1: e.target.value}})} className="w-full bg-brand-dark border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white focus:border-white outline-none transition-all" />
+                         </div>
+                         <div>
+                            <label className="block text-[9px] font-bold text-slate-500 uppercase mb-1">Highlight (Yellow)</label>
+                            <input type="text" value={homeConfig.ultraPoints?.titleHighlight || ''} onChange={e => setHomeConfig({...homeConfig, ultraPoints: {...(homeConfig.ultraPoints || DEFAULT_HOME_CONFIG.ultraPoints!), titleHighlight: e.target.value}})} className="w-full bg-brand-dark border border-white/10 rounded-lg px-4 py-2.5 text-sm text-yellow-500 focus:border-yellow-500 outline-none transition-all" />
+                         </div>
+                         <div>
+                            <label className="block text-[9px] font-bold text-slate-500 uppercase mb-1">Title Part 2 (New Line)</label>
+                            <input type="text" value={homeConfig.ultraPoints?.titlePart2 || ''} onChange={e => setHomeConfig({...homeConfig, ultraPoints: {...(homeConfig.ultraPoints || DEFAULT_HOME_CONFIG.ultraPoints!), titlePart2: e.target.value}})} className="w-full bg-brand-dark border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white focus:border-white outline-none transition-all" />
+                         </div>
+                    </div>
+                    <div>
+                        <label className="block text-[9px] font-bold text-slate-500 uppercase mb-1">Description</label>
+                        <textarea rows={3} value={homeConfig.ultraPoints?.description || ''} onChange={e => setHomeConfig({...homeConfig, ultraPoints: {...(homeConfig.ultraPoints || DEFAULT_HOME_CONFIG.ultraPoints!), description: e.target.value}})} className="w-full bg-brand-dark border border-white/10 rounded-lg px-4 py-2.5 text-sm text-slate-300 focus:border-white outline-none transition-all resize-none" />
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-white/5">
+                         <div className="space-y-3">
+                             <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Card 1 Config</h4>
+                             <div>
+                                <label className="block text-[9px] font-bold text-slate-500 uppercase mb-1">Title</label>
+                                <input type="text" value={homeConfig.ultraPoints?.card1Title || ''} onChange={e => setHomeConfig({...homeConfig, ultraPoints: {...(homeConfig.ultraPoints || DEFAULT_HOME_CONFIG.ultraPoints!), card1Title: e.target.value}})} className="w-full bg-brand-dark border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white" />
+                             </div>
+                             <div>
+                                <label className="block text-[9px] font-bold text-slate-500 uppercase mb-1">Description</label>
+                                <input type="text" value={homeConfig.ultraPoints?.card1Desc || ''} onChange={e => setHomeConfig({...homeConfig, ultraPoints: {...(homeConfig.ultraPoints || DEFAULT_HOME_CONFIG.ultraPoints!), card1Desc: e.target.value}})} className="w-full bg-brand-dark border border-white/10 rounded-lg px-4 py-2.5 text-sm text-slate-400" />
+                             </div>
+                         </div>
+                         <div className="space-y-3">
+                             <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Card 2 Config</h4>
+                             <div>
+                                <label className="block text-[9px] font-bold text-slate-500 uppercase mb-1">Title</label>
+                                <input type="text" value={homeConfig.ultraPoints?.card2Title || ''} onChange={e => setHomeConfig({...homeConfig, ultraPoints: {...(homeConfig.ultraPoints || DEFAULT_HOME_CONFIG.ultraPoints!), card2Title: e.target.value}})} className="w-full bg-brand-dark border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white" />
+                             </div>
+                             <div>
+                                <label className="block text-[9px] font-bold text-slate-500 uppercase mb-1">Description</label>
+                                <input type="text" value={homeConfig.ultraPoints?.card2Desc || ''} onChange={e => setHomeConfig({...homeConfig, ultraPoints: {...(homeConfig.ultraPoints || DEFAULT_HOME_CONFIG.ultraPoints!), card2Desc: e.target.value}})} className="w-full bg-brand-dark border border-white/10 rounded-lg px-4 py-2.5 text-sm text-slate-400" />
+                             </div>
+                         </div>
+                    </div>
                 </div>
             </section>
 
