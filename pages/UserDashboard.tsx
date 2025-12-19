@@ -36,7 +36,7 @@ const UserDashboard: React.FC = () => {
     loadData();
     
     const unsubscribe = StorageService.subscribe(loadData);
-    return () => unsubscribe();
+    return () => { unsubscribe(); };
   }, []);
 
   const handleLogout = () => {
