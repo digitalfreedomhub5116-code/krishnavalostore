@@ -1,8 +1,8 @@
 
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Shield, Loader2, Gamepad2, AlertTriangle, User, Mail, Phone, Lock, ArrowRight } from 'lucide-react';
-import { StorageService } from '../services/storage';
+import { Loader2, Gamepad2, AlertTriangle, User, Mail, Phone, Lock, ArrowRight } from 'lucide-react';
+import { StorageService, SITE_LOGO_URL } from '../services/storage';
 
 const UserAuth: React.FC = () => {
   const [isRegistering, setIsRegistering] = useState(false);
@@ -67,7 +67,7 @@ const UserAuth: React.FC = () => {
                 <div className="relative inline-block mb-4 group">
                    <div className="absolute inset-0 bg-brand-accent blur-xl opacity-20 group-hover:opacity-40 transition-opacity"></div>
                    <div className="relative p-4 rounded-2xl bg-brand-surface border border-white/10 shadow-[0_0_30px_rgba(255,70,85,0.15)]">
-                      <Shield className="w-10 h-10 text-brand-accent" strokeWidth={1.5} />
+                      <img src={SITE_LOGO_URL} alt="Logo" className="w-10 h-10 object-contain" />
                    </div>
                 </div>
 

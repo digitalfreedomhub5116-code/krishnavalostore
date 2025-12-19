@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Shield, UserCog, Home, Gamepad2, User as UserIcon, LogOut, LayoutDashboard, Zap, Award, Sparkles, X, Trophy } from 'lucide-react';
-import { StorageService, DEFAULT_HOME_CONFIG } from '../services/storage';
+import { UserCog, Home, Gamepad2, User as UserIcon, LogOut, LayoutDashboard, Zap, Award, Sparkles, X, Trophy } from 'lucide-react';
+import { StorageService, DEFAULT_HOME_CONFIG, SITE_LOGO_URL } from '../services/storage';
 import { User, HomeConfig } from '../types';
 import SkinSearchFloatingBar from './SkinSearchFloatingBar';
 
@@ -110,7 +110,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         <div className="absolute inset-0 bg-brand-accent/5 pointer-events-none"></div>
         <div className="max-w-7xl w-full px-4 flex items-center justify-center relative">
           <Link to="/" className="flex items-center gap-4 md:gap-6 group relative z-10 transition-transform duration-300 hover:scale-105">
-            <Shield className="h-8 w-8 md:h-12 md:w-12 text-brand-accent transition-all duration-500 group-hover:rotate-12 group-hover:drop-shadow-[0_0_20px_rgba(255,70,85,0.7)]" />
+            <img src={SITE_LOGO_URL} alt="Logo" className="h-8 w-8 md:h-12 md:w-12 object-contain transition-all duration-500 group-hover:rotate-12 group-hover:drop-shadow-[0_0_20px_rgba(255,70,85,0.7)]" />
             <div className="flex items-center">
               <span className="font-display font-black text-2xl md:text-5xl lg:text-6xl tracking-tighter text-white whitespace-nowrap uppercase italic">
                 KRISHNA <span className="text-brand-accent">VALO</span> STORE
