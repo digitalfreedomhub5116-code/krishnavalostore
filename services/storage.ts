@@ -158,6 +158,10 @@ export const StorageService = {
     if (row?.data) {
       const booking = row.data as Booking;
       const oldStatus = booking.status;
+      
+      // Optimization: If status isn't changing, don't do anything
+      if (oldStatus === status) return;
+
       booking.status = status;
       
       await getSupabase().from('bookings').update({ data: booking, status: status }).eq('order_id', orderId);
@@ -191,6 +195,31 @@ export const StorageService = {
       }
       
       notifyStorageChange();
+    }
+  },
+
+  // Automatically check for expired ACTIVE bookings and mark them as COMPLETED
+  checkExpiredBookings: async () => {
+    try {
+      const bookings = await StorageService.getBookings();
+      const activeBookings = bookings.filter(b => b.status === BookingStatus.ACTIVE);
+      const now = new Date().getTime();
+      let hasUpdates = false;
+
+      for (const booking of activeBookings) {
+        const endTime = new Date(booking.endTime).getTime();
+        if (endTime <= now) {
+          // Booking has expired
+          await StorageService.updateBookingStatus(booking.orderId, BookingStatus.COMPLETED);
+          hasUpdates = true;
+        }
+      }
+
+      if (hasUpdates) {
+        notifyStorageChange();
+      }
+    } catch (e) {
+      console.error("Error checking expired bookings:", e);
     }
   },
 

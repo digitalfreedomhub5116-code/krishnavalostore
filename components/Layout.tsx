@@ -49,11 +49,20 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   useEffect(() => {
     syncData();
+    // Run expiration check immediately on load
+    StorageService.checkExpiredBookings();
+
+    // Set up interval to check for expired bookings every minute
+    const expiryInterval = setInterval(() => {
+        StorageService.checkExpiredBookings();
+    }, 60000);
+
     const unsubscribe = StorageService.subscribe(() => {
       syncData();
     });
     window.addEventListener('storage', syncData);
     return () => {
+      clearInterval(expiryInterval);
       unsubscribe();
       window.removeEventListener('storage', syncData);
     };
