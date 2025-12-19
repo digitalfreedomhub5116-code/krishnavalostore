@@ -142,10 +142,25 @@ export const StorageService = {
     
     if (row?.data) {
       const booking = row.data as Booking;
+      const oldStatus = booking.status;
       booking.status = status;
       
       await getSupabase().from('bookings').update({ data: booking, status: status }).eq('order_id', orderId);
       
+      // Points Logic
+      if (booking.customerId) {
+        const points = Math.floor(booking.totalPrice / 9);
+        
+        // Mark as active (Approved) -> Add points
+        if (oldStatus !== BookingStatus.ACTIVE && status === BookingStatus.ACTIVE) {
+          await StorageService.updateUserPoints(booking.customerId, points);
+        } 
+        // Marked as cancelled -> Deduct points (if they were already added)
+        else if (oldStatus === BookingStatus.ACTIVE && status === BookingStatus.CANCELLED) {
+          await StorageService.updateUserPoints(booking.customerId, -points);
+        }
+      }
+
       const account = await StorageService.getAccountById(booking.accountId);
       
       if (account) {
@@ -160,6 +175,23 @@ export const StorageService = {
         }
       }
       
+      notifyStorageChange();
+    }
+  },
+
+  updateUserPoints: async (userId: string, amount: number) => {
+    const { data: row } = await getSupabase().from('users').select('data').eq('id', userId).single();
+    if (row?.data) {
+      const userData = row.data as User;
+      userData.ultraPoints = (userData.ultraPoints || 0) + amount;
+      
+      await getSupabase().from('users').update({ data: userData }).eq('id', userId);
+      
+      // Update local storage if this is the current user
+      const currentUser = StorageService.getCurrentUser();
+      if (currentUser && currentUser.id === userId) {
+        localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(userData));
+      }
       notifyStorageChange();
     }
   },
@@ -214,6 +246,7 @@ export const StorageService = {
       avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${name}`,
       role: 'customer',
       isVerified: true,
+      ultraPoints: 20, // Welcome Bonus
       createdAt: new Date().toISOString(),
       lastLogin: new Date().toISOString()
     };
@@ -228,6 +261,10 @@ export const StorageService = {
     if (error || !data) throw new Error("Invalid credentials");
     const user = data.data as User;
     if (user.password !== password) throw new Error("Invalid credentials");
+    
+    user.lastLogin = new Date().toISOString();
+    await getSupabase().from('users').update({ data: user }).eq('id', user.id);
+    
     localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
     notifyStorageChange();
     return user;

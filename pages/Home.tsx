@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronRight, Gamepad2, Clock, QrCode, MessageCircle, Play, Star, Zap, Shield, TrendingUp, CheckCircle2, Loader2, ArrowRight } from 'lucide-react';
+import { ChevronRight, Gamepad2, Clock, QrCode, MessageCircle, Play, Star, Zap, Shield, TrendingUp, CheckCircle2, Loader2, ArrowRight, Award, Gift, Gem } from 'lucide-react';
 import CustomVideoPlayer from '../components/CustomVideoPlayer';
 import { StorageService, DEFAULT_HOME_CONFIG } from '../services/storage';
 import { HomeConfig, Review } from '../types';
@@ -152,6 +152,84 @@ const Home: React.FC = () => {
                 <span className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/indicator:opacity-100 transition-opacity pointer-events-none"><span className="w-full h-full bg-white/10"></span></span>
               </button>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ULTRA POINTS SECTION */}
+      <section className="bg-brand-darker py-24 relative overflow-hidden">
+        <div className="absolute inset-0 bg-yellow-500/5 pointer-events-none"></div>
+        <div className="max-w-7xl mx-auto px-4 relative z-10">
+          <div className="flex flex-col lg:flex-row items-center gap-16">
+            <div className="flex-1 space-y-8 animate-on-scroll reveal-left">
+               <div className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-500/10 border border-yellow-500/30 rounded-full text-xs font-black text-yellow-500 uppercase tracking-[0.3em] shadow-[0_0_20px_rgba(234,179,8,0.1)]">
+                  <Award size={14} /> NEW REWARDS PROTOCOL
+               </div>
+               <h2 className="text-5xl md:text-7xl font-display font-black text-white uppercase tracking-tighter italic leading-none">
+                  EARN <span className="text-yellow-500">ULTRA POINTS</span> <br /> WHILE YOU PLAY
+               </h2>
+               <p className="text-slate-400 text-lg leading-relaxed max-w-xl">
+                 Join the most rewarding rental ecosystem. Every deployment earns you points that convert directly into Valorant Points (VP) for your main account.
+               </p>
+               
+               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div className="p-6 bg-brand-surface border border-white/5 rounded-2xl group hover:border-yellow-500/30 transition-all">
+                     <div className="w-12 h-12 bg-yellow-500/20 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                        <Award className="text-yellow-500" />
+                     </div>
+                     <h3 className="font-bold text-white mb-2 uppercase tracking-widest text-sm">Earn 1 UP for ₹9</h3>
+                     <p className="text-slate-500 text-xs leading-relaxed">Simply rent any ID. Points are calculated as Amount / 9 and added on approval.</p>
+                  </div>
+                  <div className="p-6 bg-brand-surface border border-white/5 rounded-2xl group hover:border-yellow-500/30 transition-all">
+                     <div className="w-12 h-12 bg-yellow-500/20 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                        <Gem className="text-yellow-500" />
+                     </div>
+                     <h3 className="font-bold text-white mb-2 uppercase tracking-widest text-sm">1 UP = 2 VP</h3>
+                     <p className="text-slate-500 text-xs leading-relaxed">Your earned points double in value when converting to Valorant Point vouchers.</p>
+                  </div>
+               </div>
+            </div>
+
+            <div className="flex-1 relative animate-on-scroll reveal-right">
+               <div className="absolute inset-0 bg-yellow-500/20 blur-[100px] rounded-full"></div>
+               <div className="relative bg-brand-surface border border-yellow-500/20 rounded-3xl p-8 shadow-2xl backdrop-blur-xl">
+                  <div className="flex justify-between items-center mb-10">
+                     <div className="space-y-1">
+                        <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Active Milestone</div>
+                        <div className="text-2xl font-display font-black text-white uppercase italic">VP VOUCHER 01</div>
+                     </div>
+                     <div className="w-16 h-16 bg-brand-dark rounded-2xl flex items-center justify-center border border-white/5 shadow-inner">
+                        <Gift className="text-yellow-500 w-8 h-8" />
+                     </div>
+                  </div>
+
+                  <div className="space-y-6">
+                     <div className="flex justify-between items-end">
+                        <div className="text-sm font-bold text-white">500 <span className="text-yellow-500">UP</span></div>
+                        <div className="text-xs text-slate-500">GOAL REACHED</div>
+                     </div>
+                     <div className="h-4 bg-brand-dark rounded-full border border-white/5 overflow-hidden p-0.5">
+                        <div className="h-full bg-gradient-to-r from-yellow-600 to-yellow-400 rounded-full shadow-[0_0_20px_rgba(234,179,8,0.4)] animate-pulse" style={{ width: '100%' }}></div>
+                     </div>
+                     <div className="flex justify-between items-center py-4 px-6 bg-brand-dark rounded-xl border border-white/5">
+                        <div className="text-center flex-1">
+                           <div className="text-lg font-black text-white">500 UP</div>
+                           <div className="text-[9px] text-slate-500 uppercase tracking-widest">ULTRA POINTS</div>
+                        </div>
+                        <div className="px-4 text-slate-600">→</div>
+                        <div className="text-center flex-1">
+                           <div className="text-lg font-black text-yellow-500">1000 VP</div>
+                           <div className="text-[9px] text-slate-500 uppercase tracking-widest">VOUCHER CODE</div>
+                        </div>
+                     </div>
+                     <div className="pt-6 text-center">
+                        <Link to="/browse" className="inline-flex items-center gap-2 px-10 py-4 bg-white text-brand-darker font-black text-xs rounded-xl hover:bg-yellow-500 transition-all uppercase tracking-widest shadow-2xl">
+                           START EARNING NOW
+                        </Link>
+                     </div>
+                  </div>
+               </div>
+            </div>
           </div>
         </div>
       </section>

@@ -52,7 +52,8 @@ export interface User {
   isVerified: boolean;
   verificationCode?: string;
   createdAt: string;  
-  lastLogin: string;  
+  lastLogin: string;
+  ultraPoints: number; // Added for gamification
 }
 
 export enum BookingStatus {

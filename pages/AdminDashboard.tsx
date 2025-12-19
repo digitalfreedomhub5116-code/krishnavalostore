@@ -5,8 +5,7 @@ import { createPortal } from 'react-dom';
 import { StorageService, DEFAULT_HOME_CONFIG } from '../services/storage';
 import { AIService } from '../services/ai';
 import { Account, Booking, BookingStatus, Rank, User, HomeConfig, Review, Skin, HeroSlide, TrustItem, StepItem } from '../types';
-// Fixed: Added missing 'Lock' icon to the lucide-react imports to resolve JSX element errors.
-import { Plus, Trash2, Check, X, Edit2, Loader2, LogOut, Square, CheckSquare, BarChart3, IndianRupee, Users, Gamepad2, Home, Save, Zap, Shield, Star, MessageSquare, AlertCircle, Cpu, Search, Video, FileText, Play, Copy, Terminal, Layout, Image as ImageIcon, ShieldCheck, Lock, Ban } from 'lucide-react';
+import { Plus, Trash2, Check, X, Edit2, Loader2, LogOut, Square, CheckSquare, BarChart3, IndianRupee, Users, Gamepad2, Home, Save, Zap, Shield, Star, MessageSquare, AlertCircle, Cpu, Search, Video, FileText, Play, Copy, Terminal, Layout, Image as ImageIcon, ShieldCheck, Lock, Ban, Type as TypeIcon, Minus, Award } from 'lucide-react';
 
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -58,15 +57,9 @@ const AdminDashboard: React.FC = () => {
   useEffect(() => {
     if (isAuthenticated) {
       refreshData();
-      
-      // Subscribe to internal StorageService updates
-      const unsubscribe = StorageService.subscribe(() => {
-        refreshData();
-      });
-
+      const unsubscribe = StorageService.subscribe(refreshData);
       const interval = setInterval(refreshData, 30000);
       window.addEventListener('storage', refreshData);
-      
       return () => {
         unsubscribe();
         clearInterval(interval);
@@ -81,6 +74,11 @@ const AdminDashboard: React.FC = () => {
     activeRentals: accounts.filter(a => a.isBooked).length,
     totalUsers: users.length
   }), [bookings, accounts, users]);
+
+  const handleAdjustPoints = async (userId: string, amount: number) => {
+     await StorageService.updateUserPoints(userId, amount);
+     refreshData();
+  };
 
   const handleDeployAccount = async () => {
     if (!newAccount.name || !newAccount.username || !newAccount.password) {
@@ -107,7 +105,6 @@ const AdminDashboard: React.FC = () => {
     try {
       await StorageService.saveAccount(accountToSave);
       setShowAddModal(false);
-      // Reset form
       setNewAccount({
         name: '', rank: Rank.IRON, skins: [], pricing: { hours3: 49, hours12: 149, hours24: 249 },
         imageUrl: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=1000&auto=format&fit=crop',
@@ -206,8 +203,8 @@ const AdminDashboard: React.FC = () => {
               <tr className="bg-brand-darker text-slate-500 border-b border-white/10 uppercase font-bold tracking-widest text-[10px]">
                 <th className="p-5">Agent</th>
                 <th className="p-5">Contact</th>
-                <th className="p-5">Status</th>
-                <th className="p-5 text-right">Registered</th>
+                <th className="p-5">Ultra Points</th>
+                <th className="p-5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
@@ -227,9 +224,29 @@ const AdminDashboard: React.FC = () => {
                     <div className="text-[10px] text-slate-500 font-mono">{user.phone}</div>
                   </td>
                   <td className="p-5">
-                    <span className="px-2 py-1 bg-green-500/10 text-green-400 border border-green-500/20 rounded text-[10px] font-bold uppercase">Active</span>
+                    <div className="flex items-center gap-2">
+                       <Award size={14} className="text-yellow-500" />
+                       <span className="font-black text-white">{user.ultraPoints || 0} UP</span>
+                    </div>
                   </td>
-                  <td className="p-5 text-right text-slate-500 font-mono text-xs">{new Date(user.createdAt).toLocaleDateString()}</td>
+                  <td className="p-5 text-right">
+                     <div className="flex justify-end gap-2">
+                        <button 
+                          onClick={() => handleAdjustPoints(user.id, 50)}
+                          className="p-1.5 bg-green-500/10 text-green-400 hover:bg-green-500 hover:text-white rounded border border-green-500/20 transition-all"
+                          title="Grant 50 UP"
+                        >
+                           <Plus size={14} />
+                        </button>
+                        <button 
+                          onClick={() => handleAdjustPoints(user.id, -50)}
+                          className="p-1.5 bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white rounded border border-red-500/20 transition-all"
+                          title="Deduct 50 UP"
+                        >
+                           <Minus size={14} />
+                        </button>
+                     </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -284,6 +301,57 @@ const AdminDashboard: React.FC = () => {
                     <button onClick={() => setHomeConfig({...homeConfig, heroSlides: [...homeConfig.heroSlides, { id: Date.now(), title: "NEW TITLE", subtitle: "NEW SUBTITLE", image: "", accent: "text-brand-accent", buttonColor: "bg-brand-accent" }]})} className="border-2 border-dashed border-white/10 rounded-xl p-6 flex flex-col items-center justify-center text-slate-600 hover:border-brand-cyan hover:text-brand-cyan transition-all"><Plus size={24} /><span className="text-[10px] font-bold uppercase tracking-widest mt-2">Add New Slide</span></button>
                 </div>
             </section>
+
+            <section className="bg-brand-surface border border-white/10 rounded-xl p-6">
+                <div className="flex justify-between items-center mb-6 border-b border-white/5 pb-4">
+                    <h3 className="text-xs font-bold text-white flex items-center gap-2 uppercase tracking-[0.3em] text-slate-400"><MessageSquare className="text-brand-cyan" size={16} /> Community Intel (Reviews)</h3>
+                    <button onClick={() => setHomeConfig({...homeConfig, reviews: [...homeConfig.reviews, { id: Date.now(), type: 'text', name: 'Agent X', rank: 'Platinum', quote: 'New review entry...', rating: 5, date: new Date().toLocaleDateString('en-IN', {month: 'short', day: 'numeric'}) }]})} className="text-[10px] font-bold text-brand-cyan hover:underline uppercase">+ ADD INTEL</button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {homeConfig.reviews.map((review, idx) => (
+                        <div key={review.id} className="bg-brand-dark border border-white/5 p-6 rounded-xl space-y-4 group hover:border-brand-cyan/30 transition-all relative overflow-hidden">
+                            <div className="flex justify-between items-center relative z-10">
+                                <div className="flex gap-2">
+                                   <button 
+                                      onClick={() => { const r = [...homeConfig.reviews]; r[idx].type = 'text'; setHomeConfig({...homeConfig, reviews: r}); }}
+                                      className={`px-3 py-1 text-[9px] font-black uppercase rounded ${review.type === 'text' ? 'bg-brand-cyan text-brand-dark' : 'bg-white/5 text-slate-500'}`}
+                                   >
+                                      TEXT
+                                   </button>
+                                   <button 
+                                      onClick={() => { const r = [...homeConfig.reviews]; r[idx].type = 'video'; setHomeConfig({...homeConfig, reviews: r}); }}
+                                      className={`px-3 py-1 text-[9px] font-black uppercase rounded ${review.type === 'video' ? 'bg-brand-accent text-white shadow-[0_0_10px_rgba(255,70,85,0.4)]' : 'bg-white/5 text-slate-500'}`}
+                                   >
+                                      VIDEO
+                                   </button>
+                                </div>
+                                <button onClick={() => { const r = homeConfig.reviews.filter(item => item.id !== review.id); setHomeConfig({...homeConfig, reviews: r}); }} className="text-slate-600 hover:text-red-500 transition-colors"><Trash2 size={16} /></button>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                               <div><label className="block text-[9px] font-bold text-slate-500 uppercase mb-1">Agent Name</label><input type="text" value={review.name} onChange={e => { const r = [...homeConfig.reviews]; r[idx].name = e.target.value; setHomeConfig({...homeConfig, reviews: r}); }} className="w-full bg-brand-surface border border-white/10 rounded px-3 py-2 text-white text-sm" /></div>
+                               <div><label className="block text-[9px] font-bold text-slate-500 uppercase mb-1">Agent Rank</label><input type="text" value={review.rank} onChange={e => { const r = [...homeConfig.reviews]; r[idx].rank = e.target.value; setHomeConfig({...homeConfig, reviews: r}); }} className="w-full bg-brand-surface border border-white/10 rounded px-3 py-2 text-white text-sm" /></div>
+                            </div>
+
+                            <div><label className="block text-[9px] font-bold text-slate-500 uppercase mb-1">Intel Transmission (Quote)</label><textarea rows={3} value={review.quote} onChange={e => { const r = [...homeConfig.reviews]; r[idx].quote = e.target.value; setHomeConfig({...homeConfig, reviews: r}); }} className="w-full bg-brand-surface border border-white/10 rounded px-3 py-2 text-slate-300 text-sm italic resize-none" /></div>
+
+                            {review.type === 'video' ? (
+                               <div className="space-y-3 animate-in fade-in zoom-in-95 duration-200">
+                                  <div className="grid grid-cols-1 gap-3">
+                                     <div><label className="block text-[9px] font-bold text-slate-500 uppercase mb-1">Video Source URL (.mp4)</label><input type="text" value={review.videoUrl || ''} onChange={e => { const r = [...homeConfig.reviews]; r[idx].videoUrl = e.target.value; setHomeConfig({...homeConfig, reviews: r}); }} className="w-full bg-brand-surface border border-white/10 rounded px-3 py-2 text-brand-cyan text-[10px] font-mono" placeholder="Direct MP4 link..." /></div>
+                                     <div><label className="block text-[9px] font-bold text-slate-500 uppercase mb-1">Thumbnail Intelligence URL</label><div className="flex gap-2"><input type="text" value={review.thumbnail || ''} onChange={e => { const r = [...homeConfig.reviews]; r[idx].thumbnail = e.target.value; setHomeConfig({...homeConfig, reviews: r}); }} className="flex-1 bg-brand-surface border border-white/10 rounded px-3 py-2 text-slate-500 text-[10px] font-mono" placeholder="Image link..." /><div className="w-10 h-10 bg-black rounded overflow-hidden flex-shrink-0 border border-white/10"><img src={review.thumbnail} className="w-full h-full object-cover" alt="" /></div></div></div>
+                                  </div>
+                               </div>
+                            ) : (
+                               <div className="grid grid-cols-2 gap-4 animate-in fade-in zoom-in-95 duration-200">
+                                  <div><label className="block text-[9px] font-bold text-slate-500 uppercase mb-1">Rating (1-5)</label><input type="number" min="1" max="5" value={review.rating || 5} onChange={e => { const r = [...homeConfig.reviews]; r[idx].rating = parseInt(e.target.value); setHomeConfig({...homeConfig, reviews: r}); }} className="w-full bg-brand-surface border border-white/10 rounded px-3 py-2 text-yellow-400 font-bold" /></div>
+                                  <div><label className="block text-[9px] font-bold text-slate-500 uppercase mb-1">Timestamp</label><input type="text" value={review.date || ''} onChange={e => { const r = [...homeConfig.reviews]; r[idx].date = e.target.value; setHomeConfig({...homeConfig, reviews: r}); }} className="w-full bg-brand-surface border border-white/10 rounded px-3 py-2 text-slate-400 text-xs" /></div>
+                               </div>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            </section>
          </div>
       )}
 
@@ -294,7 +362,6 @@ const AdminDashboard: React.FC = () => {
               <div className="p-6 border-b border-white/5 bg-brand-dark flex justify-between items-center"><div className="flex items-center gap-3"><ShieldCheck className="text-brand-cyan" size={24} /><h2 className="text-xl font-bold text-white uppercase tracking-tighter italic">Vanguard Agent Deployment</h2></div><button onClick={() => setShowAddModal(false)} className="text-slate-500 hover:text-white transition-colors"><X size={24}/></button></div>
               <div className="flex-1 overflow-y-auto p-8 space-y-8">
                  <section className="space-y-4"><h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.4em] mb-4">Identity & Visuals</h3><div className="grid grid-cols-1 md:grid-cols-2 gap-6"><div><label className="block text-xs font-bold text-slate-400 uppercase mb-2">Display Name</label><input type="text" value={newAccount.name} onChange={e => setNewAccount({...newAccount, name: e.target.value})} className="w-full bg-brand-dark border border-white/10 rounded-lg px-4 py-3 text-white focus:border-brand-accent outline-none" placeholder="e.g. Radiant Beast #IND" /></div><div><label className="block text-xs font-bold text-slate-400 uppercase mb-2">Rank</label><select value={newAccount.rank} onChange={e => setNewAccount({...newAccount, rank: e.target.value as Rank})} className="w-full bg-brand-dark border border-white/10 rounded-lg px-4 py-3 text-white focus:border-brand-accent outline-none cursor-pointer">{Object.values(Rank).map(r => <option key={r} value={r}>{r}</option>)}</select></div></div><div><label className="block text-xs font-bold text-slate-400 uppercase mb-2">Hero Intelligence URL (Image)</label><input type="text" value={newAccount.imageUrl} onChange={e => setNewAccount({...newAccount, imageUrl: e.target.value})} className="w-full bg-brand-dark border border-white/10 rounded-lg px-4 py-3 text-brand-cyan font-mono text-xs focus:border-brand-cyan outline-none" /></div></section>
-                 {/* Fixed: Lock icon is now imported and correctly used here. */}
                  <section className="space-y-4 bg-brand-accent/5 p-6 rounded-xl border border-brand-accent/20"><h3 className="text-[10px] font-bold text-brand-accent uppercase tracking-[0.4em] mb-4 flex items-center gap-2"><Lock size={14} /> Secure Credentials</h3><div className="grid grid-cols-1 md:grid-cols-2 gap-6"><div><label className="block text-xs font-bold text-slate-400 uppercase mb-2">Riot Username</label><input type="text" value={newAccount.username} onChange={e => setNewAccount({...newAccount, username: e.target.value})} className="w-full bg-brand-dark border border-white/10 rounded-lg px-4 py-3 text-white focus:border-brand-accent outline-none font-mono" /></div><div><label className="block text-xs font-bold text-slate-400 uppercase mb-2">Riot Password</label><input type="text" value={newAccount.password} onChange={e => setNewAccount({...newAccount, password: e.target.value})} className="w-full bg-brand-dark border border-white/10 rounded-lg px-4 py-3 text-white focus:border-brand-accent outline-none font-mono" /></div></div></section>
               </div>
               <div className="p-6 border-t border-white/5 bg-brand-dark flex gap-4"><button onClick={() => setShowAddModal(false)} className="flex-1 py-4 border border-white/10 text-slate-400 hover:text-white hover:bg-white/5 font-bold rounded-xl transition-all uppercase tracking-widest text-xs">Abort Deployment</button><button onClick={handleDeployAccount} className="flex-[2] py-4 bg-brand-accent hover:bg-red-600 text-white font-bold rounded-xl transition-all shadow-xl shadow-brand-accent/30 uppercase tracking-widest text-xs flex items-center justify-center gap-2"><Plus size={18} /> Deploy to Database</button></div>

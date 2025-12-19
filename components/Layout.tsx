@@ -1,7 +1,7 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Shield, UserCog, Home, Gamepad2, User as UserIcon, LogOut, LayoutDashboard, Zap } from 'lucide-react';
+import { Shield, UserCog, Home, Gamepad2, User as UserIcon, LogOut, LayoutDashboard, Zap, Award, Sparkles, X, Trophy } from 'lucide-react';
 import { StorageService, DEFAULT_HOME_CONFIG } from '../services/storage';
 import { User, HomeConfig } from '../types';
 import SkinSearchFloatingBar from './SkinSearchFloatingBar';
@@ -11,6 +11,9 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showBonusPopup, setShowBonusPopup] = useState(false);
+  const [prevPoints, setPrevPoints] = useState<number | null>(null);
+  const [pointDiff, setPointDiff] = useState<number | null>(null);
   const [homeConfig, setHomeConfig] = useState<HomeConfig>(DEFAULT_HOME_CONFIG);
 
   const isHomePage = location.pathname === '/';
@@ -19,28 +22,37 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     try {
       const config = await StorageService.getHomeConfig();
       setHomeConfig(config);
-    } catch (err) {
-      console.error("Failed to load global config:", err);
-    }
+    } catch (err) {}
   };
 
   const syncData = () => {
-    setCurrentUser(StorageService.getCurrentUser());
+    const user = StorageService.getCurrentUser();
+    
+    // Animate point changes
+    if (user && prevPoints !== null && user.ultraPoints > prevPoints) {
+      const diff = user.ultraPoints - prevPoints;
+      setPointDiff(diff);
+      setTimeout(() => setPointDiff(null), 4000);
+    }
+    
+    setCurrentUser(user);
+    if (user) setPrevPoints(user.ultraPoints);
+    
     loadConfig();
+
+    // Show bonus popup if user has exactly 20 points (newly registered) and hasn't seen it this session
+    if (user && user.ultraPoints === 20 && !sessionStorage.getItem('bonus_shown')) {
+      setShowBonusPopup(true);
+      sessionStorage.setItem('bonus_shown', 'true');
+    }
   };
 
-  // Listen for user changes and config changes
   useEffect(() => {
     syncData();
-    
-    // Subscribe to internal StorageService updates (replaces direct Event constructor)
     const unsubscribe = StorageService.subscribe(() => {
       syncData();
     });
-
-    // Native storage event (dispatched by browser for other tabs) is still safe to listen to
     window.addEventListener('storage', syncData);
-    
     return () => {
       unsubscribe();
       window.removeEventListener('storage', syncData);
@@ -63,8 +75,17 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   return (
     <div className="min-h-screen bg-brand-darker text-slate-100 font-sans flex flex-col selection:bg-brand-accent selection:text-white relative">
-      {/* CRT Scanline Effect Overlay */}
       <div className="scanlines"></div>
+
+      {/* Point Earned Floating Animation */}
+      {pointDiff !== null && (
+        <div className="fixed top-24 right-4 md:right-12 z-[100] pointer-events-none animate-bounce">
+           <div className="bg-yellow-500 text-brand-darker px-5 py-2.5 rounded-full font-black shadow-[0_0_40px_#eab308] flex items-center gap-3 scale-125 animate-in slide-in-from-bottom-10 fade-in duration-500">
+              <Sparkles className="w-5 h-5 animate-spin" />
+              <span>+{pointDiff} ULTRA POINTS</span>
+           </div>
+        </div>
+      )}
 
       {/* GLOBAL MARQUEE BROADCAST */}
       <div className="w-full bg-black border-b border-white/5 py-2.5 relative z-[60] overflow-hidden">
@@ -84,20 +105,30 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         </div>
       </div>
 
-      {/* GLOBAL BRAND HEADER - Non-sticky */}
+      {/* GLOBAL BRAND HEADER */}
       <div className="w-full bg-black/80 border-b border-white/5 py-6 md:py-10 lg:py-12 flex justify-center items-center relative z-40 overflow-hidden">
         <div className="absolute inset-0 bg-brand-accent/5 pointer-events-none"></div>
         <div className="max-w-7xl w-full px-4 flex items-center justify-center relative">
           <Link to="/" className="flex items-center gap-4 md:gap-6 group relative z-10 transition-transform duration-300 hover:scale-105">
             <Shield className="h-8 w-8 md:h-12 md:w-12 text-brand-accent transition-all duration-500 group-hover:rotate-12 group-hover:drop-shadow-[0_0_20px_rgba(255,70,85,0.7)]" />
-            <span className="font-display font-black text-2xl md:text-5xl lg:text-6xl tracking-tighter text-white whitespace-nowrap uppercase italic">
-              KRISHNA <span className="text-brand-accent">VALO</span> STORE
-            </span>
+            <div className="flex items-center">
+              <span className="font-display font-black text-2xl md:text-5xl lg:text-6xl tracking-tighter text-white whitespace-nowrap uppercase italic">
+                KRISHNA <span className="text-brand-accent">VALO</span> STORE
+              </span>
+              {currentUser && (
+                <div className="flex items-center gap-1.5 md:gap-3 ml-3 md:ml-6 px-2.5 md:px-5 py-1 md:py-2 bg-yellow-500/10 border border-yellow-500/30 rounded-full text-yellow-500 animate-in fade-in zoom-in duration-700 shadow-[0_0_20px_rgba(234,179,8,0.2)]">
+                  <Trophy size={18} className="md:w-6 md:h-6 w-4 h-4 animate-pulse" />
+                  <span className="font-display font-black text-lg md:text-3xl tracking-tight">
+                    {currentUser.ultraPoints || 0}
+                  </span>
+                </div>
+              )}
+            </div>
           </Link>
         </div>
       </div>
 
-      {/* Navbar - Sticky Navigation */}
+      {/* Navbar */}
       <nav className="hidden md:block sticky top-0 w-full z-30 bg-brand-dark/80 backdrop-blur-xl border-b border-white/10 shadow-[0_4px_30px_rgba(0,0,0,0.3)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
@@ -111,7 +142,14 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               </Link>
             </div>
 
-            <div className="flex items-center">
+            <div className="flex items-center gap-4">
+              {currentUser && (
+                <Link to="/dashboard" className="hidden lg:flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/30 rounded-full px-3 py-1 text-[10px] font-black text-yellow-500 uppercase tracking-widest shadow-[0_0_10px_rgba(234,179,8,0.2)] hover:scale-105 transition-all">
+                  <Award size={12} className="animate-bounce" />
+                  {currentUser.ultraPoints || 0} Ultra Points
+                </Link>
+              )}
+
               {currentUser ? (
                 <div className="relative">
                     <button 
@@ -164,10 +202,42 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         </div>
       </nav>
 
+      {/* Bonus Popup */}
+      {showBonusPopup && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+           <div className="bg-brand-surface border border-yellow-500/50 rounded-2xl w-full max-w-sm p-8 text-center relative overflow-hidden shadow-[0_0_50px_rgba(234,179,8,0.3)]">
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-yellow-500 to-transparent"></div>
+              <button onClick={() => setShowBonusPopup(false)} className="absolute top-4 right-4 text-slate-500 hover:text-white"><X size={20} /></button>
+              
+              <div className="relative inline-block mb-6">
+                 <div className="absolute inset-0 bg-yellow-500 blur-2xl opacity-20 animate-pulse"></div>
+                 <div className="relative w-20 h-20 bg-yellow-500/20 rounded-full border border-yellow-500/50 flex items-center justify-center">
+                    <Sparkles className="w-10 h-10 text-yellow-500" />
+                 </div>
+              </div>
+
+              <h2 className="text-2xl font-display font-black text-white uppercase tracking-tighter italic mb-2">Welcome Agent!</h2>
+              <p className="text-slate-400 text-sm mb-6">We've credited your account with a deployment bonus.</p>
+              
+              <div className="bg-brand-dark border border-white/5 rounded-xl p-4 mb-8">
+                 <div className="text-3xl font-black text-yellow-500">+20</div>
+                 <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Ultra Points Received</div>
+              </div>
+
+              <button 
+                onClick={() => setShowBonusPopup(false)}
+                className="w-full py-4 bg-yellow-500 hover:bg-yellow-400 text-brand-darker font-black rounded-xl transition-all uppercase tracking-widest text-xs shadow-lg shadow-yellow-500/20"
+              >
+                Let's Play
+              </button>
+           </div>
+        </div>
+      )}
+
       {/* Global Search Bar */}
       <SkinSearchFloatingBar isHomePage={isHomePage} />
 
-      <main className="flex-grow pb-20 md:pb-0 relative z-10">
+      <main className="flex-grow pb-24 md:pb-0 relative z-10">
         {children}
       </main>
 
@@ -184,28 +254,31 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         </div>
       </footer>
 
-      {/* Bottom Navigation Bar (Mobile Only) */}
-      <div className="md:hidden fixed bottom-4 left-4 right-4 z-50 bg-[#0f172a]/70 backdrop-blur-lg border border-white/10 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.8)] animate-nav-float">
-        <div className="flex justify-around items-center h-16 px-2">
-          <Link to="/" className="flex flex-col items-center justify-center w-full h-full">
-             <Home className={`w-6 h-6 ${isTabActive('/') ? 'text-brand-accent' : 'text-slate-500'}`} />
-          </Link>
-          <Link to="/browse" className="relative flex flex-col items-center justify-center w-full h-full">
-             <div className={`absolute -top-6 bg-brand-darker border-4 border-brand-dark rounded-full p-3 transition-all ${isTabActive('/browse') ? 'shadow-[0_0_20px_rgba(0,240,255,0.6)] border-brand-cyan' : 'border-white/10'}`}>
-                <Gamepad2 className={`w-6 h-6 ${isTabActive('/browse') ? 'text-brand-cyan' : 'text-slate-400'}`} />
+      {/* Bottom Navigation Bar */}
+      <div className="md:hidden fixed bottom-6 left-6 right-6 z-50 bg-brand-surface/90 backdrop-blur-xl border border-white/10 rounded-[2rem] h-20 flex justify-around items-center px-6 shadow-[0_20px_50px_rgba(0,0,0,0.5)] animate-nav-float">
+         <Link to="/" className="p-3 transition-transform active:scale-90">
+            <Home className={`${location.pathname === '/' ? 'text-brand-accent drop-shadow-[0_0_8px_rgba(255,70,85,0.6)]' : 'text-slate-500'}`} size={28} />
+         </Link>
+         
+         <Link to="/browse" className="relative -mt-12 p-1">
+            <div className="bg-brand-accent rounded-full p-4 border-4 border-brand-darker shadow-[0_10px_30px_rgba(255,70,85,0.5)] transition-all active:scale-95 group">
+               <Gamepad2 className="text-white w-8 h-8 group-hover:rotate-12 transition-transform" />
+               <div className="absolute inset-0 bg-white/20 rounded-full animate-ping pointer-events-none opacity-20"></div>
+            </div>
+         </Link>
+
+         {currentUser ? (
+           <Link to="/dashboard" className="flex flex-col items-center p-3 active:scale-90 transition-transform">
+             <div className="relative">
+                <img src={currentUser.avatarUrl} className={`w-9 h-9 rounded-full border-2 transition-all ${pointDiff !== null ? 'border-yellow-500 scale-110 shadow-[0_0_15px_#eab308]' : 'border-white/10'}`} alt="" />
+                {currentUser.ultraPoints > 0 && <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-500 rounded-full border-2 border-brand-darker animate-pulse" />}
              </div>
-             <span className="mt-8 text-[10px] font-bold text-slate-500">RENT</span>
-          </Link>
-          {currentUser ? (
-             <Link to="/dashboard" className="flex flex-col items-center justify-center w-full h-full">
-                <img src={currentUser.avatarUrl} className={`w-6 h-6 rounded-full border ${isTabActive('/dashboard') ? 'border-brand-accent' : 'border-white/20'}`} alt="Me" />
-             </Link>
-          ) : (
-            <Link to="/login" className="flex flex-col items-center justify-center w-full h-full">
-                <UserIcon className={`w-6 h-6 ${isTabActive('/login') ? 'text-brand-accent' : 'text-slate-500'}`} />
-            </Link>
-          )}
-        </div>
+           </Link>
+         ) : (
+           <Link to="/login" className="p-3 active:scale-90 transition-transform">
+              <UserIcon className="text-slate-500" size={28} />
+           </Link>
+         )}
       </div>
     </div>
   );
