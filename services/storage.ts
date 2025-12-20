@@ -82,11 +82,20 @@ export const DEFAULT_HOME_CONFIG: HomeConfig = {
     {
       id: 1,
       type: 'video',
-      name: 'Aryan Sharma',
-      rank: 'Diamond',
-      quote: 'Got the ID in 2 minutes. The Radiant knife skin is insane!',
+      name: 'Aditya Rao',
+      rank: 'Immortal',
+      quote: 'The best rental service I\'ve used. Instant delivery via WhatsApp is a game changer.',
       thumbnail: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=1000&auto=format&fit=crop',
-      videoUrl: 'https://sample-videos.com/video321/mp4/720/big_buck_bunny_720p_1mb.mp4'
+      videoUrl: 'https://go.screenpal.com/watch/cTlqlMnYGuh'
+    },
+    {
+      id: 2,
+      type: 'video',
+      name: 'Rahul Verma',
+      rank: 'Ascendant',
+      quote: 'Finally a legit store! The account quality is top notch. Will rent again.',
+      thumbnail: 'https://images.unsplash.com/photo-1552820728-8b83bb6b773f?q=80&w=1000&auto=format&fit=crop',
+      videoUrl: 'https://go.screenpal.com/watch/cTlql6nYGqu'
     }
   ],
   ultraPoints: {
@@ -114,8 +123,15 @@ export const StorageService = {
     return () => listeners.delete(callback);
   },
 
-  getAccounts: async (): Promise<Account[]> => {
-    const { data, error } = await getSupabase().from('accounts').select('*');
+  getAccounts: async (rankFilter?: string): Promise<Account[]> => {
+    let query = getSupabase().from('accounts').select('*');
+    
+    // Server-side filtering for Rank using JSONB syntax
+    if (rankFilter && rankFilter !== 'All') {
+       query = query.eq('data->>rank', rankFilter);
+    }
+    
+    const { data, error } = await query;
     if (error || !data) return [];
     return data.map(row => row.data as Account);
   },

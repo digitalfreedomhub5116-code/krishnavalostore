@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Play, Pause, Volume2, VolumeX, Maximize, Minimize, X, SkipBack, SkipForward } from 'lucide-react';
 
@@ -21,6 +22,33 @@ const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({ src, poster, titl
   const [isBuffering, setIsBuffering] = useState(false);
   
   const controlsTimeoutRef = useRef<number | null>(null);
+
+  // Check for ScreenPal or other embeddable URLs
+  const isScreenPal = src.includes('screenpal.com');
+
+  if (isScreenPal) {
+     // Extract ID from /watch/ or /player/ URL
+     // Example: https://go.screenpal.com/watch/cTlql6nYGqu -> cTlql6nYGqu
+     const id = src.split('/').pop()?.split('?')[0];
+     const embedUrl = `https://go.screenpal.com/player/${id}`;
+
+     return (
+        <div className="relative w-full h-full bg-black flex items-center justify-center rounded-xl overflow-hidden shadow-2xl">
+           <button 
+             onClick={onClose} 
+             className="absolute top-4 right-4 z-50 p-2 rounded-full bg-black/60 text-white hover:bg-brand-accent transition-colors"
+           >
+             <X className="w-6 h-6" />
+           </button>
+           <iframe 
+              src={embedUrl} 
+              className="w-full h-full border-0" 
+              allowFullScreen={true}
+              title={title || "Video Player"}
+           />
+        </div>
+     );
+  }
 
   useEffect(() => {
     const video = videoRef.current;

@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Zap } from 'lucide-react';
+import { Zap, Trophy } from 'lucide-react';
 import { SITE_LOGO_URL } from '../services/storage';
 
 const LOADING_TEXTS = [
@@ -59,7 +59,7 @@ const LoadingScreen: React.FC<{ onComplete: () => void }> = ({ onComplete }) => 
 
         <div className="relative z-10 flex flex-col items-center w-full max-w-md px-4">
             {/* Logo Animation */}
-            <div className="relative mb-12 scale-125">
+            <div className="relative mb-10 scale-125">
                 <div className="absolute inset-0 bg-brand-accent/20 blur-3xl rounded-full animate-pulse"></div>
                 <div className="relative">
                     <img src={SITE_LOGO_URL} alt="Logo" className="w-24 h-24 object-contain animate-[pulse_3s_ease-in-out_infinite]" />
@@ -70,10 +70,20 @@ const LoadingScreen: React.FC<{ onComplete: () => void }> = ({ onComplete }) => 
             </div>
 
             {/* Title */}
-            <h1 className="text-4xl md:text-5xl font-display font-bold text-white mb-2 tracking-widest glitch-text text-center" data-text="KRISHNA VALO STORE">
+            <h1 className="text-4xl md:text-5xl font-display font-bold text-white mb-3 tracking-widest glitch-text text-center" data-text="KRISHNA VALO STORE">
                 KRISHNA VALO STORE
             </h1>
-            <div className="text-brand-cyan font-mono text-xs tracking-[0.4em] mb-12 uppercase animate-pulse">
+
+            {/* New Tagline - India's #1 Platform */}
+            <div className="flex items-center gap-2 mb-2 animate-in slide-in-from-bottom-2 duration-700">
+                <Trophy className="w-4 h-4 text-yellow-500" />
+                <span className="text-yellow-500 font-black italic text-sm tracking-[0.2em] uppercase drop-shadow-[0_0_10px_rgba(234,179,8,0.5)]">
+                    INDIA'S #1 RENTING PLATFORM
+                </span>
+                <Trophy className="w-4 h-4 text-yellow-500" />
+            </div>
+
+            <div className="text-brand-cyan font-mono text-[10px] tracking-[0.4em] mb-12 opacity-60 uppercase">
                 System Online
             </div>
 
@@ -105,7 +115,7 @@ const LoadingScreen: React.FC<{ onComplete: () => void }> = ({ onComplete }) => 
         
         {/* Version Number */}
         <div className="absolute bottom-6 right-10 text-[10px] text-slate-600 font-mono tracking-widest">
-            V.2.0.4 // BUILD: STABLE
+            V.2.1.0 // CHECKPOINT
         </div>
     </div>
   );
