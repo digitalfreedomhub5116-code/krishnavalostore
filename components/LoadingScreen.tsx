@@ -74,13 +74,13 @@ const LoadingScreen: React.FC<{ onComplete: () => void }> = ({ onComplete }) => 
                 KRISHNA VALO STORE
             </h1>
 
-            {/* New Tagline - India's #1 Platform */}
-            <div className="flex items-center gap-2 mb-2 animate-in slide-in-from-bottom-2 duration-700">
-                <Trophy className="w-4 h-4 text-yellow-500" />
-                <span className="text-yellow-500 font-black italic text-sm tracking-[0.2em] uppercase drop-shadow-[0_0_10px_rgba(234,179,8,0.5)]">
+            {/* New Tagline - India's #1 Platform - Mobile Responsive Updates */}
+            <div className="flex items-center gap-1.5 md:gap-2 mb-2 animate-in slide-in-from-bottom-2 duration-700">
+                <Trophy className="w-3 h-3 md:w-4 md:h-4 text-yellow-500 shrink-0" />
+                <span className="text-yellow-500 font-black italic text-[10px] md:text-sm tracking-[0.15em] md:tracking-[0.2em] uppercase drop-shadow-[0_0_10px_rgba(234,179,8,0.5)] whitespace-nowrap">
                     INDIA'S #1 RENTING PLATFORM
                 </span>
-                <Trophy className="w-4 h-4 text-yellow-500" />
+                <Trophy className="w-3 h-3 md:w-4 md:h-4 text-yellow-500 shrink-0" />
             </div>
 
             <div className="text-brand-cyan font-mono text-[10px] tracking-[0.4em] mb-12 opacity-60 uppercase">
