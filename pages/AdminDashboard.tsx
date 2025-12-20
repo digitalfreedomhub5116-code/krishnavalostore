@@ -230,7 +230,7 @@ const AdminDashboard: React.FC = () => {
                     </div>
                   </td>
                   <td className="p-5 text-right">
-                     <div className="flex justify-end gap-2">
+                     <div className="flex justify-end gap-2 items-center">
                         <button 
                           onClick={() => handleAdjustPoints(user.id, 50)}
                           className="p-1.5 bg-green-500/10 text-green-400 hover:bg-green-500 hover:text-white rounded border border-green-500/20 transition-all"
@@ -244,6 +244,21 @@ const AdminDashboard: React.FC = () => {
                           title="Deduct 50 UP"
                         >
                            <Minus size={14} />
+                        </button>
+                        
+                        <div className="w-px h-6 bg-white/10 mx-1"></div>
+                        
+                        <button 
+                          onClick={async () => {
+                             if(window.confirm(`ELIMINATE AGENT ${user.name}? This action is irreversible.`)) {
+                                await StorageService.deleteUser(user.id);
+                                refreshData();
+                             }
+                          }}
+                          className="p-1.5 bg-red-500/10 text-red-500 hover:bg-red-600 hover:text-white rounded border border-red-500/20 transition-all shadow-[0_0_10px_rgba(220,38,38,0.2)]"
+                          title="Eliminate Agent"
+                        >
+                           <Trash2 size={14} />
                         </button>
                      </div>
                   </td>

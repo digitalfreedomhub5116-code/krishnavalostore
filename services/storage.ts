@@ -305,6 +305,11 @@ export const StorageService = {
     return data.map(row => row.data as User);
   },
 
+  deleteUser: async (userId: string) => {
+    await getSupabase().from('users').delete().eq('id', userId);
+    notifyStorageChange();
+  },
+
   registerUser: async (name: string, email: string, phone: string, password: string): Promise<User> => {
     const newUser: User = {
       id: 'usr-' + Date.now(),
