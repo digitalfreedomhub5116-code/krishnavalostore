@@ -18,6 +18,14 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   const isHomePage = location.pathname === '/';
 
+  // SCROLL TO TOP LOGIC
+  useEffect(() => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  }, [location.pathname]);
+
   const loadConfig = async () => {
     try {
       const config = await StorageService.getHomeConfig();

@@ -168,6 +168,11 @@ export const StorageService = {
     notifyStorageChange();
   },
 
+  deleteBooking: async (orderId: string) => {
+    await getSupabase().from('bookings').delete().eq('order_id', orderId);
+    notifyStorageChange();
+  },
+
   updateBookingStatus: async (orderId: string, status: BookingStatus) => {
     const { data: row } = await getSupabase().from('bookings').select('data').eq('order_id', orderId).single();
     

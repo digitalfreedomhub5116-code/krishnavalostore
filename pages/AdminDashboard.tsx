@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { Navigate, useNavigate, Link } from 'react-router-dom';
 import { createPortal } from 'react-dom';
@@ -169,7 +168,7 @@ const AdminDashboard: React.FC = () => {
         ))}
       </div>
 
-      {activeTab === 'bookings' && <BookingTable bookings={bookings} onUpdateStatus={async (id: string, s: BookingStatus) => { await StorageService.updateBookingStatus(id, s); refreshData(); }} />}
+      {activeTab === 'bookings' && <BookingTable bookings={bookings} onUpdateStatus={async (id: string, s: BookingStatus) => { await StorageService.updateBookingStatus(id, s); refreshData(); }} onDelete={async (id: string) => { await StorageService.deleteBooking(id); refreshData(); }} />}
       
       {activeTab === 'accounts' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -437,7 +436,7 @@ const StatCard = ({ label, value, icon: Icon, color }: any) => (
   </div>
 );
 
-const BookingTable = ({ bookings, onUpdateStatus }: any) => (
+const BookingTable = ({ bookings, onUpdateStatus, onDelete }: any) => (
   <div className="bg-brand-surface border border-white/10 rounded-xl overflow-hidden overflow-x-auto shadow-2xl">
     <table className="w-full text-left text-sm">
       <thead><tr className="bg-brand-darker text-slate-500 border-b border-white/10 uppercase font-bold tracking-widest text-[10px]"><th className="p-5">Order ID</th><th className="p-5">Agent</th><th className="p-5">Status</th><th className="p-5 text-right">Operation</th></tr></thead>
@@ -459,12 +458,24 @@ const BookingTable = ({ bookings, onUpdateStatus }: any) => (
             <td className="p-5 text-right">
               <div className="flex justify-end gap-2">
                 {b.status === 'PENDING' && (
-                  <button 
-                    onClick={() => onUpdateStatus(b.orderId, BookingStatus.ACTIVE)} 
-                    className="px-4 py-2 bg-brand-cyan text-brand-dark text-[10px] rounded font-black uppercase tracking-widest hover:bg-cyan-400 transition-all shadow-lg"
-                  >
-                    AUTHORIZE
-                  </button>
+                  <>
+                    <button 
+                      onClick={() => onUpdateStatus(b.orderId, BookingStatus.ACTIVE)} 
+                      className="px-4 py-2 bg-brand-cyan text-brand-dark text-[10px] rounded font-black uppercase tracking-widest hover:bg-cyan-400 transition-all shadow-lg"
+                    >
+                      AUTHORIZE
+                    </button>
+                    <button 
+                      onClick={() => {
+                        if (window.confirm("Are you sure you want to remove this booking request?")) {
+                          onDelete(b.orderId);
+                        }
+                      }}
+                      className="px-4 py-2 bg-red-500/10 text-red-500 border border-red-500/20 text-[10px] rounded font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all shadow-lg flex items-center gap-1.5"
+                    >
+                      <Trash2 size={12} /> REMOVE
+                    </button>
+                  </>
                 )}
                 {b.status === 'ACTIVE' && (
                   <button 
