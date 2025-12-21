@@ -421,6 +421,9 @@ const RentalCard: React.FC<{ booking: Booking, showCredentials?: boolean }> = ({
     alert("Copied to clipboard!");
   };
 
+  const startObj = new Date(booking.startTime);
+  const formattedStart = `${startObj.getDate()} ${startObj.toLocaleString('default', { month: 'short' })} ${startObj.getFullYear()} ${startObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+
   return (
     <div className={`bg-brand-surface border rounded-xl overflow-hidden relative group transition-all duration-300 ${isActive ? 'border-brand-accent/50 shadow-[0_0_20px_rgba(255,70,85,0.1)]' : 'border-white/10'}`}>
       
@@ -470,9 +473,9 @@ const RentalCard: React.FC<{ booking: Booking, showCredentials?: boolean }> = ({
                     <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/30 text-purple-300 text-[10px] font-black uppercase tracking-widest mb-3">
                         <CalendarClock size={12} /> Scheduled
                     </div>
-                    <h4 className="text-white font-bold text-lg mb-2 uppercase tracking-wide">Starts on {new Date(booking.startTime).toLocaleDateString()}</h4>
+                    <h4 className="text-white font-bold text-lg mb-2 uppercase tracking-wide">Starts on {startObj.toLocaleDateString()}</h4>
                     <div className="text-xl md:text-2xl font-mono font-bold text-white mb-4 tabular-nums tracking-tight">
-                       {new Date(booking.startTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                       {startObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                     </div>
                     <div className="flex items-center gap-2 text-purple-300 text-xs bg-purple-500/10 px-3 py-1.5 rounded-full border border-purple-500/20 mb-2">
                        <Lock size={12} />
