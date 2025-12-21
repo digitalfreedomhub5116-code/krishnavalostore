@@ -59,7 +59,7 @@ const SkinSearchFloatingBar: React.FC<SkinSearchFloatingBarProps> = ({ isHomePag
 
         {/* Floating Bar Container */}
         <div 
-            className={`${(isHomePage && !isFocused) ? 'absolute' : 'fixed'} z-[60] transition-all duration-[850ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] will-change-transform
+            className={`${isFocused ? 'fixed' : 'absolute'} z-[60] transition-all duration-[850ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] will-change-transform
                 ${isFocused 
                     ? 'top-28 md:top-40 left-1/2 -translate-x-1/2 w-[calc(100%-1.5rem)] md:w-[600px] scale-100' 
                     : mode === 'hero'

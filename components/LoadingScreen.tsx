@@ -115,7 +115,7 @@ const LoadingScreen: React.FC<{ onComplete: () => void }> = ({ onComplete }) => 
         
         {/* Version Number */}
         <div className="absolute bottom-6 right-10 text-[10px] text-slate-600 font-mono tracking-widest">
-            V.2.1.0 // CHECKPOINT
+            V.2.3.0 // CHECKPOINT: ADMIN PROTOCOLS
         </div>
     </div>
   );
