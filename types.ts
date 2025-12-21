@@ -28,7 +28,7 @@ export interface Account {
   rank: Rank;
   skins: Skin[];
   totalSkins?: number; 
-  initialSkinsCount?: number; // Added: Control for initial skins display limit
+  initialSkinsCount?: number; 
   description?: string; 
   pricing: Pricing;
   imageUrl: string;
@@ -53,7 +53,7 @@ export interface User {
   verificationCode?: string;
   createdAt: string;  
   lastLogin: string;
-  ultraPoints: number; // Added for gamification
+  ultraPoints: number;
 }
 
 export enum BookingStatus {

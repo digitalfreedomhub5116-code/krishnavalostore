@@ -3,15 +3,14 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Navigate, useNavigate, Link } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { StorageService, DEFAULT_HOME_CONFIG } from '../services/storage';
-import { AIService } from '../services/ai';
-import { Account, Booking, BookingStatus, Rank, User, HomeConfig, Review, Skin, HeroSlide, TrustItem, StepItem } from '../types';
-import { Plus, Trash2, Check, X, Edit2, Loader2, LogOut, Square, CheckSquare, BarChart3, IndianRupee, Users, Gamepad2, Home, Save, Zap, Shield, Star, MessageSquare, AlertCircle, Cpu, Search, Video, FileText, Play, Copy, Terminal, Layout, Image as ImageIcon, ShieldCheck, Lock, Ban, Type as TypeIcon, Minus, Award, Clock, Unlock, CalendarClock } from 'lucide-react';
+import { Account, Booking, BookingStatus, Rank, User, HomeConfig } from '../types';
+import { Plus, Trash2, Check, X, Edit2, Loader2, LogOut, BarChart3, IndianRupee, Users, Gamepad2, Layout, Save, ShieldCheck, Lock, Ban, Minus, Award, Clock, Unlock, CalendarClock } from 'lucide-react';
 
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
   const isAuthenticated = localStorage.getItem('isAdmin') === 'true' || sessionStorage.getItem('isAdmin') === 'true';
   
-  const [activeTab, setActiveTab] = useState<'bookings' | 'accounts' | 'users' | 'edithome' | 'auditor'>('bookings');
+  const [activeTab, setActiveTab] = useState<'bookings' | 'accounts' | 'users' | 'edithome'>('bookings');
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [users, setUsers] = useState<User[]>([]);
