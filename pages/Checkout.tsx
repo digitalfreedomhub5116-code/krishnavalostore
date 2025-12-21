@@ -6,6 +6,7 @@ import { StorageService } from '../services/storage';
 import { Copy, ArrowRight, Timer, CalendarClock, Smartphone, ShieldCheck, Zap, Send } from 'lucide-react';
 
 interface CheckoutState {
+  orderId?: string; // Optional because legacy flow might not have it, but new flow will
   account: Account;
   hours: number;
   price: number;
@@ -20,7 +21,7 @@ const Checkout: React.FC = () => {
   const navigate = useNavigate();
   const state = location.state as CheckoutState;
   
-  const [orderId, setOrderId] = useState('');
+  const [orderId, setOrderId] = useState(state?.orderId || '');
   const [timer, setTimer] = useState(600); // 10 minutes for payment
   const [utr, setUtr] = useState('');
   const [error, setError] = useState('');
@@ -28,8 +29,8 @@ const Checkout: React.FC = () => {
   const currentUser = StorageService.getCurrentUser();
 
   useEffect(() => {
-    if (state) {
-      // Generate unique order ID once
+    if (state && !state.orderId) {
+      // Fallback generation if no pre-locked ID (Legacy support)
       const id = 'KV-' + Math.floor(1000 + Math.random() * 9000);
       setOrderId(id);
     }
@@ -40,6 +41,9 @@ const Checkout: React.FC = () => {
     if (timer > 0) {
       const interval = setInterval(() => setTimer(t => t - 1), 1000);
       return () => clearInterval(interval);
+    } else {
+       // Timer expired - navigate away or show error
+       setError("Session expired. Slot released.");
     }
   }, [timer]);
 
@@ -65,37 +69,56 @@ const Checkout: React.FC = () => {
   const upiString = `upi://pay?pa=${UPI_ID}&pn=KrishnaValo&am=${state.price.toFixed(2)}&cu=INR&tn=${orderId}`;
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&margin=10&data=${encodeURIComponent(upiString)}`;
 
-  const handleSubmitPayment = () => {
+  const handleSubmitPayment = async () => {
     if (!utr) {
       setError('Please enter the Transaction ID / UTR number.');
       return;
     }
     
     // Relaxed validation: Allow alphanumeric and check for reasonable length (e.g., 6+ chars)
-    // Standard UTR is 12 digits, but some apps show different formats.
     if (utr.length < 6) {
       setError('Invalid UTR. Please enter a valid reference ID.');
       return;
     }
 
-    // 1. Create Booking Record locally
-    const newBooking: Booking = {
-      orderId,
-      accountId: state.account.id,
-      accountName: state.account.name,
-      durationLabel: state.durationLabel,
-      hours: state.hours,
-      totalPrice: state.price,
-      startTime: startDateTime.toISOString(),
-      endTime: endDateTime.toISOString(),
-      status: BookingStatus.PENDING,
-      createdAt: new Date().toISOString(),
-      utr: utr,
-      customerId: currentUser?.id, // Link to logged in user
-      customerName: currentUser?.name
-    };
-
-    StorageService.createBooking(newBooking);
+    if (state.orderId) {
+       // Update existing PENDING booking
+       // We fetch it first to be safe, then update
+       const booking: Booking = {
+         orderId,
+         accountId: state.account.id,
+         accountName: state.account.name,
+         durationLabel: state.durationLabel,
+         hours: state.hours,
+         totalPrice: state.price,
+         startTime: startDateTime.toISOString(),
+         endTime: endDateTime.toISOString(),
+         status: BookingStatus.PENDING, // Still pending admin approval
+         createdAt: new Date().toISOString(), // This might be slightly off from original creation but acceptable
+         utr: utr,
+         customerId: currentUser?.id,
+         customerName: currentUser?.name
+       };
+       await StorageService.updateBooking(booking);
+    } else {
+       // Legacy Fallback: Create new booking
+       const newBooking: Booking = {
+        orderId,
+        accountId: state.account.id,
+        accountName: state.account.name,
+        durationLabel: state.durationLabel,
+        hours: state.hours,
+        totalPrice: state.price,
+        startTime: startDateTime.toISOString(),
+        endTime: endDateTime.toISOString(),
+        status: BookingStatus.PENDING,
+        createdAt: new Date().toISOString(),
+        utr: utr,
+        customerId: currentUser?.id, // Link to logged in user
+        customerName: currentUser?.name
+      };
+      await StorageService.createBooking(newBooking);
+    }
 
     // 2. Construct WhatsApp Message
     const timeString = state.startMode === 'later' 
@@ -198,7 +221,7 @@ I have made the payment. Please verify.
            <div className="bg-brand-surface border border-brand-accent/30 rounded-xl p-4 flex items-center justify-between shadow-[0_0_15px_rgba(255,70,85,0.1)]">
              <div className="flex items-center gap-2 text-brand-accent">
                <Timer className="w-5 h-5" />
-               <span className="font-bold">Payment Session</span>
+               <span className="font-bold">Slot Locked</span>
              </div>
              <div className="font-mono text-xl font-bold">{formatTimer(timer)}</div>
            </div>
@@ -237,13 +260,13 @@ I have made the payment. Please verify.
                   <span className="text-white font-mono">
                     {state.startMode === 'now' 
                       ? 'Immediate' 
-                      : startDateTime.toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'})}
+                      : startDateTime.toLocaleString('en-IN', {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'})}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm mt-1">
                    <span className="text-slate-400">End:</span>
                    <span className="text-white font-mono">
-                     {endDateTime.toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'})}
+                     {endDateTime.toLocaleString('en-IN', {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'})}
                    </span>
                 </div>
               </div>

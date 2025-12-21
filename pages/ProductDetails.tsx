@@ -3,9 +3,8 @@ import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { StorageService } from '../services/storage';
-import { Account, Pricing } from '../types';
-// Added ShieldCheck to the imports
-import { ArrowLeft, Gem, Clock, Calendar, ChevronRight, MessageCircle, X, ArrowRight, Lock, Maximize2, ChevronDown, ChevronUp, Sparkles, Loader2, AlertCircle, ShieldCheck } from 'lucide-react';
+import { Account, Pricing, BookingStatus, Booking } from '../types';
+import { ArrowLeft, Gem, Clock, Calendar, ChevronRight, MessageCircle, X, ArrowRight, Lock, Maximize2, ChevronDown, ChevronUp, Sparkles, Loader2, AlertCircle, ShieldCheck, PlayCircle, CalendarClock } from 'lucide-react';
 
 const ProductDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -16,7 +15,6 @@ const ProductDetails: React.FC = () => {
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   
   const [isSkinsExpanded, setIsSkinsExpanded] = useState(false);
-  const [selectedDuration, setSelectedDuration] = useState<keyof Pricing>('hours3');
   
   // Countdown states
   const [timeLeft, setTimeLeft] = useState<string | null>(null);
@@ -69,8 +67,6 @@ const ProductDetails: React.FC = () => {
   if (loading) return <div className="min-h-[50vh] flex flex-col items-center justify-center"><Loader2 className="w-10 h-10 text-brand-accent animate-spin" /></div>;
   if (!account) return <div className="min-h-[50vh] flex flex-col items-center justify-center"><h2 className="text-2xl font-bold mb-4">Account Not Found</h2><Link to="/browse" className="text-brand-accent hover:underline flex items-center gap-2"><ArrowLeft size={16} /> Back to Browse</Link></div>;
 
-  const displayPrice = selectedDuration === 'hours24' ? Math.floor(account.pricing.hours24 * 0.9) : account.pricing[selectedDuration];
-  
   const initialSkinsLimit = account.initialSkinsCount || 10;
 
   return (
@@ -160,16 +156,13 @@ const ProductDetails: React.FC = () => {
 
                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {(['hours3', 'hours12', 'hours24'] as (keyof Pricing)[]).map((h) => (
-                     <button 
+                     <div 
                         key={h} 
-                        disabled={!isEffectivelyAvailable}
-                        onClick={() => { setSelectedDuration(h); setShowBookingModal(true); }} 
-                        className={`p-5 rounded-xl border transition-all relative overflow-hidden group/plan
-                          ${!isEffectivelyAvailable ? 'opacity-50 grayscale cursor-not-allowed' : ''}
-                          ${h === 'hours24' 
-                             ? 'bg-brand-accent/5 border-brand-accent/30 hover:border-brand-accent' 
-                             : 'bg-brand-dark border-white/10 hover:border-brand-cyan/50 hover:bg-white/5'
-                          }
+                        className={`p-5 rounded-xl border relative overflow-hidden
+                           ${h === 'hours24' 
+                             ? 'bg-brand-accent/5 border-brand-accent/30' 
+                             : 'bg-brand-dark border-white/10'
+                           }
                         `}
                      >
                         {h === 'hours24' && (
@@ -177,38 +170,24 @@ const ProductDetails: React.FC = () => {
                              BEST VALUE
                           </div>
                         )}
-                        <div className="text-[10px] text-slate-500 uppercase font-bold tracking-widest mb-1 group-hover/plan:text-slate-300 transition-colors">
+                        <div className="text-[10px] text-slate-500 uppercase font-bold tracking-widest mb-1">
                            {h === 'hours3' ? 'Tactical (3h)' : h === 'hours12' ? 'Operation (12h)' : 'Campaign (24h)'}
                         </div>
-                        <div className="text-2xl font-black text-white group-hover/plan:scale-105 transition-transform origin-left">
+                        <div className="text-2xl font-black text-white">
                            ₹{h === 'hours24' ? Math.floor(account.pricing.hours24 * 0.9) : account.pricing[h]}
                         </div>
-                     </button>
+                     </div>
                   ))}
                </div>
             </div>
 
             <button 
               onClick={() => setShowBookingModal(true)} 
-              disabled={!isEffectivelyAvailable} 
-              className={`w-full py-6 font-black uppercase rounded-xl transition-all tracking-[0.3em] text-lg shadow-2xl relative overflow-hidden group
-                ${isEffectivelyAvailable 
-                  ? 'bg-white text-brand-darker hover:bg-brand-accent hover:text-white hover:scale-[1.02] active:scale-95' 
-                  : 'bg-slate-800 text-slate-500 border border-white/5 grayscale'
-                }
-              `}
+              className={`w-full py-6 font-black uppercase rounded-xl transition-all tracking-[0.3em] text-lg shadow-2xl relative overflow-hidden group bg-white text-brand-darker hover:bg-brand-accent hover:text-white hover:scale-[1.02] active:scale-95`}
             >
                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
                <span className="relative z-10 flex items-center justify-center gap-3">
-                  {isEffectivelyAvailable ? (
-                    <>
-                      INITIATE RENTAL <ArrowRight size={20} />
-                    </>
-                  ) : (
-                    <>
-                      <Lock size={18} /> ACCOUNT OPENS IN {timeLeft}
-                    </>
-                  )}
+                  INITIATE RENTAL <ArrowRight size={20} />
                </span>
             </button>
             
@@ -231,7 +210,6 @@ const ProductDetails: React.FC = () => {
       {showBookingModal && createPortal(
         <BookingWizard 
            account={account} 
-           selectedDuration={selectedDuration} 
            onClose={() => setShowBookingModal(false)} 
         />, 
         document.body
@@ -240,72 +218,192 @@ const ProductDetails: React.FC = () => {
   );
 };
 
-const BookingWizard = ({ account, selectedDuration, onClose }: any) => {
+const BookingWizard = ({ account, onClose }: { account: Account, onClose: () => void }) => {
    const navigate = useNavigate();
    const user = StorageService.getCurrentUser();
-   const finalPrice = selectedDuration === 'hours24' ? Math.floor(account.pricing.hours24 * 0.9) : account.pricing[selectedDuration];
+   
+   const [mode, setMode] = useState<'now' | 'prebook'>('now');
+   const [duration, setDuration] = useState<keyof Pricing>('hours3');
+   const [selectedDate, setSelectedDate] = useState<string>('');
+   const [selectedTime, setSelectedTime] = useState<string>('');
+   
+   const [error, setError] = useState<string>('');
+   const [isChecking, setIsChecking] = useState(false);
+
+   // Default date to tomorrow for pre-book
+   useEffect(() => {
+     const tmrw = new Date();
+     tmrw.setDate(tmrw.getDate() + 1);
+     setSelectedDate(tmrw.toISOString().split('T')[0]);
+     setSelectedTime("12:00");
+   }, []);
+
+   const calculatePrice = () => {
+      return duration === 'hours24' ? Math.floor(account.pricing.hours24 * 0.9) : account.pricing[duration];
+   };
+
+   const getTimes = () => {
+      const now = new Date();
+      if (mode === 'now') {
+        const hoursToAdd = parseInt(duration.replace('hours', ''));
+        const end = new Date(now.getTime() + hoursToAdd * 60 * 60 * 1000);
+        return { start: now, end };
+      } else {
+        const start = new Date(`${selectedDate}T${selectedTime}`);
+        const hoursToAdd = parseInt(duration.replace('hours', ''));
+        const end = new Date(start.getTime() + hoursToAdd * 60 * 60 * 1000);
+        return { start, end };
+      }
+   };
+
+   const handleProceed = async () => {
+      setError('');
+      setIsChecking(true);
+      
+      try {
+        const { start, end } = getTimes();
+        
+        // Basic Validation
+        if (mode === 'prebook') {
+           if (start.getTime() <= Date.now()) {
+              throw new Error("Pre-booking time must be in the future.");
+           }
+        }
+
+        // Availability Check
+        const isAvailable = await StorageService.checkAvailability(account.id, start.toISOString(), end.toISOString());
+        
+        if (!isAvailable) {
+           throw new Error("Selected time slot overlaps with an existing booking. Please choose another time.");
+        }
+
+        // LOCKING: Create PENDING Booking
+        const orderId = 'KV-' + Math.floor(1000 + Math.random() * 9000);
+        const booking: Booking = {
+           orderId,
+           accountId: account.id,
+           accountName: account.name,
+           durationLabel: duration === 'hours3' ? '3 Hours' : duration === 'hours12' ? '12 Hours' : '24 Hours',
+           hours: parseInt(duration.replace('hours', '')),
+           totalPrice: calculatePrice(),
+           startTime: start.toISOString(),
+           endTime: end.toISOString(),
+           status: BookingStatus.PENDING,
+           createdAt: new Date().toISOString(),
+           customerId: user?.id,
+           customerName: user?.name
+        };
+
+        await StorageService.createBooking(booking);
+
+        const state = { 
+           orderId,
+           account, 
+           hours: booking.hours, 
+           price: booking.totalPrice, 
+           durationLabel: booking.durationLabel, 
+           startMode: mode,
+           scheduledTime: start.toISOString()
+        };
+        
+        navigate(user ? '/checkout' : '/login', { 
+           state: user ? state : { returnTo: '/checkout', checkoutState: state } 
+        });
+
+      } catch (err: any) {
+         setError(err.message);
+      } finally {
+         setIsChecking(false);
+      }
+   };
 
    return (
       <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in zoom-in-95 duration-300">
-         <div className="bg-brand-surface border border-white/10 rounded-2xl w-full max-w-md p-8 relative shadow-[0_30px_100px_rgba(0,0,0,1)]">
+         <div className="bg-brand-surface border border-white/10 rounded-2xl w-full max-w-md p-6 relative shadow-[0_30px_100px_rgba(0,0,0,1)]">
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-brand-cyan to-transparent"></div>
             
-            <div className="flex justify-between items-center mb-8">
-               <div className="flex items-center gap-3">
-                  <div className="p-2 bg-brand-cyan/20 rounded-lg text-brand-cyan">
-                     <ShieldCheck size={24} />
-                  </div>
-                  <h3 className="font-bold text-xl uppercase tracking-tighter italic">Checkout Order</h3>
-               </div>
+            <div className="flex justify-between items-center mb-6">
+               <h3 className="font-bold text-xl uppercase tracking-tighter italic flex items-center gap-2">
+                 <ShieldCheck className="text-brand-cyan" /> Secure Reservation
+               </h3>
                <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X /></button>
             </div>
 
-            <div className="space-y-4 mb-8">
-               <div className="bg-brand-dark p-4 rounded-xl flex justify-between items-center border border-white/5">
-                  <div>
-                    <div className="text-[10px] text-slate-500 uppercase font-black tracking-widest mb-1">Target Asset</div>
-                    <div className="font-bold text-white uppercase text-lg">{account.name}</div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-[10px] text-slate-500 uppercase font-black tracking-widest mb-1">Rank</div>
-                    <div className="text-brand-cyan font-bold">{account.rank}</div>
+            {/* Mode Selection */}
+            <div className="grid grid-cols-2 gap-2 mb-6 p-1 bg-black/40 rounded-xl border border-white/5">
+               <button 
+                  onClick={() => setMode('now')} 
+                  className={`py-3 rounded-lg text-xs font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${mode === 'now' ? 'bg-brand-accent text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}
+               >
+                  <PlayCircle size={14} /> Rent Now
+               </button>
+               <button 
+                  onClick={() => setMode('prebook')} 
+                  className={`py-3 rounded-lg text-xs font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${mode === 'prebook' ? 'bg-purple-600 text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}
+               >
+                  <CalendarClock size={14} /> Pre-Book
+               </button>
+            </div>
+
+            <div className="space-y-4 mb-6">
+               <div>
+                  <label className="text-[10px] text-slate-500 uppercase font-bold tracking-widest mb-2 block">Select Duration</label>
+                  <div className="grid grid-cols-3 gap-2">
+                     {(['hours3', 'hours12', 'hours24'] as const).map(d => (
+                        <button 
+                           key={d}
+                           onClick={() => setDuration(d)}
+                           className={`p-3 rounded-lg border text-center transition-all ${duration === d ? 'bg-brand-cyan/20 border-brand-cyan text-brand-cyan font-bold' : 'bg-brand-dark border-white/10 text-slate-400 hover:border-white/30'}`}
+                        >
+                           <div className="text-[10px] uppercase mb-1">{d.replace('hours', '')} Hours</div>
+                           <div className="text-sm font-black">₹{d === 'hours24' ? Math.floor(account.pricing.hours24 * 0.9) : account.pricing[d]}</div>
+                        </button>
+                     ))}
                   </div>
                </div>
 
-               <div className="bg-brand-dark p-4 rounded-xl flex justify-between items-center border border-white/5">
-                  <div>
-                    <div className="text-[10px] text-slate-500 uppercase font-black tracking-widest mb-1">Operation Duration</div>
-                    <div className="font-bold text-white uppercase">{selectedDuration.replace('hours', '')} HOURS</div>
+               {mode === 'prebook' && (
+                  <div className="grid grid-cols-2 gap-4 animate-in slide-in-from-top-2">
+                     <div>
+                        <label className="text-[10px] text-slate-500 uppercase font-bold tracking-widest mb-2 block">Start Date</label>
+                        <input 
+                           type="date" 
+                           min={new Date().toISOString().split('T')[0]}
+                           value={selectedDate}
+                           onChange={e => setSelectedDate(e.target.value)}
+                           className="w-full bg-brand-dark border border-white/10 rounded-lg p-3 text-white text-sm outline-none focus:border-purple-500 transition-colors"
+                        />
+                     </div>
+                     <div>
+                        <label className="text-[10px] text-slate-500 uppercase font-bold tracking-widest mb-2 block">Start Time</label>
+                        <input 
+                           type="time" 
+                           value={selectedTime}
+                           onChange={e => setSelectedTime(e.target.value)}
+                           className="w-full bg-brand-dark border border-white/10 rounded-lg p-3 text-white text-sm outline-none focus:border-purple-500 transition-colors"
+                        />
+                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className="text-[10px] text-slate-500 uppercase font-black tracking-widest mb-1">Service Fee</div>
-                    <div className="text-2xl font-black text-brand-accent">₹{finalPrice}</div>
+               )}
+
+               {error && (
+                  <div className="bg-red-500/10 border border-red-500/20 p-3 rounded-lg flex items-start gap-2 text-red-400 text-xs">
+                     <AlertCircle size={14} className="shrink-0 mt-0.5" />
+                     {error}
                   </div>
-               </div>
+               )}
             </div>
 
-            <div className="space-y-3">
-              <button 
-                onClick={() => { 
-                  const state = { 
-                    account, 
-                    hours: parseInt(selectedDuration.replace('hours','')), 
-                    price: finalPrice, 
-                    durationLabel: selectedDuration === 'hours3' ? '3 Hours' : selectedDuration === 'hours12' ? '12 Hours' : '24 Hours', 
-                    startMode: 'now' 
-                  };
-                  navigate(user ? '/checkout' : '/login', { 
-                    state: user ? state : { returnTo: '/checkout', checkoutState: state } 
-                  });
-                }} 
-                className="w-full bg-brand-accent py-5 rounded-xl font-black text-white hover:bg-red-600 transition-all shadow-[0_10px_30px_rgba(255,70,85,0.3)] hover:scale-[1.02] active:scale-95 uppercase tracking-[0.2em]"
-              >
-                {user ? 'PROCEED TO UPLINK' : 'LOGIN TO CONTINUE'}
-              </button>
-              <p className="text-center text-[10px] text-slate-500 uppercase tracking-widest">
-                ID will be delivered instantly to WhatsApp after verification
-              </p>
-            </div>
+            <button 
+              onClick={handleProceed} 
+              disabled={isChecking}
+              className="w-full bg-white text-brand-darker py-4 rounded-xl font-black uppercase tracking-[0.2em] hover:bg-brand-accent hover:text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {isChecking ? <Loader2 className="animate-spin" /> : (mode === 'now' ? 'PROCEED TO CHECKOUT' : 'CONFIRM RESERVATION')}
+            </button>
+            <p className="text-center text-[10px] text-slate-500 mt-3 uppercase tracking-widest">
+               Slot will be locked for 10 minutes upon proceeding
+            </p>
          </div>
       </div>
    );

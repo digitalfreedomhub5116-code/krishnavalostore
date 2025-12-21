@@ -159,6 +159,10 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                     KRISHNA <span className="text-brand-accent">VALO STORE</span>
                  </h1>
               </div>
+              {/* Tooltip */}
+              <span className="absolute top-full mt-4 left-0 px-3 py-1 bg-brand-darker/95 backdrop-blur-md border border-white/10 text-brand-cyan text-[10px] font-bold uppercase tracking-widest rounded opacity-0 group-hover:opacity-100 transition-all duration-300 transform group-hover:translate-y-0 -translate-y-2 pointer-events-none shadow-xl whitespace-nowrap hidden md:block">
+                 Return Home
+              </span>
            </Link>
            
            {/* Global Search Bar (Visible on Mobile & Desktop) */}
@@ -187,7 +191,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               {/* Desktop Profile / Login */}
               <div>
                 {currentUser ? (
-                  <div className="relative">
+                  <div className="relative group">
                      <button 
                        onClick={() => setShowProfileMenu(!showProfileMenu)} 
                        className={`flex items-center gap-3 pl-3 pr-1 py-1 rounded-full border transition-all duration-300 ${showProfileMenu ? 'bg-white/10 border-brand-accent' : 'bg-white/5 border-white/10 hover:border-white/30'}`}
@@ -198,6 +202,11 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                         </div>
                         <img src={currentUser.avatarUrl} alt="" className="w-9 h-9 rounded-full bg-brand-surface object-cover border border-white/10" />
                      </button>
+                     
+                     {/* Tooltip for Profile */}
+                     <span className="absolute top-full mt-2 right-0 px-3 py-1 bg-brand-darker/95 backdrop-blur-md border border-white/10 text-brand-cyan text-[10px] font-bold uppercase tracking-widest rounded opacity-0 group-hover:opacity-100 transition-all duration-300 transform group-hover:translate-y-0 -translate-y-2 pointer-events-none shadow-xl whitespace-nowrap z-50">
+                        Profile Menu
+                     </span>
                      
                      {showProfileMenu && (
                        <>
@@ -225,7 +234,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                      )}
                   </div>
                 ) : (
-                  <Link to="/login" className="group relative px-6 py-2.5 bg-white text-brand-darker font-black text-xs uppercase tracking-widest rounded-none skew-x-[-10deg] transition-all hover:scale-105 active:scale-95 overflow-hidden">
+                  <Link to="/login" className="group relative px-6 py-2.5 bg-white text-brand-darker font-black text-xs uppercase tracking-widest rounded-none skew-x-[-10deg] transition-all hover:scale-105 active:scale-95 overflow-hidden block">
                      <span className="relative z-10 skew-x-[10deg] inline-block">Agent Login</span>
                      <div className="absolute inset-0 bg-brand-accent transform translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out"></div>
                   </Link>
@@ -313,6 +322,11 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                        className={`transition-colors duration-300 ${active ? 'text-white fill-white/20' : 'text-slate-500 stroke-[1.5px]'}`} 
                      />
                   </div>
+                  
+                  {/* Tooltip for Mobile Nav Icons */}
+                  <span className="absolute bottom-full mb-4 left-1/2 -translate-x-1/2 px-3 py-1 bg-brand-darker/95 backdrop-blur-md border border-white/10 text-brand-cyan text-[10px] font-bold uppercase tracking-widest rounded opacity-0 group-hover:opacity-100 transition-all duration-300 transform group-hover:translate-y-0 translate-y-2 pointer-events-none shadow-[0_4px_20px_rgba(0,0,0,0.5)] whitespace-nowrap z-50">
+                     {item.label}
+                  </span>
                </Link>
              );
            })}

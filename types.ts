@@ -1,5 +1,4 @@
 
-
 export enum Rank {
   IRON = 'Iron',
   BRONZE = 'Bronze',
@@ -60,6 +59,7 @@ export interface User {
 export enum BookingStatus {
   PENDING = 'PENDING', 
   ACTIVE = 'ACTIVE',   
+  PRE_BOOKED = 'PRE_BOOKED',
   COMPLETED = 'COMPLETED', 
   CANCELLED = 'CANCELLED'
 }

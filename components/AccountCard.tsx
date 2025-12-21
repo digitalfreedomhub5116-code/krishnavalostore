@@ -1,8 +1,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Account } from '../types';
-import { Trophy, Gem, Lock, Eye, Sparkles, Clock } from 'lucide-react';
+import { Account, Booking, BookingStatus } from '../types';
+import { StorageService } from '../services/storage';
+import { Trophy, Gem, Lock, Eye, Sparkles, Clock, CalendarDays } from 'lucide-react';
 
 interface AccountCardProps {
   account: Account;
@@ -11,6 +12,29 @@ interface AccountCardProps {
 const AccountCard: React.FC<AccountCardProps> = ({ account }) => {
   const [timeLeft, setTimeLeft] = useState<string | null>(null);
   const [isEffectivelyAvailable, setIsEffectivelyAvailable] = useState(!account.isBooked);
+  const [upcomingBooking, setUpcomingBooking] = useState<Booking | null>(null);
+
+  // Poll for upcoming bookings to display "Pre-Booked" status if applicable
+  useEffect(() => {
+    const fetchBookings = async () => {
+       const allBookings = await StorageService.getBookings(account.id);
+       const now = Date.now();
+       
+       // Find nearest future booking that is approved (ACTIVE or PRE_BOOKED)
+       const future = allBookings
+          .filter(b => 
+             (b.status === BookingStatus.PRE_BOOKED || b.status === BookingStatus.ACTIVE) &&
+             new Date(b.startTime).getTime() > now
+          )
+          .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())[0];
+       
+       setUpcomingBooking(future || null);
+    };
+
+    fetchBookings();
+    const interval = setInterval(fetchBookings, 60000); // Update every minute
+    return () => clearInterval(interval);
+  }, [account.id]);
 
   useEffect(() => {
     if (!account.isBooked || !account.bookedUntil) {
@@ -73,7 +97,7 @@ const AccountCard: React.FC<AccountCardProps> = ({ account }) => {
           <div className="absolute inset-0 bg-gradient-to-t from-brand-surface via-transparent to-transparent opacity-90" />
           
           {/* Status Badge */}
-          <div className="absolute top-3 right-3 z-20">
+          <div className="absolute top-3 right-3 z-20 flex flex-col items-end gap-1">
             {isEffectivelyAvailable ? (
               <span className="inline-flex items-center px-3 py-1 bg-black/50 backdrop-blur-md border border-green-500/50 text-green-400 text-[10px] font-bold uppercase tracking-wider skew-x-[-10deg]">
                 <span className="w-1.5 h-1.5 rounded-full bg-green-400 mr-2 animate-pulse" />
@@ -89,6 +113,16 @@ const AccountCard: React.FC<AccountCardProps> = ({ account }) => {
                   {timeLeft}
                 </span>
               </div>
+            )}
+
+            {/* Pre-Booked Indicator */}
+            {upcomingBooking && (
+               <div className="flex items-center gap-1.5 bg-black/80 backdrop-blur-md px-2 py-1 rounded border border-purple-500/30 text-[9px] text-purple-400 font-bold uppercase tracking-wide">
+                  <CalendarDays size={10} />
+                  <span>
+                     Pre-Booked: {new Date(upcomingBooking.startTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                  </span>
+               </div>
             )}
           </div>
 
