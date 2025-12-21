@@ -404,6 +404,13 @@ const RentalCard: React.FC<{ booking: Booking, showCredentials?: boolean }> = ({
          
          if (diff <= 1000) {
             await StorageService.syncBooking(booking.orderId);
+         } else {
+             // Show countdown for PRE_BOOKED
+             const h = Math.floor(diff / 3600000);
+             const m = Math.floor((diff % 3600000) / 60000);
+             const s = Math.floor((diff % 60000) / 1000);
+             setTimeLeft(`${h}h ${m}m ${s}s`);
+             setTimeLabel('Starts In');
          }
       } else if (now < end) {
          // ACTIVE COUNTDOWN
@@ -491,9 +498,10 @@ const RentalCard: React.FC<{ booking: Booking, showCredentials?: boolean }> = ({
                     <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/30 text-purple-300 text-[10px] font-black uppercase tracking-widest mb-3">
                         <CalendarClock size={12} /> Scheduled
                     </div>
-                    <h4 className="text-white font-bold text-lg mb-2 uppercase tracking-wide">Starts on {startObj.toLocaleDateString()}</h4>
-                    <div className="text-xl md:text-2xl font-mono font-bold text-white mb-4 tabular-nums tracking-tight">
-                       {startObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                    {/* Countdown for Pre-Booked Status */}
+                    <h4 className="text-white font-bold text-lg mb-2 uppercase tracking-wide">Your booking starts in</h4>
+                    <div className="text-xl md:text-4xl font-mono font-black text-white mb-4 tabular-nums tracking-tight">
+                       {timeLeft}
                     </div>
                     <div className="flex items-center gap-2 text-purple-300 text-xs bg-purple-500/10 px-3 py-1.5 rounded-full border border-purple-500/20 mb-2">
                        <Lock size={12} />
