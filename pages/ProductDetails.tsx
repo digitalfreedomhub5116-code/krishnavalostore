@@ -222,21 +222,10 @@ const BookingWizard = ({ account, onClose }: { account: Account, onClose: () => 
    const navigate = useNavigate();
    const user = StorageService.getCurrentUser();
    
-   const [mode, setMode] = useState<'now' | 'prebook'>('now');
    const [duration, setDuration] = useState<keyof Pricing>('hours3');
-   const [selectedDate, setSelectedDate] = useState<string>('');
-   const [selectedTime, setSelectedTime] = useState<string>('');
    
    const [error, setError] = useState<string>('');
    const [isChecking, setIsChecking] = useState(false);
-
-   // Default date to tomorrow for pre-book
-   useEffect(() => {
-     const tmrw = new Date();
-     tmrw.setDate(tmrw.getDate() + 1);
-     setSelectedDate(tmrw.toISOString().split('T')[0]);
-     setSelectedTime("12:00");
-   }, []);
 
    const calculatePrice = () => {
       return duration === 'hours24' ? Math.floor(account.pricing.hours24 * 0.9) : account.pricing[duration];
@@ -244,16 +233,9 @@ const BookingWizard = ({ account, onClose }: { account: Account, onClose: () => 
 
    const getTimes = () => {
       const now = new Date();
-      if (mode === 'now') {
-        const hoursToAdd = parseInt(duration.replace('hours', ''));
-        const end = new Date(now.getTime() + hoursToAdd * 60 * 60 * 1000);
-        return { start: now, end };
-      } else {
-        const start = new Date(`${selectedDate}T${selectedTime}`);
-        const hoursToAdd = parseInt(duration.replace('hours', ''));
-        const end = new Date(start.getTime() + hoursToAdd * 60 * 60 * 1000);
-        return { start, end };
-      }
+      const hoursToAdd = parseInt(duration.replace('hours', ''));
+      const end = new Date(now.getTime() + hoursToAdd * 60 * 60 * 1000);
+      return { start: now, end };
    };
 
    const handleProceed = async () => {
@@ -263,18 +245,11 @@ const BookingWizard = ({ account, onClose }: { account: Account, onClose: () => 
       try {
         const { start, end } = getTimes();
         
-        // Basic Validation
-        if (mode === 'prebook') {
-           if (start.getTime() <= Date.now()) {
-              throw new Error("Pre-booking time must be in the future.");
-           }
-        }
-
         // Availability Check
         const isAvailable = await StorageService.checkAvailability(account.id, start.toISOString(), end.toISOString());
         
         if (!isAvailable) {
-           throw new Error("Selected time slot overlaps with an existing booking. Please choose another time.");
+           throw new Error("Selected time slot overlaps with an existing booking. Please try again later.");
         }
 
         // LOCKING: Create PENDING Booking
@@ -302,7 +277,7 @@ const BookingWizard = ({ account, onClose }: { account: Account, onClose: () => 
            hours: booking.hours, 
            price: booking.totalPrice, 
            durationLabel: booking.durationLabel, 
-           startMode: mode,
+           startMode: 'now',
            scheduledTime: start.toISOString()
         };
         
@@ -329,22 +304,6 @@ const BookingWizard = ({ account, onClose }: { account: Account, onClose: () => 
                <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X /></button>
             </div>
 
-            {/* Mode Selection */}
-            <div className="grid grid-cols-2 gap-2 mb-6 p-1 bg-black/40 rounded-xl border border-white/5">
-               <button 
-                  onClick={() => setMode('now')} 
-                  className={`py-3 rounded-lg text-xs font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${mode === 'now' ? 'bg-brand-accent text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}
-               >
-                  <PlayCircle size={14} /> Rent Now
-               </button>
-               <button 
-                  onClick={() => setMode('prebook')} 
-                  className={`py-3 rounded-lg text-xs font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${mode === 'prebook' ? 'bg-purple-600 text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}
-               >
-                  <CalendarClock size={14} /> Pre-Book
-               </button>
-            </div>
-
             <div className="space-y-4 mb-6">
                <div>
                   <label className="text-[10px] text-slate-500 uppercase font-bold tracking-widest mb-2 block">Select Duration</label>
@@ -362,30 +321,6 @@ const BookingWizard = ({ account, onClose }: { account: Account, onClose: () => 
                   </div>
                </div>
 
-               {mode === 'prebook' && (
-                  <div className="grid grid-cols-2 gap-4 animate-in slide-in-from-top-2">
-                     <div>
-                        <label className="text-[10px] text-slate-500 uppercase font-bold tracking-widest mb-2 block">Start Date</label>
-                        <input 
-                           type="date" 
-                           min={new Date().toISOString().split('T')[0]}
-                           value={selectedDate}
-                           onChange={e => setSelectedDate(e.target.value)}
-                           className="w-full bg-brand-dark border border-white/10 rounded-lg p-3 text-white text-sm outline-none focus:border-purple-500 transition-colors"
-                        />
-                     </div>
-                     <div>
-                        <label className="text-[10px] text-slate-500 uppercase font-bold tracking-widest mb-2 block">Start Time</label>
-                        <input 
-                           type="time" 
-                           value={selectedTime}
-                           onChange={e => setSelectedTime(e.target.value)}
-                           className="w-full bg-brand-dark border border-white/10 rounded-lg p-3 text-white text-sm outline-none focus:border-purple-500 transition-colors"
-                        />
-                     </div>
-                  </div>
-               )}
-
                {error && (
                   <div className="bg-red-500/10 border border-red-500/20 p-3 rounded-lg flex items-start gap-2 text-red-400 text-xs">
                      <AlertCircle size={14} className="shrink-0 mt-0.5" />
@@ -399,7 +334,7 @@ const BookingWizard = ({ account, onClose }: { account: Account, onClose: () => 
               disabled={isChecking}
               className="w-full bg-white text-brand-darker py-4 rounded-xl font-black uppercase tracking-[0.2em] hover:bg-brand-accent hover:text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              {isChecking ? <Loader2 className="animate-spin" /> : (mode === 'now' ? 'PROCEED TO CHECKOUT' : 'CONFIRM RESERVATION')}
+              {isChecking ? <Loader2 className="animate-spin" /> : 'PROCEED TO CHECKOUT'}
             </button>
             <p className="text-center text-[10px] text-slate-500 mt-3 uppercase tracking-widest">
                Slot will be locked for 10 minutes upon proceeding
