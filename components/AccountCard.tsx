@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Account, Booking, BookingStatus } from '../types';
+import { Account, Booking } from '../types';
 import { StorageService } from '../services/storage';
 import { Trophy, Gem, Clock, CalendarDays, Sparkles } from 'lucide-react';
 
@@ -24,10 +24,10 @@ const AccountCard: React.FC<AccountCardProps> = ({ account }) => {
        const now = Date.now();
        
        // Find relevant booking (Active or Pre-Booked in future)
-       // We prioritize ACTIVE, then PRE_BOOKED
+       // Using string literals for status
        const relevant = allBookings
           .filter(b => 
-             (b.status === BookingStatus.PRE_BOOKED || b.status === BookingStatus.ACTIVE) &&
+             (b.status === 'PRE_BOOKED' || b.status === 'ACTIVE') &&
              new Date(b.endTime).getTime() > now // Not expired
           )
           .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())[0];

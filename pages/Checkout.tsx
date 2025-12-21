@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate, Navigate } from 'react-router-dom';
-import { Account, UPI_ID, BookingStatus, Booking } from '../types';
+import { Account, UPI_ID, Booking } from '../types';
 import { StorageService } from '../services/storage';
 import { Copy, ArrowRight, Timer, CalendarClock, Smartphone, ShieldCheck, Zap, Send } from 'lucide-react';
 
@@ -73,7 +73,7 @@ const Checkout: React.FC = () => {
       totalPrice: state.price,
       startTime: startDateTime.toISOString(),
       endTime: endDateTime.toISOString(),
-      status: BookingStatus.PENDING, // Still pending admin approval
+      status: 'PENDING', // Using string literal
       createdAt: new Date().toISOString(), 
       utr: utr,
       customerId: currentUser?.id,

@@ -56,6 +56,7 @@ export interface User {
   ultraPoints: number;
 }
 
+// Keeping Enum for reference values, but decoupling form Interface
 export enum BookingStatus {
   PENDING = 'PENDING', 
   ACTIVE = 'ACTIVE',   
@@ -73,7 +74,7 @@ export interface Booking {
   totalPrice: number;
   startTime: string; 
   endTime: string;   
-  status: BookingStatus;
+  status: string; // Changed to pure string to fix TS2367
   customerName?: string;
   customerId?: string;
   createdAt: string;

@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { StorageService } from '../services/storage';
-import { Account, Pricing, BookingStatus, Booking } from '../types';
+import { Account, Pricing } from '../types';
 import { ArrowLeft, Gem, Clock, Calendar, ChevronRight, MessageCircle, X, ArrowRight, Lock, Maximize2, ChevronDown, ChevronUp, Sparkles, Loader2, AlertCircle, ShieldCheck, PlayCircle, CalendarClock } from 'lucide-react';
 
 const ProductDetails: React.FC = () => {

@@ -69,7 +69,11 @@ const AdminDashboard: React.FC = () => {
 
   const stats = useMemo(() => ({
     totalBookings: bookings.length,
-    monthlyRevenue: bookings.filter(b => (b.status === BookingStatus.ACTIVE || b.status === BookingStatus.COMPLETED)).reduce((sum, b) => sum + b.totalPrice, 0),
+    monthlyRevenue: bookings.filter(b => {
+      // Safe check for string status
+      const s = b.status as any;
+      return s === 'ACTIVE' || s === 'COMPLETED';
+    }).reduce((sum, b) => sum + b.totalPrice, 0),
     activeRentals: accounts.filter(a => a.isBooked).length,
     totalUsers: users.length
   }), [bookings, accounts, users]);
@@ -301,8 +305,9 @@ const BookingTimer: React.FC<{ booking: Booking }> = ({ booking }) => {
       const now = Date.now();
       const start = new Date(booking.startTime).getTime();
       const end = new Date(booking.endTime).getTime();
+      const status = booking.status as any;
 
-      if (booking.status === BookingStatus.PRE_BOOKED) {
+      if (status === 'PRE_BOOKED') {
          // Explicitly display start time for pre-booked/confirmed future bookings
          const date = new Date(booking.startTime);
          const dateStr = date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -328,11 +333,12 @@ const BookingTimer: React.FC<{ booking: Booking }> = ({ booking }) => {
     return () => clearInterval(interval);
   }, [booking]);
 
-  if (booking.status === BookingStatus.CANCELLED) return <span className="text-slate-500">Terminated</span>;
-  if (booking.status === BookingStatus.COMPLETED) return <span className="text-slate-500">Finished</span>;
-  if (booking.status === BookingStatus.PENDING) return <span className="text-yellow-500">Pending Action</span>;
+  const status = booking.status as any;
+  if (status === 'CANCELLED') return <span className="text-slate-500">Terminated</span>;
+  if (status === 'COMPLETED') return <span className="text-slate-500">Finished</span>;
+  if (status === 'PENDING') return <span className="text-yellow-500">Pending Action</span>;
 
-  const isFuture = booking.status === BookingStatus.PRE_BOOKED;
+  const isFuture = status === 'PRE_BOOKED';
   
   return (
     <div className={`flex items-center gap-1.5 text-xs font-bold font-mono ${isFuture ? 'text-purple-400' : 'text-green-400'}`}>
@@ -354,20 +360,22 @@ const BookingTable = ({ bookings, onUpdateStatus, onDelete }: any) => {
       <table className="w-full text-left text-sm">
         <thead><tr className="bg-brand-darker text-slate-500 border-b border-white/10 uppercase font-bold tracking-widest text-[10px]"><th className="p-5">Order ID</th><th className="p-5">Agent</th><th className="p-5">Status</th><th className="p-5">Timer</th><th className="p-5 text-right">Operation</th></tr></thead>
         <tbody className="divide-y divide-white/5">
-          {bookings.map((b: any) => (
+          {bookings.map((b: any) => {
+            const status = b.status as any;
+            return (
             <tr key={b.orderId} className="hover:bg-white/5 transition-colors group">
               <td className="p-5 font-mono text-xs text-brand-cyan">{b.orderId}</td>
               <td className="p-5"><div className="text-white font-bold">{b.accountName}</div><div className="text-[10px] text-slate-500 font-mono">UTR: {b.utr}</div></td>
               <td className="p-5">
                 <span className={`px-3 py-1 rounded text-[10px] font-black uppercase tracking-tighter ${
-                  b.status === 'ACTIVE' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 
-                  b.status === 'PRE_BOOKED' ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' :
-                  b.status === 'CANCELLED' ? 'bg-slate-700/50 text-slate-400 border border-white/10' :
+                  status === 'ACTIVE' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 
+                  status === 'PRE_BOOKED' ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' :
+                  status === 'CANCELLED' ? 'bg-slate-700/50 text-slate-400 border border-white/10' :
                   'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20'
                 }`}>
-                  {b.status === 'CANCELLED' && <Ban size={10} className="inline mr-1" />}
+                  {status === 'CANCELLED' && <Ban size={10} className="inline mr-1" />}
                   {/* Display PRE_BOOKED internally as CONFIRMED visually */}
-                  {b.status === 'PRE_BOOKED' ? 'CONFIRMED' : b.status}
+                  {status === 'PRE_BOOKED' ? 'CONFIRMED' : status}
                 </span>
               </td>
               <td className="p-5">
@@ -375,7 +383,7 @@ const BookingTable = ({ bookings, onUpdateStatus, onDelete }: any) => {
               </td>
               <td className="p-5 text-right">
                 <div className="flex justify-end gap-2">
-                  {b.status === 'PENDING' && (
+                  {status === 'PENDING' && (
                     <>
                       <button 
                         onClick={() => handleAuthorize(b)} 
@@ -395,7 +403,7 @@ const BookingTable = ({ bookings, onUpdateStatus, onDelete }: any) => {
                       </button>
                     </>
                   )}
-                  {b.status === 'PRE_BOOKED' && (
+                  {status === 'PRE_BOOKED' && (
                      <button
                         onClick={() => {
                            if(window.confirm("UNLOCK NOW? This will grant the user immediate access to credentials regardless of the scheduled start time.")) {
@@ -407,7 +415,7 @@ const BookingTable = ({ bookings, onUpdateStatus, onDelete }: any) => {
                         <Unlock size={12} /> UNLOCK NOW
                      </button>
                   )}
-                  {(b.status === 'ACTIVE' || b.status === 'PRE_BOOKED') && (
+                  {(status === 'ACTIVE' || status === 'PRE_BOOKED') && (
                     <button 
                       onClick={() => {
                         if(window.confirm("Terminate this session? The account will be released immediately for new bookings.")) {
@@ -422,7 +430,7 @@ const BookingTable = ({ bookings, onUpdateStatus, onDelete }: any) => {
                 </div>
               </td>
             </tr>
-          ))}
+          )})}
         </tbody>
       </table>
     </div>
