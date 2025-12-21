@@ -22,7 +22,6 @@ const Checkout: React.FC = () => {
   const state = location.state as CheckoutState;
   
   const [orderId, setOrderId] = useState(state?.orderId || '');
-  const [timer, setTimer] = useState(600); // 10 minutes for payment
   const [utr, setUtr] = useState('');
   const [error, setError] = useState('');
 
@@ -36,17 +35,6 @@ const Checkout: React.FC = () => {
     }
   }, [state]);
 
-  // Payment Timer countdown
-  useEffect(() => {
-    if (timer > 0) {
-      const interval = setInterval(() => setTimer(t => t - 1), 1000);
-      return () => clearInterval(interval);
-    } else {
-       // Timer expired - navigate away or show error
-       setError("Session expired. Slot released.");
-    }
-  }, [timer]);
-
   if (!state) {
     return <Navigate to="/browse" />;
   }
@@ -57,12 +45,6 @@ const Checkout: React.FC = () => {
     : new Date();
     
   const endDateTime = new Date(startDateTime.getTime() + state.hours * 60 * 60 * 1000);
-
-  const formatTimer = (seconds: number) => {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m}:${s < 10 ? '0' : ''}${s}`;
-  };
 
   // Construct UPI URI with amount and order ID
   // tn (Transaction Note) is critical here - it puts the Order ID in the bank statement for the admin
@@ -81,44 +63,23 @@ const Checkout: React.FC = () => {
       return;
     }
 
-    if (state.orderId) {
-       // Update existing PENDING booking
-       // We fetch it first to be safe, then update
-       const booking: Booking = {
-         orderId,
-         accountId: state.account.id,
-         accountName: state.account.name,
-         durationLabel: state.durationLabel,
-         hours: state.hours,
-         totalPrice: state.price,
-         startTime: startDateTime.toISOString(),
-         endTime: endDateTime.toISOString(),
-         status: BookingStatus.PENDING, // Still pending admin approval
-         createdAt: new Date().toISOString(), // This might be slightly off from original creation but acceptable
-         utr: utr,
-         customerId: currentUser?.id,
-         customerName: currentUser?.name
-       };
-       await StorageService.updateBooking(booking);
-    } else {
-       // Legacy Fallback: Create new booking
-       const newBooking: Booking = {
-        orderId,
-        accountId: state.account.id,
-        accountName: state.account.name,
-        durationLabel: state.durationLabel,
-        hours: state.hours,
-        totalPrice: state.price,
-        startTime: startDateTime.toISOString(),
-        endTime: endDateTime.toISOString(),
-        status: BookingStatus.PENDING,
-        createdAt: new Date().toISOString(),
-        utr: utr,
-        customerId: currentUser?.id, // Link to logged in user
-        customerName: currentUser?.name
-      };
-      await StorageService.createBooking(newBooking);
-    }
+    // Always create new booking entry since we removed pre-locking
+    const booking: Booking = {
+      orderId,
+      accountId: state.account.id,
+      accountName: state.account.name,
+      durationLabel: state.durationLabel,
+      hours: state.hours,
+      totalPrice: state.price,
+      startTime: startDateTime.toISOString(),
+      endTime: endDateTime.toISOString(),
+      status: BookingStatus.PENDING, // Still pending admin approval
+      createdAt: new Date().toISOString(), 
+      utr: utr,
+      customerId: currentUser?.id,
+      customerName: currentUser?.name
+    };
+    await StorageService.createBooking(booking);
 
     // 2. Construct WhatsApp Message
     const timeString = state.startMode === 'later' 
@@ -217,15 +178,6 @@ I have made the payment. Please verify.
 
         {/* Right Column: Order Summary */}
         <div className="space-y-6">
-           {/* Timer */}
-           <div className="bg-brand-surface border border-brand-accent/30 rounded-xl p-4 flex items-center justify-between shadow-[0_0_15px_rgba(255,70,85,0.1)]">
-             <div className="flex items-center gap-2 text-brand-accent">
-               <Timer className="w-5 h-5" />
-               <span className="font-bold">Slot Locked</span>
-             </div>
-             <div className="font-mono text-xl font-bold">{formatTimer(timer)}</div>
-           </div>
-
           <div className="bg-brand-surface border border-white/10 rounded-xl p-6">
             <h2 className="text-xl font-bold mb-4">Order Summary</h2>
             

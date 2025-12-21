@@ -181,8 +181,8 @@ export const StorageService = {
     const newEnd = new Date(endTime).getTime();
 
     const conflicts = bookings.filter(b => {
-      // Ignore Cancelled and Completed
-      if (b.status === BookingStatus.CANCELLED || b.status === BookingStatus.COMPLETED) return false;
+      // Ignore Cancelled, Completed, AND Pending (to prevent locking)
+      if (b.status === BookingStatus.CANCELLED || b.status === BookingStatus.COMPLETED || b.status === BookingStatus.PENDING) return false;
       
       const bStart = new Date(b.startTime).getTime();
       const bEnd = new Date(b.endTime).getTime();
@@ -257,6 +257,34 @@ export const StorageService = {
       
       notifyStorageChange();
     }
+  },
+
+  // NEW: Sync a specific booking's status with server time
+  // This is used by the frontend to force-check a booking when its timer runs out
+  syncBooking: async (orderId: string) => {
+     try {
+       const { data: row } = await getSupabase().from('bookings').select('data').eq('order_id', orderId).single();
+       if (row?.data) {
+         const booking = row.data as Booking;
+         const now = Date.now();
+         const startTime = new Date(booking.startTime).getTime();
+         const endTime = new Date(booking.endTime).getTime();
+         
+         if (booking.status === BookingStatus.PRE_BOOKED && now >= startTime && now < endTime) {
+           await StorageService.updateBookingStatus(orderId, BookingStatus.ACTIVE);
+           return true;
+         }
+         
+         if (booking.status === BookingStatus.ACTIVE && now >= endTime) {
+            await StorageService.updateBookingStatus(orderId, BookingStatus.COMPLETED);
+            return true;
+         }
+       }
+       return false;
+     } catch (e) {
+       console.error("Sync error", e);
+       return false;
+     }
   },
 
   // Automatically check for expired bookings and pending locks

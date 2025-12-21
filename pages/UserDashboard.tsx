@@ -3,11 +3,10 @@ import React, { useState, useEffect } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { StorageService } from '../services/storage';
 import { User, Booking, BookingStatus, Account } from '../types';
-// Added Sparkles to the imports from lucide-react
 import { 
   User as UserIcon, Clock, History, LifeBuoy, LogOut, 
   Gamepad2, Calendar, Copy, Eye, EyeOff, ShieldCheck, 
-  AlertTriangle, ChevronRight, CheckCircle2, MessageCircle, Award, Gift, Gem, Sparkles
+  AlertTriangle, ChevronRight, CheckCircle2, MessageCircle, Award, Gift, Gem, Sparkles, Lock, Timer, CalendarClock
 } from 'lucide-react';
 
 const UserDashboard: React.FC = () => {
@@ -25,8 +24,8 @@ const UserDashboard: React.FC = () => {
         setUser(currentUser);
         const userBookings = await StorageService.getUserBookings(currentUser.id);
         userBookings.sort((a, b) => {
-          if (a.status === BookingStatus.ACTIVE && b.status !== BookingStatus.ACTIVE) return -1;
-          if (a.status !== BookingStatus.ACTIVE && b.status === BookingStatus.ACTIVE) return 1;
+          if ((a.status === BookingStatus.ACTIVE || a.status === BookingStatus.PRE_BOOKED) && (b.status !== BookingStatus.ACTIVE && b.status !== BookingStatus.PRE_BOOKED)) return -1;
+          if ((a.status !== BookingStatus.ACTIVE && a.status !== BookingStatus.PRE_BOOKED) && (b.status === BookingStatus.ACTIVE || b.status === BookingStatus.PRE_BOOKED)) return 1;
           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
         });
         setBookings(userBookings);
@@ -47,7 +46,7 @@ const UserDashboard: React.FC = () => {
   if (loading) return null;
   if (!user) return <Navigate to="/login" />;
 
-  const activeBookings = bookings.filter(b => b.status === BookingStatus.ACTIVE || b.status === BookingStatus.PENDING);
+  const activeBookings = bookings.filter(b => b.status === BookingStatus.ACTIVE || b.status === BookingStatus.PENDING || b.status === BookingStatus.PRE_BOOKED);
   const pastBookings = bookings.filter(b => b.status === BookingStatus.COMPLETED || b.status === BookingStatus.CANCELLED);
 
   const renderTabContent = () => {
@@ -80,11 +79,11 @@ const UserDashboard: React.FC = () => {
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-brand-surface border border-white/10 rounded-xl p-4 flex flex-col justify-center items-center text-center">
                 <div className="text-3xl font-bold text-white mb-1">{activeBookings.length}</div>
-                <div className="text-xs text-slate-400 uppercase tracking-widest">Active Rentals</div>
+                <div className="text-xs text-slate-400 uppercase tracking-widest">Active/Upcoming</div>
               </div>
               <div className="bg-brand-surface border border-white/10 rounded-xl p-4 flex flex-col justify-center items-center text-center">
                 <div className="text-3xl font-bold text-brand-accent mb-1">{pastBookings.length}</div>
-                <div className="text-xs text-slate-400 uppercase tracking-widest">Completed</div>
+                <div className="text-xs text-slate-400 uppercase tracking-widest">History</div>
               </div>
             </div>
 
@@ -92,7 +91,7 @@ const UserDashboard: React.FC = () => {
               <div className="space-y-4">
                 <h3 className="text-lg font-bold text-white flex items-center gap-2">
                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                   Current Session
+                   Current Sessions
                 </h3>
                 {activeBookings.map(booking => (
                   <RentalCard key={booking.orderId} booking={booking} />
@@ -115,6 +114,7 @@ const UserDashboard: React.FC = () => {
         );
       
       case 'rewards':
+        // ... (Rewards content unchanged) ...
         const pointsProgress = Math.min((user.ultraPoints / 500) * 100, 100);
         return (
           <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">
@@ -163,19 +163,6 @@ const UserDashboard: React.FC = () => {
                       >
                         {user.ultraPoints >= 500 ? 'CLAIM 1000 VP VOUCHER' : `${500 - user.ultraPoints} POINTS REMAINING`}
                       </button>
-                   </div>
-
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 opacity-40 grayscale pointer-events-none">
-                      <div className="p-6 bg-brand-surface border border-white/5 rounded-2xl">
-                         <h3 className="text-white font-bold text-xs uppercase tracking-widest mb-4">Locked Milestone</h3>
-                         <div className="text-2xl font-black text-slate-500 mb-2">2500 VP</div>
-                         <div className="text-[10px] font-bold text-slate-600 uppercase">Unlock at 1200 UP</div>
-                      </div>
-                      <div className="p-6 bg-brand-surface border border-white/5 rounded-2xl">
-                         <h3 className="text-white font-bold text-xs uppercase tracking-widest mb-4">Locked Milestone</h3>
-                         <div className="text-2xl font-black text-slate-500 mb-2">5500 VP</div>
-                         <div className="text-[10px] font-bold text-slate-600 uppercase">Unlock at 2500 UP</div>
-                      </div>
                    </div>
                 </div>
              </div>
@@ -239,6 +226,7 @@ const UserDashboard: React.FC = () => {
         );
 
       case 'profile':
+        // ... (Profile content unchanged) ...
         return (
           <div className="animate-in fade-in slide-in-from-right-4 duration-300">
              <div className="bg-brand-surface border border-white/10 rounded-xl p-6 max-w-2xl mx-auto">
@@ -358,51 +346,75 @@ const UserDashboard: React.FC = () => {
 
 const RentalCard: React.FC<{ booking: Booking, showCredentials?: boolean }> = ({ booking, showCredentials }) => {
   const [timeLeft, setTimeLeft] = useState<string>('--:--:--');
-  const [progress, setProgress] = useState(100);
+  const [timeLabel, setTimeLabel] = useState<string>('Time Remaining');
+  const [progress, setProgress] = useState(0);
   const [isRevealed, setIsRevealed] = useState(false);
   const [accountDetails, setAccountDetails] = useState<Account | undefined>(undefined);
+  
+  // Strict Status Check
+  const isPreBooked = booking.status === BookingStatus.PRE_BOOKED;
+  const isActive = booking.status === BookingStatus.ACTIVE;
+  const isPending = booking.status === BookingStatus.PENDING;
+  const isExpired = booking.status === BookingStatus.COMPLETED || booking.status === BookingStatus.CANCELLED;
 
   useEffect(() => {
     const fetchAccount = async () => {
-      if (showCredentials) {
+      // ONLY fetch details if Active. Security Feature.
+      if (showCredentials && isActive) {
          const acc = await StorageService.getAccountById(booking.accountId);
          setAccountDetails(acc);
+      } else {
+         setAccountDetails(undefined); // Ensure clear if status changes back (rare but safer)
       }
     };
     fetchAccount();
-  }, [booking.accountId, showCredentials]);
+  }, [booking.accountId, showCredentials, isActive]);
 
   useEffect(() => {
-    if (booking.status !== BookingStatus.ACTIVE) {
-       setTimeLeft(booking.status);
-       setProgress(0);
-       return;
-    }
+    if (isExpired || isPending) return;
 
-    const interval = setInterval(() => {
+    const interval = setInterval(async () => {
       const now = new Date().getTime();
       const end = new Date(booking.endTime).getTime();
       const start = new Date(booking.startTime).getTime();
-      const totalDuration = end - start;
-      const distance = end - now;
+      
+      if (booking.status === BookingStatus.PRE_BOOKED) {
+         // PRE-BOOKING DISPLAY - Wait until start time
+         // The syncBooking check will flip it to ACTIVE when start time is reached
+         const diff = start - now;
+         
+         if (diff <= 1000) {
+            await StorageService.syncBooking(booking.orderId);
+         }
+      } else if (now < end) {
+         // ACTIVE COUNTDOWN
+         // If status is still PRE_BOOKED but time has passed, force sync immediately
+         if (booking.status === BookingStatus.PRE_BOOKED) {
+            await StorageService.syncBooking(booking.orderId);
+         }
 
-      if (distance < 0) {
-        setTimeLeft("EXPIRED");
-        setProgress(0);
-        clearInterval(interval);
+         const totalDuration = end - start;
+         const remaining = end - now;
+         const h = Math.floor(remaining / 3600000);
+         const m = Math.floor((remaining % 3600000) / 60000);
+         const s = Math.floor((remaining % 60000) / 1000);
+         setTimeLeft(`${h}h ${m}m ${s}s`);
+         setTimeLabel('Time Remaining');
+         const percent = Math.max(0, (remaining / totalDuration) * 100);
+         setProgress(percent);
       } else {
-        const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-        const seconds = Math.floor((distance % (1000 * 60)) / 1000);
-        setTimeLeft(`${hours}h ${minutes}m ${seconds}s`);
-        
-        const percent = Math.max(0, (distance / totalDuration) * 100);
-        setProgress(percent);
+         setTimeLeft("EXPIRED");
+         setProgress(0);
+         // Force sync on expire to cleanup
+         if (booking.status === BookingStatus.ACTIVE) {
+            await StorageService.syncBooking(booking.orderId);
+         }
+         clearInterval(interval);
       }
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [booking]);
+  }, [booking, isExpired, isPending]);
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -410,7 +422,9 @@ const RentalCard: React.FC<{ booking: Booking, showCredentials?: boolean }> = ({
   };
 
   return (
-    <div className="bg-brand-surface border border-white/10 rounded-xl overflow-hidden relative group">
+    <div className={`bg-brand-surface border rounded-xl overflow-hidden relative group transition-all duration-300 ${isActive ? 'border-brand-accent/50 shadow-[0_0_20px_rgba(255,70,85,0.1)]' : 'border-white/10'}`}>
+      
+      {/* Progress Bar (Only for Active) */}
       <div className="h-1 bg-gray-800 w-full">
          <div 
            className={`h-full transition-all duration-1000 ease-linear ${progress < 20 ? 'bg-red-500' : 'bg-brand-accent'}`} 
@@ -430,23 +444,50 @@ const RentalCard: React.FC<{ booking: Booking, showCredentials?: boolean }> = ({
            </div>
            
            <div className="text-right">
-              {booking.status === BookingStatus.ACTIVE ? (
+              {isActive ? (
                  <>
-                   <div className="text-sm text-slate-400 uppercase tracking-wide text-[10px] font-bold">Time Remaining</div>
-                   <div className="text-2xl font-mono font-bold text-brand-cyan tabular-nums tracking-tight">
+                   <div className="text-sm text-slate-400 uppercase tracking-wide text-[10px] font-bold">{timeLabel}</div>
+                   <div className="text-2xl font-mono font-bold tabular-nums tracking-tight text-brand-cyan">
                       {timeLeft}
                    </div>
                  </>
               ) : (
-                <span className={`px-3 py-1 border rounded-full text-xs font-bold uppercase ${booking.status === BookingStatus.CANCELLED ? 'bg-slate-700/50 text-slate-400 border-white/10' : 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'}`}>
-                  {booking.status}
+                <span className={`px-3 py-1 border rounded-full text-xs font-bold uppercase ${booking.status === BookingStatus.CANCELLED ? 'bg-slate-700/50 text-slate-400 border-white/10' : (isPreBooked ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' : 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20')}`}>
+                  {isPreBooked ? 'CONFIRMED' : booking.status}
                 </span>
               )}
            </div>
         </div>
 
-        {showCredentials && booking.status === BookingStatus.ACTIVE && accountDetails && (
-          <div className="mt-6 bg-brand-dark/50 border border-white/5 rounded-lg p-4 relative overflow-hidden">
+        {/* --- LOCKED PRE-BOOKED STATE --- */}
+        {showCredentials && isPreBooked && (
+            <div className="mt-6 bg-purple-500/5 border border-purple-500/20 rounded-lg p-8 flex flex-col items-center justify-center text-center relative overflow-hidden group/lock">
+                <div className="absolute inset-0 bg-purple-500/5 blur-xl group-hover/lock:bg-purple-500/10 transition-colors"></div>
+                <div className="relative z-10 flex flex-col items-center">
+                    <div className="w-16 h-16 bg-purple-500/20 rounded-full flex items-center justify-center mb-4 shadow-[0_0_20px_rgba(168,85,247,0.3)] animate-pulse">
+                        <Lock className="w-8 h-8 text-purple-400" />
+                    </div>
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/30 text-purple-300 text-[10px] font-black uppercase tracking-widest mb-3">
+                        <CalendarClock size={12} /> Scheduled
+                    </div>
+                    <h4 className="text-white font-bold text-lg mb-2 uppercase tracking-wide">Starts on {new Date(booking.startTime).toLocaleDateString()}</h4>
+                    <div className="text-xl md:text-2xl font-mono font-bold text-white mb-4 tabular-nums tracking-tight">
+                       {new Date(booking.startTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                    </div>
+                    <div className="flex items-center gap-2 text-purple-300 text-xs bg-purple-500/10 px-3 py-1.5 rounded-full border border-purple-500/20 mb-2">
+                       <Lock size={12} />
+                       <span className="uppercase font-bold tracking-wider">Credentials Locked</span>
+                    </div>
+                    <p className="text-slate-400 text-xs max-w-sm">
+                        Access to ID & Password will unlock automatically at the scheduled time.
+                    </p>
+                </div>
+            </div>
+        )}
+
+        {/* --- ACTIVE CREDENTIALS --- */}
+        {showCredentials && isActive && accountDetails && (
+          <div className="mt-6 bg-brand-dark/50 border border-white/5 rounded-lg p-4 relative overflow-hidden animate-in fade-in zoom-in-95">
              
              {!isRevealed ? (
                <div className="absolute inset-0 z-10 backdrop-blur-md bg-black/60 flex flex-col items-center justify-center text-center p-4">
@@ -500,7 +541,7 @@ const RentalCard: React.FC<{ booking: Booking, showCredentials?: boolean }> = ({
           </div>
         )}
 
-        {booking.status === BookingStatus.PENDING && (
+        {isPending && (
           <div className="mt-4 bg-blue-500/10 border border-blue-500/20 p-3 rounded-lg flex items-center gap-3">
              <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center shrink-0">
                <Clock className="w-4 h-4 text-blue-400 animate-spin-slow" />
