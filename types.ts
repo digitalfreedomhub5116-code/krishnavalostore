@@ -28,7 +28,7 @@ export interface Account {
   rank: Rank;
   skins: Skin[];
   totalSkins?: number; 
-  initialSkinsCount?: number; 
+  initialSkinsCount?: number; // Added: Control for initial skins display limit
   description?: string; 
   pricing: Pricing;
   imageUrl: string;
@@ -53,10 +53,9 @@ export interface User {
   verificationCode?: string;
   createdAt: string;  
   lastLogin: string;
-  ultraPoints: number;
+  ultraPoints: number; // Added for gamification
 }
 
-// Keeping Enum for reference values, but decoupling form Interface
 export enum BookingStatus {
   PENDING = 'PENDING', 
   ACTIVE = 'ACTIVE',   
@@ -74,7 +73,7 @@ export interface Booking {
   totalPrice: number;
   startTime: string; 
   endTime: string;   
-  status: string; // Changed to pure string to fix TS2367
+  status: BookingStatus;
   customerName?: string;
   customerId?: string;
   createdAt: string;

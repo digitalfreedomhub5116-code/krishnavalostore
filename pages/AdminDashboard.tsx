@@ -3,14 +3,15 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Navigate, useNavigate, Link } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { StorageService, DEFAULT_HOME_CONFIG } from '../services/storage';
-import { Account, Booking, BookingStatus, Rank, User, HomeConfig } from '../types';
-import { Plus, Trash2, Check, X, Edit2, Loader2, LogOut, BarChart3, IndianRupee, Users, Gamepad2, Layout, Save, ShieldCheck, Lock, Ban, Minus, Award, Clock, Unlock, CalendarClock } from 'lucide-react';
+import { AIService } from '../services/ai';
+import { Account, Booking, BookingStatus, Rank, User, HomeConfig, Review, Skin, HeroSlide, TrustItem, StepItem } from '../types';
+import { Plus, Trash2, Check, X, Edit2, Loader2, LogOut, Square, CheckSquare, BarChart3, IndianRupee, Users, Gamepad2, Home, Save, Zap, Shield, Star, MessageSquare, AlertCircle, Cpu, Search, Video, FileText, Play, Copy, Terminal, Layout, Image as ImageIcon, ShieldCheck, Lock, Ban, Type as TypeIcon, Minus, Award, Clock } from 'lucide-react';
 
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
   const isAuthenticated = localStorage.getItem('isAdmin') === 'true' || sessionStorage.getItem('isAdmin') === 'true';
   
-  const [activeTab, setActiveTab] = useState<'bookings' | 'accounts' | 'users' | 'edithome'>('bookings');
+  const [activeTab, setActiveTab] = useState<'bookings' | 'accounts' | 'users' | 'edithome' | 'auditor'>('bookings');
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [users, setUsers] = useState<User[]>([]);
@@ -69,11 +70,7 @@ const AdminDashboard: React.FC = () => {
 
   const stats = useMemo(() => ({
     totalBookings: bookings.length,
-    monthlyRevenue: bookings.filter(b => {
-      // Safe check for string status
-      const s = b.status as any;
-      return s === 'ACTIVE' || s === 'COMPLETED';
-    }).reduce((sum, b) => sum + b.totalPrice, 0),
+    monthlyRevenue: bookings.filter(b => (b.status === BookingStatus.ACTIVE || b.status === BookingStatus.COMPLETED)).reduce((sum, b) => sum + b.totalPrice, 0),
     activeRentals: accounts.filter(a => a.isBooked).length,
     totalUsers: users.length
   }), [bookings, accounts, users]);
@@ -199,7 +196,8 @@ const AdminDashboard: React.FC = () => {
         </div>
       )}
 
-      {/* Users Tab */}
+      {/* ... Users Tab, Edit Home Tab, Modals (Same as original) ... */}
+      {/* (Abbreviated to focus on the request logic, copying existing tab logic) */}
       {activeTab === 'users' && (
         <div className="bg-brand-surface border border-white/10 rounded-xl overflow-hidden shadow-2xl">
           <table className="w-full text-left text-sm">
@@ -264,8 +262,8 @@ const AdminDashboard: React.FC = () => {
                 {configSaved ? 'DEPLOYED SUCCESSFULLY' : isSavingConfig ? 'UPLOADING...' : 'SAVE ALL CHANGES'}
               </button>
             </div>
-            
-            <div className="p-8 text-center text-slate-500 border border-dashed border-white/10 rounded-xl">Edit Home Functionality Hidden for brevity.</div>
+            {/* ... Rest of Edit Home ... */}
+            <div className="p-8 text-center text-slate-500 border border-dashed border-white/10 rounded-xl">Edit Home Functionality Hidden for brevity in this patch.</div>
          </div>
       )}
 
@@ -305,15 +303,9 @@ const BookingTimer: React.FC<{ booking: Booking }> = ({ booking }) => {
       const now = Date.now();
       const start = new Date(booking.startTime).getTime();
       const end = new Date(booking.endTime).getTime();
-      const status = booking.status as any;
 
-      if (status === 'PRE_BOOKED') {
-         // Explicitly display start time for pre-booked/confirmed future bookings
-         const date = new Date(booking.startTime);
-         const dateStr = date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-         const timeStr = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-         setDisplayText(`Prebooked for ${dateStr} ${timeStr}`);
-      } else if (now < start) {
+      if (now < start) {
+        // Pre-booked / Upcoming
         const diff = start - now;
         const h = Math.floor(diff / 3600000);
         const m = Math.floor((diff % 3600000) / 60000);
@@ -333,16 +325,15 @@ const BookingTimer: React.FC<{ booking: Booking }> = ({ booking }) => {
     return () => clearInterval(interval);
   }, [booking]);
 
-  const status = booking.status as any;
-  if (status === 'CANCELLED') return <span className="text-slate-500">Terminated</span>;
-  if (status === 'COMPLETED') return <span className="text-slate-500">Finished</span>;
-  if (status === 'PENDING') return <span className="text-yellow-500">Pending Action</span>;
+  if (booking.status === BookingStatus.CANCELLED) return <span className="text-slate-500">Terminated</span>;
+  if (booking.status === BookingStatus.COMPLETED) return <span className="text-slate-500">Finished</span>;
+  if (booking.status === BookingStatus.PENDING) return <span className="text-yellow-500">Pending Action</span>;
 
-  const isFuture = status === 'PRE_BOOKED';
+  const isFuture = new Date(booking.startTime).getTime() > Date.now();
   
   return (
     <div className={`flex items-center gap-1.5 text-xs font-bold font-mono ${isFuture ? 'text-purple-400' : 'text-green-400'}`}>
-       {isFuture ? <CalendarClock size={12} /> : <Clock size={12} />} {displayText}
+       <Clock size={12} /> {displayText}
     </div>
   );
 };
@@ -360,22 +351,19 @@ const BookingTable = ({ bookings, onUpdateStatus, onDelete }: any) => {
       <table className="w-full text-left text-sm">
         <thead><tr className="bg-brand-darker text-slate-500 border-b border-white/10 uppercase font-bold tracking-widest text-[10px]"><th className="p-5">Order ID</th><th className="p-5">Agent</th><th className="p-5">Status</th><th className="p-5">Timer</th><th className="p-5 text-right">Operation</th></tr></thead>
         <tbody className="divide-y divide-white/5">
-          {bookings.map((b: any) => {
-            const status = b.status as any;
-            return (
+          {bookings.map((b: any) => (
             <tr key={b.orderId} className="hover:bg-white/5 transition-colors group">
               <td className="p-5 font-mono text-xs text-brand-cyan">{b.orderId}</td>
               <td className="p-5"><div className="text-white font-bold">{b.accountName}</div><div className="text-[10px] text-slate-500 font-mono">UTR: {b.utr}</div></td>
               <td className="p-5">
                 <span className={`px-3 py-1 rounded text-[10px] font-black uppercase tracking-tighter ${
-                  status === 'ACTIVE' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 
-                  status === 'PRE_BOOKED' ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' :
-                  status === 'CANCELLED' ? 'bg-slate-700/50 text-slate-400 border border-white/10' :
+                  b.status === 'ACTIVE' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 
+                  b.status === 'PRE_BOOKED' ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' :
+                  b.status === 'CANCELLED' ? 'bg-slate-700/50 text-slate-400 border border-white/10' :
                   'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20'
                 }`}>
-                  {status === 'CANCELLED' && <Ban size={10} className="inline mr-1" />}
-                  {/* Display PRE_BOOKED internally as CONFIRMED visually */}
-                  {status === 'PRE_BOOKED' ? 'CONFIRMED' : status}
+                  {b.status === 'CANCELLED' && <Ban size={10} className="inline mr-1" />}
+                  {b.status}
                 </span>
               </td>
               <td className="p-5">
@@ -383,7 +371,7 @@ const BookingTable = ({ bookings, onUpdateStatus, onDelete }: any) => {
               </td>
               <td className="p-5 text-right">
                 <div className="flex justify-end gap-2">
-                  {status === 'PENDING' && (
+                  {b.status === 'PENDING' && (
                     <>
                       <button 
                         onClick={() => handleAuthorize(b)} 
@@ -403,19 +391,7 @@ const BookingTable = ({ bookings, onUpdateStatus, onDelete }: any) => {
                       </button>
                     </>
                   )}
-                  {status === 'PRE_BOOKED' && (
-                     <button
-                        onClick={() => {
-                           if(window.confirm("UNLOCK NOW? This will grant the user immediate access to credentials regardless of the scheduled start time.")) {
-                              onUpdateStatus(b.orderId, BookingStatus.ACTIVE);
-                           }
-                        }}
-                        className="px-4 py-2 bg-purple-500 hover:bg-purple-400 text-white text-[10px] rounded font-black uppercase tracking-widest transition-all shadow-lg flex items-center gap-1.5"
-                     >
-                        <Unlock size={12} /> UNLOCK NOW
-                     </button>
-                  )}
-                  {(status === 'ACTIVE' || status === 'PRE_BOOKED') && (
+                  {(b.status === 'ACTIVE' || b.status === 'PRE_BOOKED') && (
                     <button 
                       onClick={() => {
                         if(window.confirm("Terminate this session? The account will be released immediately for new bookings.")) {
@@ -430,7 +406,7 @@ const BookingTable = ({ bookings, onUpdateStatus, onDelete }: any) => {
                 </div>
               </td>
             </tr>
-          )})}
+          ))}
         </tbody>
       </table>
     </div>

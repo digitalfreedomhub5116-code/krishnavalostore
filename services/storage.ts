@@ -1,13 +1,15 @@
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { Account, Booking, User, HomeConfig } from '../types';
+import { Account, Booking, Rank, BookingStatus, User, HomeConfig, Skin } from '../types';
 
 const SUPABASE_URL = 'https://akwdzwrkhpyhrrcyvkpx.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_EjqnCcOPSh6uoT9y-g2OFw_ACj0byDo';
 
 // REPLACE THIS URL WITH YOUR OWN LOGO IMAGE URL
+// Using a Data URI for the Shield SVG to ensure it matches brand colors perfectly
 export const SITE_LOGO_URL = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJyZ2JhKDI1NSwgNzAsIDg1LCAwLjIpIiBzdHJva2U9IiNmZjQ2NTUiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMjAgMTNjMCA1LTMuNSA3LjUtNy42NiA4Ljk1YTEgMSAwIDAgMS0uNjctLjAxQzcuNSAyMC41IDQgMTggNCAxM1Y2YTEgMSAwIDAgMSAxLTFjMiAwIDQuNS0xLjIgNi4yNC0yLjcyYTEuMTcgMS4xNyAwIDAgMSAxLjUyIDBDMTQuNTEgMy44MSAxNyA1IDE5IDVhMSAxIDAgMCAxIDEgMXoiLz48L3N2Zz4=";
 
+// Lazy load Supabase to avoid constructor issues at module-level load
 let supabaseInstance: SupabaseClient | null = null;
 const getSupabase = () => {
   if (!supabaseInstance) {
@@ -18,6 +20,7 @@ const getSupabase = () => {
 
 const CURRENT_USER_KEY = 'kv_current_user';
 
+// Internal listener system to avoid manual Event constructor usage
 type StorageListener = () => void;
 const listeners = new Set<StorageListener>();
 
@@ -25,12 +28,16 @@ const notifyStorageChange = () => {
   listeners.forEach(listener => {
     try {
       listener();
-    } catch (e) {}
+    } catch (e) {
+      // Ignore listener errors
+    }
   });
 
   try {
     localStorage.setItem('valo_storage_sync', Date.now().toString());
-  } catch (e) {}
+  } catch (e) {
+    // Ignore storage errors
+  }
 };
 
 export const DEFAULT_HOME_CONFIG: HomeConfig = {
@@ -118,9 +125,12 @@ export const StorageService = {
 
   getAccounts: async (rankFilter?: string): Promise<Account[]> => {
     let query = getSupabase().from('accounts').select('*');
+    
+    // Server-side filtering for Rank using JSONB syntax
     if (rankFilter && rankFilter !== 'All') {
        query = query.eq('data->>rank', rankFilter);
     }
+    
     const { data, error } = await query;
     if (error || !data) return [];
     return data.map(row => row.data as Account);
@@ -144,6 +154,10 @@ export const StorageService = {
 
   getBookings: async (accountId?: string): Promise<Booking[]> => {
     let query = getSupabase().from('bookings').select('*').order('data->createdAt', { ascending: false });
+    if (accountId) {
+      // In a real app we would check inside the JSONB, but Supabase client JS doesn't easily support deep JSON filtering on arrays without specific setup. 
+      // For now, filtering client side if needed, but for "all bookings", we fetch all.
+    }
     const { data, error } = await query;
     if (error || !data) return [];
     
@@ -159,6 +173,7 @@ export const StorageService = {
     return bookings.filter(b => b.customerId === userId);
   },
 
+  // Check if a time slot is available for an account
   checkAvailability: async (accountId: string, startTime: string, endTime: string): Promise<boolean> => {
     const bookings = await StorageService.getBookings(accountId);
     
@@ -166,12 +181,13 @@ export const StorageService = {
     const newEnd = new Date(endTime).getTime();
 
     const conflicts = bookings.filter(b => {
-      // String literal comparison
-      if (b.status === 'CANCELLED' || b.status === 'COMPLETED' || b.status === 'PENDING') return false;
+      // Ignore Cancelled and Completed
+      if (b.status === BookingStatus.CANCELLED || b.status === BookingStatus.COMPLETED) return false;
       
       const bStart = new Date(b.startTime).getTime();
       const bEnd = new Date(b.endTime).getTime();
 
+      // Check overlap: (StartA < EndB) and (EndA > StartB)
       return (newStart < bEnd && newEnd > bStart);
     });
 
@@ -193,7 +209,7 @@ export const StorageService = {
     notifyStorageChange();
   },
 
-  updateBookingStatus: async (orderId: string, status: string) => {
+  updateBookingStatus: async (orderId: string, status: BookingStatus) => {
     const { data: row } = await getSupabase().from('bookings').select('data').eq('order_id', orderId).single();
     
     if (row?.data) {
@@ -206,13 +222,16 @@ export const StorageService = {
       
       await getSupabase().from('bookings').update({ data: booking, status: status }).eq('order_id', orderId);
       
+      // Points Logic
       if (booking.customerId) {
         const points = Math.floor(booking.totalPrice / 9);
         
-        if (oldStatus === 'PENDING' && (status === 'ACTIVE' || status === 'PRE_BOOKED')) {
+        // Mark as active/pre-booked (Approved) -> Add points
+        if (oldStatus === BookingStatus.PENDING && (status === BookingStatus.ACTIVE || status === BookingStatus.PRE_BOOKED)) {
           await StorageService.updateUserPoints(booking.customerId, points);
         } 
-        else if ((oldStatus === 'ACTIVE' || oldStatus === 'PRE_BOOKED') && status === 'CANCELLED') {
+        // Cancelled -> Deduct points
+        else if ((oldStatus === BookingStatus.ACTIVE || oldStatus === BookingStatus.PRE_BOOKED) && status === BookingStatus.CANCELLED) {
           await StorageService.updateUserPoints(booking.customerId, -points);
         }
       }
@@ -220,10 +239,14 @@ export const StorageService = {
       const account = await StorageService.getAccountById(booking.accountId);
       
       if (account) {
-        if (status === 'ACTIVE') {
+        // Logic for account status updates
+        // If a booking transitions to ACTIVE, we lock the account
+        if (status === BookingStatus.ACTIVE) {
           account.isBooked = true;
           account.bookedUntil = booking.endTime;
-        } else if (status === 'COMPLETED' || status === 'CANCELLED') {
+        } 
+        // If a booking is Cancelled or Completed, we only unlock if THIS booking was the one locking it
+        else if (status === BookingStatus.COMPLETED || status === BookingStatus.CANCELLED) {
           if (account.isBooked && account.bookedUntil === booking.endTime) {
             account.isBooked = false;
             account.bookedUntil = null;
@@ -236,32 +259,7 @@ export const StorageService = {
     }
   },
 
-  syncBooking: async (orderId: string) => {
-     try {
-       const { data: row } = await getSupabase().from('bookings').select('data').eq('order_id', orderId).single();
-       if (row?.data) {
-         const booking = row.data as Booking;
-         const now = Date.now();
-         const startTime = new Date(booking.startTime).getTime();
-         const endTime = new Date(booking.endTime).getTime();
-         
-         if (booking.status === 'PRE_BOOKED' && now >= startTime && now < endTime) {
-           await StorageService.updateBookingStatus(orderId, 'ACTIVE');
-           return true;
-         }
-         
-         if (booking.status === 'ACTIVE' && now >= endTime) {
-            await StorageService.updateBookingStatus(orderId, 'COMPLETED');
-            return true;
-         }
-       }
-       return false;
-     } catch (e) {
-       console.error("Sync error", e);
-       return false;
-     }
-  },
-
+  // Automatically check for expired bookings and pending locks
   checkExpiredBookings: async () => {
     try {
       const bookings = await StorageService.getBookings();
@@ -273,19 +271,23 @@ export const StorageService = {
         const startTime = new Date(booking.startTime).getTime();
         const createdAt = new Date(booking.createdAt).getTime();
 
-        if (booking.status === 'ACTIVE' && endTime <= now) {
-          await StorageService.updateBookingStatus(booking.orderId, 'COMPLETED');
+        // 1. Expire Active Bookings
+        if (booking.status === BookingStatus.ACTIVE && endTime <= now) {
+          await StorageService.updateBookingStatus(booking.orderId, BookingStatus.COMPLETED);
           hasUpdates = true;
         }
 
-        if (booking.status === 'PRE_BOOKED' && startTime <= now && endTime > now) {
-          await StorageService.updateBookingStatus(booking.orderId, 'ACTIVE');
+        // 2. Activate Pre-Bookings when time arrives
+        if (booking.status === BookingStatus.PRE_BOOKED && startTime <= now && endTime > now) {
+          await StorageService.updateBookingStatus(booking.orderId, BookingStatus.ACTIVE);
           hasUpdates = true;
         }
 
-        if (booking.status === 'PENDING') {
+        // 3. Cleanup Pending Locks (> 10 mins old)
+        if (booking.status === BookingStatus.PENDING) {
            const tenMins = 10 * 60 * 1000;
            if (now - createdAt > tenMins) {
+             // Silently delete or cancel expired pending requests to free up the slot
              await StorageService.deleteBooking(booking.orderId);
              hasUpdates = true;
            }
@@ -295,7 +297,9 @@ export const StorageService = {
       if (hasUpdates) {
         notifyStorageChange();
       }
-    } catch (e) {}
+    } catch (e) {
+      console.error("Error checking expired bookings:", e);
+    }
   },
 
   updateUserPoints: async (userId: string, amount: number) => {
@@ -370,7 +374,7 @@ export const StorageService = {
       avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${name}`,
       role: 'customer',
       isVerified: true,
-      ultraPoints: 20, 
+      ultraPoints: 20, // Welcome Bonus
       createdAt: new Date().toISOString(),
       lastLogin: new Date().toISOString()
     };

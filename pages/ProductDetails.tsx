@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { StorageService } from '../services/storage';
-import { Account, Pricing } from '../types';
+import { Account, Pricing, BookingStatus, Booking } from '../types';
 import { ArrowLeft, Gem, Clock, Calendar, ChevronRight, MessageCircle, X, ArrowRight, Lock, Maximize2, ChevronDown, ChevronUp, Sparkles, Loader2, AlertCircle, ShieldCheck, PlayCircle, CalendarClock } from 'lucide-react';
 
 const ProductDetails: React.FC = () => {
@@ -277,16 +277,31 @@ const BookingWizard = ({ account, onClose }: { account: Account, onClose: () => 
            throw new Error("Selected time slot overlaps with an existing booking. Please choose another time.");
         }
 
-        // Generate Order ID but DO NOT LOCK (Create DB entry) yet
+        // LOCKING: Create PENDING Booking
         const orderId = 'KV-' + Math.floor(1000 + Math.random() * 9000);
-        
-        // We prepare state to pass to checkout, but don't save to DB until payment intent is clearer
+        const booking: Booking = {
+           orderId,
+           accountId: account.id,
+           accountName: account.name,
+           durationLabel: duration === 'hours3' ? '3 Hours' : duration === 'hours12' ? '12 Hours' : '24 Hours',
+           hours: parseInt(duration.replace('hours', '')),
+           totalPrice: calculatePrice(),
+           startTime: start.toISOString(),
+           endTime: end.toISOString(),
+           status: BookingStatus.PENDING,
+           createdAt: new Date().toISOString(),
+           customerId: user?.id,
+           customerName: user?.name
+        };
+
+        await StorageService.createBooking(booking);
+
         const state = { 
            orderId,
            account, 
-           hours: parseInt(duration.replace('hours', '')), 
-           price: calculatePrice(), 
-           durationLabel: duration === 'hours3' ? '3 Hours' : duration === 'hours12' ? '12 Hours' : '24 Hours', 
+           hours: booking.hours, 
+           price: booking.totalPrice, 
+           durationLabel: booking.durationLabel, 
            startMode: mode,
            scheduledTime: start.toISOString()
         };
@@ -386,6 +401,9 @@ const BookingWizard = ({ account, onClose }: { account: Account, onClose: () => 
             >
               {isChecking ? <Loader2 className="animate-spin" /> : (mode === 'now' ? 'PROCEED TO CHECKOUT' : 'CONFIRM RESERVATION')}
             </button>
+            <p className="text-center text-[10px] text-slate-500 mt-3 uppercase tracking-widest">
+               Slot will be locked for 10 minutes upon proceeding
+            </p>
          </div>
       </div>
    );

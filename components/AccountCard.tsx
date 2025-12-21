@@ -1,9 +1,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Account, Booking } from '../types';
+import { Account, Booking, BookingStatus } from '../types';
 import { StorageService } from '../services/storage';
-import { Trophy, Gem, Clock, CalendarDays, Sparkles } from 'lucide-react';
+import { Trophy, Gem, Lock, Eye, Sparkles, Clock, CalendarDays } from 'lucide-react';
 
 interface AccountCardProps {
   account: Account;
@@ -11,28 +11,24 @@ interface AccountCardProps {
 
 const AccountCard: React.FC<AccountCardProps> = ({ account }) => {
   const [timeLeft, setTimeLeft] = useState<string | null>(null);
-  const [timerLabel, setTimerLabel] = useState<string>('Opens In');
-  const [statusStyle, setStatusStyle] = useState<string>('text-brand-accent border-brand-accent/50 bg-brand-accent/20');
-  
   const [isEffectivelyAvailable, setIsEffectivelyAvailable] = useState(!account.isBooked);
   const [upcomingBooking, setUpcomingBooking] = useState<Booking | null>(null);
 
-  // Poll for upcoming bookings
+  // Poll for upcoming bookings to display "Pre-Booked" status if applicable
   useEffect(() => {
     const fetchBookings = async () => {
        const allBookings = await StorageService.getBookings(account.id);
        const now = Date.now();
        
-       // Find relevant booking (Active or Pre-Booked in future)
-       // Using string literals for status
-       const relevant = allBookings
+       // Find nearest future booking that is approved (ACTIVE or PRE_BOOKED)
+       const future = allBookings
           .filter(b => 
-             (b.status === 'PRE_BOOKED' || b.status === 'ACTIVE') &&
-             new Date(b.endTime).getTime() > now // Not expired
+             (b.status === BookingStatus.PRE_BOOKED || b.status === BookingStatus.ACTIVE) &&
+             new Date(b.startTime).getTime() > now
           )
           .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())[0];
        
-       setUpcomingBooking(relevant || null);
+       setUpcomingBooking(future || null);
     };
 
     fetchBookings();
@@ -40,58 +36,34 @@ const AccountCard: React.FC<AccountCardProps> = ({ account }) => {
     return () => clearInterval(interval);
   }, [account.id]);
 
-  // Timer Logic
   useEffect(() => {
+    if (!account.isBooked || !account.bookedUntil) {
+      setIsEffectivelyAvailable(true);
+      setTimeLeft(null);
+      return;
+    }
+
     const updateTimer = () => {
       const now = new Date().getTime();
-      let targetTime = 0;
-      let label = 'Opens In';
-      let style = 'text-brand-accent border-brand-accent/50 bg-brand-accent/20';
-      let isAvailable = true;
+      const end = new Date(account.bookedUntil!).getTime();
+      const diff = end - now;
 
-      if (upcomingBooking) {
-         const start = new Date(upcomingBooking.startTime).getTime();
-         const end = new Date(upcomingBooking.endTime).getTime();
-
-         if (now < start) {
-            // PRE_BOOKED (Future)
-            targetTime = start;
-            label = 'Starts In';
-            style = 'text-purple-400 border-purple-500/50 bg-purple-500/20';
-            isAvailable = false;
-         } else if (now < end) {
-            // ACTIVE (Current)
-            targetTime = end;
-            label = 'Ends In';
-            style = 'text-brand-accent border-brand-accent/50 bg-brand-accent/20';
-            isAvailable = false;
-         }
-      } else if (account.isBooked && account.bookedUntil) {
-         // Fallback for manually booked accounts without booking record
-         targetTime = new Date(account.bookedUntil).getTime();
-         isAvailable = false;
-      }
-
-      const diff = targetTime - now;
-
-      if (diff > 0 && !isAvailable) {
+      if (diff <= 0) {
+        setIsEffectivelyAvailable(true);
+        setTimeLeft(null);
+      } else {
+        setIsEffectivelyAvailable(false);
         const h = Math.floor(diff / (1000 * 60 * 60));
         const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
         const s = Math.floor((diff % (1000 * 60)) / 1000);
         setTimeLeft(`${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`);
-        setTimerLabel(label);
-        setStatusStyle(style);
-        setIsEffectivelyAvailable(false);
-      } else {
-        setTimeLeft(null);
-        setIsEffectivelyAvailable(true);
       }
     };
 
     updateTimer();
     const interval = setInterval(updateTimer, 1000);
     return () => clearInterval(interval);
-  }, [account.isBooked, account.bookedUntil, upcomingBooking]);
+  }, [account.isBooked, account.bookedUntil]);
 
   const getRankColor = (rank: string) => {
     if (rank.includes('Gold')) return 'text-yellow-400';
@@ -108,7 +80,7 @@ const AccountCard: React.FC<AccountCardProps> = ({ account }) => {
     <div className={`group relative rounded-none overflow-hidden border transition-all duration-300 ${isEffectivelyAvailable ? 'border-white/10 bg-brand-surface hover:border-brand-accent/50 hover:shadow-[0_0_30px_rgba(255,70,85,0.15)] hover:-translate-y-2' : 'border-white/5 bg-brand-dark opacity-90'}`}>
       
       <Link to={`/account/${account.id}`} className="block h-full">
-        {/* Corner Accents */}
+        {/* Corner Accents (Cyberpunk Style) */}
         <div className="absolute top-0 left-0 w-2 h-2 border-l border-t border-white/20 group-hover:border-brand-accent transition-colors z-20"></div>
         <div className="absolute top-0 right-0 w-2 h-2 border-r border-t border-white/20 group-hover:border-brand-accent transition-colors z-20"></div>
         <div className="absolute bottom-0 left-0 w-2 h-2 border-l border-b border-white/20 group-hover:border-brand-accent transition-colors z-20"></div>
@@ -133,14 +105,24 @@ const AccountCard: React.FC<AccountCardProps> = ({ account }) => {
               </span>
             ) : (
               <div className="flex flex-col items-end gap-1">
-                <span className={`inline-flex items-center px-3 py-1 backdrop-blur-md border text-[9px] font-black uppercase tracking-widest skew-x-[-10deg] shadow-[0_0_15px_rgba(0,0,0,0.5)] ${statusStyle}`}>
-                  {timerLabel === 'Starts In' ? <CalendarDays className="w-3 h-3 mr-1.5" /> : <Clock className="w-3 h-3 mr-1.5 animate-pulse" />}
-                  {timerLabel}
+                <span className="inline-flex items-center px-3 py-1 bg-brand-accent/20 backdrop-blur-md border border-brand-accent/50 text-brand-accent text-[9px] font-black uppercase tracking-widest skew-x-[-10deg] shadow-[0_0_15px_rgba(255,70,85,0.3)]">
+                  <Clock className="w-3 h-3 mr-1.5 animate-pulse" />
+                  Opens In
                 </span>
-                <span className="bg-black/80 px-2 py-0.5 rounded font-mono text-xs text-white border border-white/10 tabular-nums shadow-lg">
+                <span className="bg-black/80 px-2 py-0.5 rounded font-mono text-xs text-white border border-white/10 tabular-nums">
                   {timeLeft}
                 </span>
               </div>
+            )}
+
+            {/* Pre-Booked Indicator */}
+            {upcomingBooking && (
+               <div className="flex items-center gap-1.5 bg-black/80 backdrop-blur-md px-2 py-1 rounded border border-purple-500/30 text-[9px] text-purple-400 font-bold uppercase tracking-wide">
+                  <CalendarDays size={10} />
+                  <span>
+                     Pre-Booked: {new Date(upcomingBooking.startTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                  </span>
+               </div>
             )}
           </div>
 
@@ -218,15 +200,8 @@ const AccountCard: React.FC<AccountCardProps> = ({ account }) => {
                 : 'bg-slate-800 text-slate-400 border border-white/5 hover:bg-slate-700'}`}
           >
             <div className="skew-x-[10deg] flex items-center gap-2">
-               {isEffectivelyAvailable ? (
-                  <>
-                    <Gem className="w-4 h-4" /> View Details
-                  </>
-               ) : (
-                  <>
-                    <Clock className="w-4 h-4" /> {timerLabel === 'Starts In' ? 'Pre-Booked' : 'Check Slot'}
-                  </>
-               )}
+              <Eye className="w-4 h-4" /> 
+              {isEffectivelyAvailable ? 'View Details' : 'Check Slot'}
             </div>
           </div>
         </div>
