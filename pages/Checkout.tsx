@@ -1,9 +1,10 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate, Navigate } from 'react-router-dom';
 import { Account, UPI_ID, BookingStatus, Booking } from '../types';
 import { StorageService } from '../services/storage';
-import { Copy, ArrowRight, Timer, CalendarClock, Smartphone, ShieldCheck, Zap, Send } from 'lucide-react';
+import { Copy, ArrowRight, Timer, CalendarClock, Smartphone, ShieldCheck, Zap, Send, Ticket, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 
 interface CheckoutState {
   orderId?: string; // Optional because legacy flow might not have it, but new flow will
@@ -25,6 +26,12 @@ const Checkout: React.FC = () => {
   const [timer, setTimer] = useState(600); // 10 minutes for payment
   const [utr, setUtr] = useState('');
   const [error, setError] = useState('');
+  
+  // Coupon State
+  const [couponCode, setCouponCode] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; type: 'PERCENT' | 'FLAT'; value: number } | null>(null);
+  const [couponMessage, setCouponMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
 
   const currentUser = StorageService.getCurrentUser();
 
@@ -43,7 +50,7 @@ const Checkout: React.FC = () => {
       return () => clearInterval(interval);
     } else {
        // Timer expired - navigate away or show error
-       setError("Session expired. Slot released.");
+       setError("Session expired.");
     }
   }, [timer]);
 
@@ -64,10 +71,54 @@ const Checkout: React.FC = () => {
     return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
+  // --- Price Calculations ---
+  const basePrice = state.price;
+  let finalPrice = basePrice;
+  let discountAmount = 0;
+
+  if (appliedCoupon) {
+    if (appliedCoupon.type === 'PERCENT') {
+      discountAmount = Math.floor((basePrice * appliedCoupon.value) / 100);
+    } else {
+      discountAmount = appliedCoupon.value;
+    }
+    // Prevent negative price
+    if (discountAmount > basePrice) discountAmount = basePrice;
+    finalPrice = basePrice - discountAmount;
+  }
+
   // Construct UPI URI with amount and order ID
   // tn (Transaction Note) is critical here - it puts the Order ID in the bank statement for the admin
-  const upiString = `upi://pay?pa=${UPI_ID}&pn=KrishnaValo&am=${state.price.toFixed(2)}&cu=INR&tn=${orderId}`;
+  const upiString = `upi://pay?pa=${UPI_ID}&pn=KrishnaValo&am=${finalPrice.toFixed(2)}&cu=INR&tn=${orderId}`;
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&margin=10&data=${encodeURIComponent(upiString)}`;
+
+  // --- Coupon Handlers ---
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) return;
+    setIsValidatingCoupon(true);
+    setCouponMessage(null);
+    setAppliedCoupon(null);
+
+    try {
+      const result = await StorageService.validateCoupon(couponCode);
+      if (result.valid && result.type && result.value) {
+         setAppliedCoupon({ code: couponCode.toUpperCase(), type: result.type, value: result.value });
+         setCouponMessage({ type: 'success', text: result.message });
+      } else {
+         setCouponMessage({ type: 'error', text: result.message });
+      }
+    } catch (err) {
+      setCouponMessage({ type: 'error', text: "Verification failed. Try again." });
+    } finally {
+      setIsValidatingCoupon(false);
+    }
+  };
+
+  const removeCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponCode('');
+    setCouponMessage(null);
+  };
 
   const handleSubmitPayment = async () => {
     if (!utr) {
@@ -81,23 +132,29 @@ const Checkout: React.FC = () => {
       return;
     }
 
+    // Increment Coupon usage if applied
+    if (appliedCoupon) {
+       await StorageService.incrementCouponUsage(appliedCoupon.code);
+    }
+
     if (state.orderId) {
        // Update existing PENDING booking
-       // We fetch it first to be safe, then update
        const booking: Booking = {
          orderId,
          accountId: state.account.id,
          accountName: state.account.name,
          durationLabel: state.durationLabel,
          hours: state.hours,
-         totalPrice: state.price,
+         totalPrice: finalPrice, // Use discounted price
          startTime: startDateTime.toISOString(),
          endTime: endDateTime.toISOString(),
-         status: BookingStatus.PENDING, // Still pending admin approval
-         createdAt: new Date().toISOString(), // This might be slightly off from original creation but acceptable
+         status: BookingStatus.PENDING, 
+         createdAt: new Date().toISOString(),
          utr: utr,
          customerId: currentUser?.id,
-         customerName: currentUser?.name
+         customerName: currentUser?.name,
+         couponCode: appliedCoupon ? appliedCoupon.code : undefined,
+         discountApplied: appliedCoupon ? discountAmount : undefined
        };
        await StorageService.updateBooking(booking);
     } else {
@@ -108,14 +165,16 @@ const Checkout: React.FC = () => {
         accountName: state.account.name,
         durationLabel: state.durationLabel,
         hours: state.hours,
-        totalPrice: state.price,
+        totalPrice: finalPrice, // Use discounted price
         startTime: startDateTime.toISOString(),
         endTime: endDateTime.toISOString(),
         status: BookingStatus.PENDING,
         createdAt: new Date().toISOString(),
         utr: utr,
         customerId: currentUser?.id, // Link to logged in user
-        customerName: currentUser?.name
+        customerName: currentUser?.name,
+        couponCode: appliedCoupon ? appliedCoupon.code : undefined,
+        discountApplied: appliedCoupon ? discountAmount : undefined
       };
       await StorageService.createBooking(newBooking);
     }
@@ -125,14 +184,19 @@ const Checkout: React.FC = () => {
       ? startDateTime.toLocaleString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
       : "Immediate";
 
-    const message = `
+    let message = `
 *PAYMENT SUBMITTED*
 ---------------------
 *Order ID:* ${orderId}
 *Valorant ID:* ${state.account.name}
 *Duration:* ${state.durationLabel}
-*Price:* ₹${state.price}
-*Start Time:* ${timeString}
+*Price:* ₹${finalPrice}`;
+
+    if (appliedCoupon) {
+      message += `\n*Coupon:* ${appliedCoupon.code} (-₹${discountAmount})`;
+    }
+
+    message += `\n*Start Time:* ${timeString}
 *UTR/Ref ID:* ${utr}
 ---------------------
 I have made the payment. Please verify.
@@ -186,7 +250,7 @@ I have made the payment. Please verify.
                 alt="UPI QR Code" 
                 className="w-48 h-48 mb-2 mix-blend-multiply"
               />
-              <p className="text-brand-dark font-bold text-lg">₹{state.price}</p>
+              <p className="text-brand-dark font-bold text-lg">₹{finalPrice}</p>
               
               {/* Scan Overlay for visual flair */}
               <div className="absolute inset-0 bg-brand-accent/5 pointer-events-none" />
@@ -221,7 +285,7 @@ I have made the payment. Please verify.
            <div className="bg-brand-surface border border-brand-accent/30 rounded-xl p-4 flex items-center justify-between shadow-[0_0_15px_rgba(255,70,85,0.1)]">
              <div className="flex items-center gap-2 text-brand-accent">
                <Timer className="w-5 h-5" />
-               <span className="font-bold">Slot Locked</span>
+               <span className="font-bold">Session Time</span>
              </div>
              <div className="font-mono text-xl font-bold">{formatTimer(timer)}</div>
            </div>
@@ -271,7 +335,55 @@ I have made the payment. Please verify.
                 </div>
               </div>
 
-              <div className="flex justify-between text-slate-300 pt-2">
+              {/* Coupon Section */}
+              <div className="pt-2">
+                 <div className="relative">
+                    {appliedCoupon ? (
+                      <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3 flex justify-between items-center">
+                         <div className="flex items-center gap-2">
+                            <Ticket className="w-4 h-4 text-green-400" />
+                            <div>
+                               <div className="text-xs text-green-400 font-bold uppercase tracking-wider">{appliedCoupon.code}</div>
+                               <div className="text-[10px] text-green-300">Coupon Applied</div>
+                            </div>
+                         </div>
+                         <button onClick={removeCoupon} className="text-slate-500 hover:text-white"><XCircle className="w-4 h-4" /></button>
+                      </div>
+                    ) : (
+                      <div className="flex gap-2">
+                         <div className="relative flex-1">
+                            <Ticket className="absolute left-3 top-3 w-4 h-4 text-slate-500" />
+                            <input 
+                              type="text" 
+                              placeholder="Coupon Code"
+                              value={couponCode}
+                              onChange={(e) => {
+                                 setCouponCode(e.target.value.toUpperCase());
+                                 setCouponMessage(null);
+                              }}
+                              onKeyPress={(e) => e.key === 'Enter' && handleApplyCoupon()}
+                              className="w-full bg-brand-dark border border-white/10 rounded-lg py-2.5 pl-10 pr-3 text-sm text-white focus:border-brand-accent outline-none font-mono uppercase"
+                            />
+                         </div>
+                         <button 
+                           onClick={handleApplyCoupon}
+                           disabled={isValidatingCoupon || !couponCode}
+                           className="px-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-xs font-bold uppercase tracking-wide transition-colors disabled:opacity-50"
+                         >
+                           {isValidatingCoupon ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Apply'}
+                         </button>
+                      </div>
+                    )}
+                    {couponMessage && (
+                       <div className={`text-[10px] mt-2 flex items-center gap-1.5 ${couponMessage.type === 'success' ? 'text-green-400' : 'text-red-400'}`}>
+                          {couponMessage.type === 'success' ? <CheckCircle size={12} /> : <XCircle size={12} />}
+                          {couponMessage.text}
+                       </div>
+                    )}
+                 </div>
+              </div>
+
+              <div className="flex justify-between text-slate-300 pt-2 border-t border-white/5 mt-4">
                 <span>Subtotal</span>
                 <span className={state.originalPrice ? 'line-through text-slate-500 text-sm' : 'text-white'}>
                    ₹{state.originalPrice || state.price}
@@ -280,15 +392,22 @@ I have made the payment. Please verify.
               
               {state.originalPrice && (
                  <div className="flex justify-between text-brand-accent font-medium text-sm">
-                    <span className="flex items-center gap-1"><Zap className="w-3 h-3 fill-current" /> Discount (24h Offer)</span>
+                    <span className="flex items-center gap-1"><Zap className="w-3 h-3 fill-current" /> 24h Offer</span>
                     <span>-₹{(state.originalPrice - state.price).toFixed(0)}</span>
+                 </div>
+              )}
+
+              {appliedCoupon && (
+                 <div className="flex justify-between text-green-400 font-medium text-sm">
+                    <span className="flex items-center gap-1"><Ticket className="w-3 h-3 fill-current" /> Coupon ({appliedCoupon.code})</span>
+                    <span>-₹{discountAmount}</span>
                  </div>
               )}
             </div>
 
             <div className="flex justify-between items-center pt-4 border-t border-white/10 mb-6">
               <span className="font-bold text-lg">Total</span>
-              <span className="font-bold text-2xl text-brand-accent">₹{state.price}</span>
+              <span className="font-bold text-2xl text-brand-accent">₹{finalPrice}</span>
             </div>
 
             {/* UTR Verification Section */}

@@ -1,4 +1,5 @@
 
+
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useParams, useNavigate, Link } from 'react-router-dom';
@@ -249,7 +250,7 @@ const BookingWizard = ({ account, onClose }: { account: Account, onClose: () => 
         const isAvailable = await StorageService.checkAvailability(account.id, start.toISOString(), end.toISOString());
         
         if (!isAvailable) {
-           throw new Error("Selected time slot overlaps with an existing booking. Please try again later.");
+           throw new Error("Selected time slot overlaps with an existing ACTIVE booking. Please try again later.");
         }
 
         // LOCKING: Create PENDING Booking
@@ -337,7 +338,7 @@ const BookingWizard = ({ account, onClose }: { account: Account, onClose: () => 
               {isChecking ? <Loader2 className="animate-spin" /> : 'PROCEED TO CHECKOUT'}
             </button>
             <p className="text-center text-[10px] text-slate-500 mt-3 uppercase tracking-widest">
-               Slot will be locked for 10 minutes upon proceeding
+               Slot is reserved only upon Payment & Admin Approval
             </p>
          </div>
       </div>

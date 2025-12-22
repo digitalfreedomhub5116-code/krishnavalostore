@@ -1,17 +1,18 @@
 
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { Navigate, useNavigate, Link } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { StorageService, DEFAULT_HOME_CONFIG } from '../services/storage';
 import { AIService } from '../services/ai';
-import { Account, Booking, BookingStatus, Rank, User, HomeConfig, Review, Skin, HeroSlide, TrustItem, StepItem } from '../types';
-import { Plus, Trash2, Check, X, Edit2, Loader2, LogOut, Square, CheckSquare, BarChart3, IndianRupee, Users, Gamepad2, Home, Save, Zap, Shield, Star, MessageSquare, AlertCircle, Cpu, Search, Video, FileText, Play, Copy, Terminal, Layout, Image as ImageIcon, ShieldCheck, Lock, Ban, Type as TypeIcon, Minus, Award, Clock } from 'lucide-react';
+import { Account, Booking, BookingStatus, Rank, User, HomeConfig, Review, Skin, HeroSlide, TrustItem, StepItem, Coupon } from '../types';
+import { Plus, Trash2, Check, X, Edit2, Loader2, LogOut, Square, CheckSquare, BarChart3, IndianRupee, Users, Gamepad2, Home, Save, Zap, Shield, Star, MessageSquare, AlertCircle, Cpu, Search, Video, FileText, Play, Copy, Terminal, Layout, Image as ImageIcon, ShieldCheck, Lock, Ban, Type as TypeIcon, Minus, Award, Clock, Ticket, CalendarDays, Repeat } from 'lucide-react';
 
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
   const isAuthenticated = localStorage.getItem('isAdmin') === 'true' || sessionStorage.getItem('isAdmin') === 'true';
   
-  const [activeTab, setActiveTab] = useState<'bookings' | 'accounts' | 'users' | 'edithome' | 'auditor'>('bookings');
+  const [activeTab, setActiveTab] = useState<'bookings' | 'accounts' | 'users' | 'edithome' | 'coupons'>('bookings');
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [users, setUsers] = useState<User[]>([]);
@@ -33,6 +34,25 @@ const AdminDashboard: React.FC = () => {
     password: '',
     description: 'Premium Valorant Account with verified skins.',
     initialSkinsCount: 10
+  });
+
+  // Coupon State
+  const [newCoupon, setNewCoupon] = useState<{
+    code: string;
+    type: 'PERCENT' | 'FLAT';
+    value: number;
+    active: boolean;
+    expiryDate: string;
+    usageType: 'UNLIMITED' | 'LIMITED';
+    maxUses: number;
+  }>({
+    code: '',
+    type: 'PERCENT',
+    value: 10,
+    active: true,
+    expiryDate: '',
+    usageType: 'UNLIMITED',
+    maxUses: 1
   });
 
   const refreshData = async () => {
@@ -118,6 +138,46 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
+  const handleAddCoupon = async () => {
+     if (!newCoupon.code || !newCoupon.value) {
+        alert("Enter Code and Value");
+        return;
+     }
+
+     const coupon: Coupon = {
+        code: newCoupon.code.toUpperCase().trim(),
+        type: newCoupon.type as 'PERCENT' | 'FLAT',
+        value: Number(newCoupon.value),
+        active: true,
+        expiryDate: newCoupon.expiryDate ? newCoupon.expiryDate : null,
+        maxUses: newCoupon.usageType === 'LIMITED' ? Number(newCoupon.maxUses) : null,
+        currentUses: 0
+     };
+
+     const updatedConfig = { 
+        ...homeConfig, 
+        coupons: [...(homeConfig.coupons || []), coupon] 
+     };
+
+     setIsSavingConfig(true);
+     await StorageService.saveHomeConfig(updatedConfig);
+     setIsSavingConfig(false);
+     setNewCoupon({ code: '', type: 'PERCENT', value: 10, active: true, expiryDate: '', usageType: 'UNLIMITED', maxUses: 1 });
+     refreshData();
+  };
+
+  const handleDeleteCoupon = async (code: string) => {
+     if(!window.confirm(`Delete coupon ${code}?`)) return;
+     const updatedConfig = {
+        ...homeConfig,
+        coupons: (homeConfig.coupons || []).filter(c => c.code !== code)
+     };
+     setIsSavingConfig(true);
+     await StorageService.saveHomeConfig(updatedConfig);
+     setIsSavingConfig(false);
+     refreshData();
+  };
+
   if (!isAuthenticated) return <Navigate to="/admin" />;
   if (loading && !showAddModal) return <div className="min-h-screen flex items-center justify-center bg-brand-darker"><Loader2 className="w-10 h-10 text-brand-accent animate-spin" /></div>;
 
@@ -155,6 +215,7 @@ const AdminDashboard: React.FC = () => {
           { id: 'bookings', icon: BarChart3, label: 'Bookings' },
           { id: 'accounts', icon: Gamepad2, label: 'Accounts' },
           { id: 'users', icon: Users, label: 'Users' },
+          { id: 'coupons', icon: Ticket, label: 'Coupons' },
           { id: 'edithome', icon: Layout, label: 'Edit Home' }
         ].map((tab) => (
           <button 
@@ -168,7 +229,7 @@ const AdminDashboard: React.FC = () => {
         ))}
       </div>
 
-      {activeTab === 'bookings' && <BookingTable bookings={bookings} onUpdateStatus={async (id: string, s: BookingStatus) => { await StorageService.updateBookingStatus(id, s); refreshData(); }} onDelete={async (id: string) => { await StorageService.deleteBooking(id); refreshData(); }} />}
+      {activeTab === 'bookings' && <BookingTable bookings={bookings} onUpdateStatus={async (id: string, s: BookingStatus) => { try { await StorageService.updateBookingStatus(id, s); refreshData(); } catch(e: any) { alert(e.message); } }} onDelete={async (id: string) => { await StorageService.deleteBooking(id); refreshData(); }} />}
       
       {activeTab === 'accounts' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -196,8 +257,145 @@ const AdminDashboard: React.FC = () => {
         </div>
       )}
 
-      {/* ... Users Tab, Edit Home Tab, Modals (Same as original) ... */}
-      {/* (Abbreviated to focus on the request logic, copying existing tab logic) */}
+      {activeTab === 'coupons' && (
+         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+             <div className="bg-brand-surface border border-white/10 rounded-xl p-6">
+                 <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-6 flex items-center gap-2">
+                    <Plus className="w-4 h-4 text-brand-cyan" /> Generate New Code
+                 </h3>
+                 
+                 {/* Top Row: Basic Info */}
+                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                     <div>
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Coupon Code</label>
+                        <input 
+                           type="text" 
+                           placeholder="e.g. SUMMER50" 
+                           value={newCoupon.code}
+                           onChange={(e) => setNewCoupon({...newCoupon, code: e.target.value.toUpperCase()})}
+                           className="w-full bg-brand-dark border border-white/10 rounded-lg px-4 py-2.5 text-white outline-none focus:border-brand-cyan font-mono"
+                        />
+                     </div>
+                     <div>
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Type</label>
+                        <select 
+                           value={newCoupon.type}
+                           onChange={(e) => setNewCoupon({...newCoupon, type: e.target.value as 'PERCENT' | 'FLAT'})}
+                           className="w-full bg-brand-dark border border-white/10 rounded-lg px-4 py-2.5 text-white outline-none focus:border-brand-cyan cursor-pointer"
+                        >
+                           <option value="PERCENT">Percentage (%)</option>
+                           <option value="FLAT">Flat Amount (₹)</option>
+                        </select>
+                     </div>
+                     <div>
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Value</label>
+                        <input 
+                           type="number" 
+                           value={newCoupon.value}
+                           onChange={(e) => setNewCoupon({...newCoupon, value: parseInt(e.target.value) || 0})}
+                           className="w-full bg-brand-dark border border-white/10 rounded-lg px-4 py-2.5 text-white outline-none focus:border-brand-cyan"
+                        />
+                     </div>
+                 </div>
+
+                 {/* Bottom Row: Constraints */}
+                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                     <div>
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1 flex items-center gap-1"><CalendarDays size={12}/> Expiry Date (Optional)</label>
+                        <input 
+                           type="date" 
+                           value={newCoupon.expiryDate}
+                           onChange={(e) => setNewCoupon({...newCoupon, expiryDate: e.target.value})}
+                           className="w-full bg-brand-dark border border-white/10 rounded-lg px-4 py-2.5 text-white outline-none focus:border-brand-cyan uppercase text-xs"
+                        />
+                     </div>
+                     
+                     <div className="flex gap-4">
+                         <div className="flex-1">
+                             <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Usage Limit</label>
+                             <select 
+                               value={newCoupon.usageType}
+                               onChange={(e) => setNewCoupon({...newCoupon, usageType: e.target.value as 'UNLIMITED' | 'LIMITED', maxUses: e.target.value === 'LIMITED' ? 1 : 1})}
+                               className="w-full bg-brand-dark border border-white/10 rounded-lg px-4 py-2.5 text-white outline-none focus:border-brand-cyan cursor-pointer text-xs"
+                             >
+                                <option value="UNLIMITED">Unlimited</option>
+                                <option value="LIMITED">Fixed Amount</option>
+                             </select>
+                         </div>
+                         
+                         {newCoupon.usageType === 'LIMITED' && (
+                             <div className="w-24 animate-in fade-in slide-in-from-left-2">
+                                <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Max Uses</label>
+                                <input 
+                                   type="number" 
+                                   min="1"
+                                   value={newCoupon.maxUses}
+                                   onChange={(e) => setNewCoupon({...newCoupon, maxUses: parseInt(e.target.value) || 1})}
+                                   className="w-full bg-brand-dark border border-white/10 rounded-lg px-3 py-2.5 text-white outline-none focus:border-brand-cyan text-center"
+                                />
+                             </div>
+                         )}
+                     </div>
+
+                     <button 
+                        onClick={handleAddCoupon}
+                        disabled={isSavingConfig}
+                        className="w-full md:w-auto px-6 py-2.5 bg-brand-cyan hover:bg-white text-brand-dark font-bold rounded-lg transition-all uppercase tracking-wide text-xs flex items-center justify-center gap-2"
+                     >
+                        {isSavingConfig ? <Loader2 className="animate-spin w-4 h-4" /> : 'Create Coupon'}
+                     </button>
+                 </div>
+             </div>
+
+             <div className="bg-brand-surface border border-white/10 rounded-xl overflow-hidden shadow-2xl">
+                <table className="w-full text-left text-sm">
+                   <thead>
+                      <tr className="bg-brand-darker text-slate-500 border-b border-white/10 uppercase font-bold tracking-widest text-[10px]">
+                         <th className="p-5">Code</th>
+                         <th className="p-5">Discount</th>
+                         <th className="p-5">Expiry</th>
+                         <th className="p-5">Usage</th>
+                         <th className="p-5 text-right">Actions</th>
+                      </tr>
+                   </thead>
+                   <tbody className="divide-y divide-white/5">
+                      {(homeConfig.coupons || []).map((coupon, idx) => (
+                         <tr key={idx} className="hover:bg-white/5 transition-colors">
+                            <td className="p-5 font-mono font-bold text-white">{coupon.code}</td>
+                            <td className="p-5 text-brand-cyan">
+                               {coupon.type === 'PERCENT' ? `${coupon.value}% OFF` : `₹${coupon.value} FLAT OFF`}
+                            </td>
+                            <td className="p-5 text-xs text-slate-400">
+                               {coupon.expiryDate ? new Date(coupon.expiryDate).toLocaleDateString() : 'No Expiry'}
+                            </td>
+                            <td className="p-5">
+                               <div className="flex items-center gap-2 text-xs">
+                                  <Repeat size={12} className="text-slate-500"/>
+                                  <span className={coupon.maxUses && coupon.currentUses >= coupon.maxUses ? 'text-red-400 font-bold' : 'text-slate-300'}>
+                                     {coupon.currentUses} / {coupon.maxUses ? coupon.maxUses : '∞'}
+                                  </span>
+                               </div>
+                            </td>
+                            <td className="p-5 text-right">
+                               <button 
+                                  onClick={() => handleDeleteCoupon(coupon.code)}
+                                  className="p-2 text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
+                                  title="Delete Coupon"
+                               >
+                                  <Trash2 size={16} />
+                               </button>
+                            </td>
+                         </tr>
+                      ))}
+                      {(!homeConfig.coupons || homeConfig.coupons.length === 0) && (
+                         <tr><td colSpan={5} className="p-8 text-center text-slate-500 italic">No coupons generated yet.</td></tr>
+                      )}
+                   </tbody>
+                </table>
+             </div>
+         </div>
+      )}
+
       {activeTab === 'users' && (
         <div className="bg-brand-surface border border-white/10 rounded-xl overflow-hidden shadow-2xl">
           <table className="w-full text-left text-sm">

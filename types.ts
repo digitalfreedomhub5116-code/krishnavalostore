@@ -1,4 +1,5 @@
 
+
 export enum Rank {
   IRON = 'Iron',
   BRONZE = 'Bronze',
@@ -78,6 +79,8 @@ export interface Booking {
   customerId?: string;
   createdAt: string;
   utr?: string;
+  couponCode?: string; // New: Track which coupon was used
+  discountApplied?: number; // New: Track amount saved
 }
 
 export const UPI_ID = "8530085116@fam";
@@ -125,6 +128,16 @@ export interface UltraPointsConfig {
   card2Desc: string;
 }
 
+export interface Coupon {
+  code: string;
+  type: 'PERCENT' | 'FLAT';
+  value: number;
+  active: boolean;
+  expiryDate?: string | null; // ISO Date string or null for no expiry
+  maxUses?: number | null;    // Null for unlimited
+  currentUses: number;        // Track how many times used
+}
+
 export interface HomeConfig {
   marqueeText: string[];
   heroSlides: HeroSlide[];
@@ -132,6 +145,7 @@ export interface HomeConfig {
   stepItems: StepItem[];   
   reviews: Review[];
   ultraPoints?: UltraPointsConfig;
+  coupons?: Coupon[]; // Added for dynamic coupon management
   cta: {
     titleLine1: string;
     titleLine2: string; 

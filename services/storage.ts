@@ -1,4 +1,5 @@
 
+
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { Account, Booking, Rank, BookingStatus, User, HomeConfig, Skin } from '../types';
 
@@ -109,6 +110,11 @@ export const DEFAULT_HOME_CONFIG: HomeConfig = {
     card2Title: "1 UP = 2 VP",
     card2Desc: "Your earned points double in value when converting to Valorant Point vouchers."
   },
+  coupons: [
+    { code: 'WELCOME20', type: 'PERCENT', value: 20, active: true, currentUses: 0 },
+    { code: 'KV50', type: 'FLAT', value: 50, active: true, currentUses: 0 },
+    { code: 'VALO10', type: 'PERCENT', value: 10, active: true, currentUses: 0 }
+  ],
   cta: {
     titleLine1: "Dont Just Play.",
     titleLine2: "DOMINATE.",
@@ -121,6 +127,62 @@ export const StorageService = {
   subscribe: (callback: StorageListener) => {
     listeners.add(callback);
     return () => listeners.delete(callback);
+  },
+
+  validateCoupon: async (code: string): Promise<{ valid: boolean; type?: 'PERCENT' | 'FLAT'; value?: number; message: string }> => {
+    const normalized = code.toUpperCase().trim();
+    
+    // Fetch latest config to get dynamic coupons
+    const config = await StorageService.getHomeConfig();
+    const coupons = config.coupons || DEFAULT_HOME_CONFIG.coupons || [];
+
+    // Simulate Network Delay for realism
+    await new Promise(resolve => setTimeout(resolve, 600));
+
+    const matched = coupons.find(c => c.code === normalized && c.active);
+
+    if (!matched) {
+       return { valid: false, message: 'Invalid or expired coupon code.' };
+    }
+
+    // Check Expiration
+    if (matched.expiryDate) {
+      const now = new Date();
+      const expiry = new Date(matched.expiryDate);
+      // Set expiry to end of that day
+      expiry.setHours(23, 59, 59, 999);
+      
+      if (now > expiry) {
+        return { valid: false, message: 'This coupon has expired.' };
+      }
+    }
+
+    // Check Usage Limit
+    if (matched.maxUses !== null && matched.maxUses !== undefined) {
+      if (matched.currentUses >= matched.maxUses) {
+        return { valid: false, message: 'Coupon usage limit reached.' };
+      }
+    }
+
+    return { valid: true, type: matched.type, value: matched.value, message: 'Coupon applied successfully!' };
+  },
+
+  incrementCouponUsage: async (code: string) => {
+    try {
+      const config = await StorageService.getHomeConfig();
+      if (!config.coupons) return;
+      
+      const updatedCoupons = config.coupons.map(c => {
+          if (c.code === code) {
+              return { ...c, currentUses: (c.currentUses || 0) + 1 };
+          }
+          return c;
+      });
+      
+      await StorageService.saveHomeConfig({ ...config, coupons: updatedCoupons });
+    } catch (e) {
+      console.error("Failed to increment coupon usage:", e);
+    }
   },
 
   getAccounts: async (rankFilter?: string): Promise<Account[]> => {
@@ -181,8 +243,10 @@ export const StorageService = {
     const newEnd = new Date(endTime).getTime();
 
     const conflicts = bookings.filter(b => {
-      // Ignore Cancelled and Completed
-      if (b.status === BookingStatus.CANCELLED || b.status === BookingStatus.COMPLETED) return false;
+      // Ignore Cancelled, Completed, AND PENDING (Requested but not approved/locked yet)
+      if (b.status === BookingStatus.CANCELLED || 
+          b.status === BookingStatus.COMPLETED || 
+          b.status === BookingStatus.PENDING) return false;
       
       const bStart = new Date(b.startTime).getTime();
       const bEnd = new Date(b.endTime).getTime();
@@ -214,8 +278,18 @@ export const StorageService = {
     
     if (row?.data) {
       const booking = row.data as Booking;
-      const oldStatus = booking.status;
       
+      // Safety Check: If trying to approve (ACTIVE/PRE_BOOKED), ensure slot is still free from *other* active bookings
+      if (status === BookingStatus.ACTIVE || status === BookingStatus.PRE_BOOKED) {
+         // checkAvailability ignores PENDING, so it won't flag this booking itself as a conflict.
+         // It will only flag if there is already an ACTIVE/PRE_BOOKED session overlapping.
+         const isAvailable = await StorageService.checkAvailability(booking.accountId, booking.startTime, booking.endTime);
+         if (!isAvailable) {
+             throw new Error("Conflict detected: This slot has already been approved for another user.");
+         }
+      }
+
+      const oldStatus = booking.status;
       if (oldStatus === status) return;
 
       booking.status = status;
@@ -333,6 +407,7 @@ export const StorageService = {
         stepItems: config.stepItems && config.stepItems.length > 0 ? config.stepItems : DEFAULT_HOME_CONFIG.stepItems,
         reviews: config.reviews && config.reviews.length > 0 ? config.reviews : DEFAULT_HOME_CONFIG.reviews,
         ultraPoints: config.ultraPoints || DEFAULT_HOME_CONFIG.ultraPoints,
+        coupons: config.coupons || DEFAULT_HOME_CONFIG.coupons,
         cta: config.cta || DEFAULT_HOME_CONFIG.cta
       };
     } catch {
