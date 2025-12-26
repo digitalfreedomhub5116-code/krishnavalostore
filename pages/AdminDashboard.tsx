@@ -196,10 +196,11 @@ const AdminDashboard: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 pb-32">
-      <div className="flex justify-between items-center mb-8">
+      {/* Mobile Responsive Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
         <h1 className="text-3xl font-display font-bold text-white tracking-tight">Vanguard <span className="text-brand-accent">OS</span></h1>
-        <div className="flex gap-3">
-           <button onClick={() => { localStorage.removeItem('isAdmin'); sessionStorage.removeItem('isAdmin'); navigate('/admin'); }} className="p-2.5 bg-brand-surface border border-white/10 rounded-lg text-slate-400 hover:text-white hover:bg-red-500/20 transition-all"><LogOut size={20} /></button>
+        <div className="flex gap-3 w-full md:w-auto">
+           <button onClick={() => { localStorage.removeItem('isAdmin'); sessionStorage.removeItem('isAdmin'); navigate('/admin'); }} className="p-2.5 bg-brand-surface border border-white/10 rounded-lg text-slate-400 hover:text-white hover:bg-red-500/20 transition-all flex-1 md:flex-none justify-center flex"><LogOut size={20} /></button>
         </div>
       </div>
 
@@ -210,7 +211,8 @@ const AdminDashboard: React.FC = () => {
         <StatCard label="Users" value={stats.totalUsers.toString()} icon={Users} color="text-purple-400" />
       </div>
 
-      <div className="flex bg-brand-dark p-1 rounded-lg border border-white/10 w-fit mb-8 overflow-x-auto shadow-2xl">
+      {/* Mobile Responsive Tabs - Scrollable */}
+      <div className="flex bg-brand-dark p-1 rounded-lg border border-white/10 w-full md:w-fit mb-8 overflow-x-auto shadow-2xl no-scrollbar">
         {[
           { id: 'bookings', icon: BarChart3, label: 'Bookings' },
           { id: 'accounts', icon: Gamepad2, label: 'Accounts' },
@@ -221,7 +223,7 @@ const AdminDashboard: React.FC = () => {
           <button 
             key={tab.id} 
             onClick={() => setActiveTab(tab.id as any)} 
-            className={`px-6 py-2.5 rounded-md text-xs font-bold uppercase tracking-widest flex items-center gap-2 transition-all ${activeTab === tab.id ? 'bg-brand-accent text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}
+            className={`flex-shrink-0 px-6 py-2.5 rounded-md text-xs font-bold uppercase tracking-widest flex items-center gap-2 transition-all whitespace-nowrap ${activeTab === tab.id ? 'bg-brand-accent text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}
           >
             <tab.icon size={14} />
             {tab.label}
@@ -347,8 +349,8 @@ const AdminDashboard: React.FC = () => {
                  </div>
              </div>
 
-             <div className="bg-brand-surface border border-white/10 rounded-xl overflow-hidden shadow-2xl">
-                <table className="w-full text-left text-sm">
+             <div className="bg-brand-surface border border-white/10 rounded-xl overflow-hidden shadow-2xl overflow-x-auto">
+                <table className="w-full text-left text-sm min-w-[600px]">
                    <thead>
                       <tr className="bg-brand-darker text-slate-500 border-b border-white/10 uppercase font-bold tracking-widest text-[10px]">
                          <th className="p-5">Code</th>
@@ -397,8 +399,8 @@ const AdminDashboard: React.FC = () => {
       )}
 
       {activeTab === 'users' && (
-        <div className="bg-brand-surface border border-white/10 rounded-xl overflow-hidden shadow-2xl">
-          <table className="w-full text-left text-sm">
+        <div className="bg-brand-surface border border-white/10 rounded-xl overflow-hidden shadow-2xl overflow-x-auto">
+          <table className="w-full text-left text-sm min-w-[700px]">
             <thead>
               <tr className="bg-brand-darker text-slate-500 border-b border-white/10 uppercase font-bold tracking-widest text-[10px]">
                 <th className="p-5">Agent</th>
@@ -546,7 +548,7 @@ const BookingTable = ({ bookings, onUpdateStatus, onDelete }: any) => {
 
   return (
     <div className="bg-brand-surface border border-white/10 rounded-xl overflow-hidden overflow-x-auto shadow-2xl">
-      <table className="w-full text-left text-sm">
+      <table className="w-full text-left text-sm min-w-[800px]">
         <thead><tr className="bg-brand-darker text-slate-500 border-b border-white/10 uppercase font-bold tracking-widest text-[10px]"><th className="p-5">Order ID</th><th className="p-5">Agent</th><th className="p-5">Status</th><th className="p-5">Timer</th><th className="p-5 text-right">Operation</th></tr></thead>
         <tbody className="divide-y divide-white/5">
           {bookings.map((b: any) => (
