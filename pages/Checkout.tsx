@@ -12,7 +12,7 @@ interface CheckoutState {
   hours: number;
   price: number;
   originalPrice?: number;
-  durationLabel: '3 Hours' | '12 Hours' | '24 Hours';
+  durationLabel: '1 Hour' | '3 Hours' | '12 Hours' | '24 Hours';
   startMode: 'now' | 'later';
   scheduledTime?: string;
 }

@@ -28,7 +28,7 @@ const AdminDashboard: React.FC = () => {
     name: '', 
     rank: Rank.IRON, 
     skins: [], 
-    pricing: { hours3: 49, hours12: 149, hours24: 249 },
+    pricing: { hours1: 29, hours3: 49, hours12: 149, hours24: 249 }, // Added default hours1
     imageUrl: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=1000&auto=format&fit=crop',
     username: '',
     password: '',
@@ -126,7 +126,7 @@ const AdminDashboard: React.FC = () => {
       await StorageService.saveAccount(accountToSave);
       setShowAddModal(false);
       setNewAccount({
-        name: '', rank: Rank.IRON, skins: [], pricing: { hours3: 49, hours12: 149, hours24: 249 },
+        name: '', rank: Rank.IRON, skins: [], pricing: { hours1: 29, hours3: 49, hours12: 149, hours24: 249 },
         imageUrl: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=1000&auto=format&fit=crop',
         username: '', password: '', description: 'Premium Valorant Account.', initialSkinsCount: 10
       });

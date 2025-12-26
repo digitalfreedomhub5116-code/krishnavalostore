@@ -172,7 +172,11 @@ const AccountCard: React.FC<AccountCardProps> = ({ account }) => {
           </div>
 
           {/* Pricing Grid */}
-          <div className="grid grid-cols-3 gap-2 mb-5">
+          <div className="grid grid-cols-4 gap-2 mb-5">
+            <div className="bg-brand-dark/50 p-2 border border-white/5 text-center flex flex-col justify-center transition-colors">
+              <div className="text-[10px] text-slate-500 uppercase">1 Hour</div>
+              <div className="text-sm font-bold text-white">₹{account.pricing.hours1 || 29}</div>
+            </div>
             <div className="bg-brand-dark/50 p-2 border border-white/5 text-center flex flex-col justify-center transition-colors">
               <div className="text-[10px] text-slate-500 uppercase">3 Hours</div>
               <div className="text-sm font-bold text-white">₹{account.pricing.hours3}</div>
@@ -185,7 +189,7 @@ const AccountCard: React.FC<AccountCardProps> = ({ account }) => {
               <div className="absolute top-0 right-0 bg-brand-accent text-white text-[8px] px-1 font-bold">
                 -10%
               </div>
-              <div className="text-[10px] text-slate-500 uppercase mt-1">24 Hours</div>
+              <div className="text-[10px] text-slate-500 uppercase mt-1">24 H</div>
               <div className="text-sm font-bold text-brand-accent leading-tight">
                  ₹{Math.floor(account.pricing.hours24 * 0.9)}
               </div>

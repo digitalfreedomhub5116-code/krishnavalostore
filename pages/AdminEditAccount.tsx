@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { StorageService } from '../services/storage';
@@ -165,7 +166,16 @@ const AdminEditAccount: React.FC = () => {
             <h3 className="text-lg font-bold mb-6 border-b border-white/5 pb-3 flex items-center gap-2">
                <Clock className="w-5 h-5 text-brand-accent" /> Pricing Structure (₹)
             </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+               <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2">1 Hour Rate</label>
+                  <input 
+                    type="number" 
+                    value={account.pricing.hours1 || 0}
+                    onChange={(e) => handleUpdatePricing('hours1', e.target.value)}
+                    className="w-full bg-brand-dark border border-white/10 rounded-lg px-4 py-3 text-white font-mono"
+                  />
+               </div>
                <div>
                   <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2">3 Hours Rate</label>
                   <input 

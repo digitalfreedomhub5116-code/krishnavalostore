@@ -155,8 +155,8 @@ const ProductDetails: React.FC = () => {
                  </div>
                )}
 
-               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {(['hours3', 'hours12', 'hours24'] as (keyof Pricing)[]).map((h) => (
+               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {(['hours1', 'hours3', 'hours12', 'hours24'] as (keyof Pricing)[]).map((h) => (
                      <div 
                         key={h} 
                         className={`p-5 rounded-xl border relative overflow-hidden
@@ -172,10 +172,10 @@ const ProductDetails: React.FC = () => {
                           </div>
                         )}
                         <div className="text-[10px] text-slate-500 uppercase font-bold tracking-widest mb-1">
-                           {h === 'hours3' ? 'Tactical (3h)' : h === 'hours12' ? 'Operation (12h)' : 'Campaign (24h)'}
+                           {h === 'hours1' ? 'Quick (1h)' : h === 'hours3' ? 'Tactical (3h)' : h === 'hours12' ? 'Ops (12h)' : 'Full Day'}
                         </div>
-                        <div className="text-2xl font-black text-white">
-                           ₹{h === 'hours24' ? Math.floor(account.pricing.hours24 * 0.9) : account.pricing[h]}
+                        <div className="text-xl md:text-2xl font-black text-white">
+                           ₹{h === 'hours24' ? Math.floor(account.pricing.hours24 * 0.9) : (account.pricing[h] || 'N/A')}
                         </div>
                      </div>
                   ))}
@@ -229,7 +229,10 @@ const BookingWizard = ({ account, onClose }: { account: Account, onClose: () => 
    const [isChecking, setIsChecking] = useState(false);
 
    const calculatePrice = () => {
-      return duration === 'hours24' ? Math.floor(account.pricing.hours24 * 0.9) : account.pricing[duration];
+      // Handle fallback if database record is missing hours1 (defaults to approx 40% of 3 hours)
+      const price = account.pricing[duration];
+      if (duration === 'hours24') return Math.floor(account.pricing.hours24 * 0.9);
+      return price || Math.floor(account.pricing.hours3 * 0.6) || 0; 
    };
 
    const getTimes = () => {
@@ -253,15 +256,20 @@ const BookingWizard = ({ account, onClose }: { account: Account, onClose: () => 
            throw new Error("Selected time slot overlaps with an existing ACTIVE booking. Please try again later.");
         }
 
+        const price = calculatePrice();
+        if (price <= 0) {
+           throw new Error("Invalid price configuration. Please contact support.");
+        }
+
         // LOCKING: Create PENDING Booking
         const orderId = 'KV-' + Math.floor(1000 + Math.random() * 9000);
         const booking: Booking = {
            orderId,
            accountId: account.id,
            accountName: account.name,
-           durationLabel: duration === 'hours3' ? '3 Hours' : duration === 'hours12' ? '12 Hours' : '24 Hours',
+           durationLabel: duration === 'hours1' ? '1 Hour' : duration === 'hours3' ? '3 Hours' : duration === 'hours12' ? '12 Hours' : '24 Hours',
            hours: parseInt(duration.replace('hours', '')),
-           totalPrice: calculatePrice(),
+           totalPrice: price,
            startTime: start.toISOString(),
            endTime: end.toISOString(),
            status: BookingStatus.PENDING,
@@ -308,15 +316,17 @@ const BookingWizard = ({ account, onClose }: { account: Account, onClose: () => 
             <div className="space-y-4 mb-6">
                <div>
                   <label className="text-[10px] text-slate-500 uppercase font-bold tracking-widest mb-2 block">Select Duration</label>
-                  <div className="grid grid-cols-3 gap-2">
-                     {(['hours3', 'hours12', 'hours24'] as const).map(d => (
+                  <div className="grid grid-cols-4 gap-2">
+                     {(['hours1', 'hours3', 'hours12', 'hours24'] as const).map(d => (
                         <button 
                            key={d}
                            onClick={() => setDuration(d)}
-                           className={`p-3 rounded-lg border text-center transition-all ${duration === d ? 'bg-brand-cyan/20 border-brand-cyan text-brand-cyan font-bold' : 'bg-brand-dark border-white/10 text-slate-400 hover:border-white/30'}`}
+                           className={`p-2 rounded-lg border text-center transition-all ${duration === d ? 'bg-brand-cyan/20 border-brand-cyan text-brand-cyan font-bold' : 'bg-brand-dark border-white/10 text-slate-400 hover:border-white/30'}`}
                         >
-                           <div className="text-[10px] uppercase mb-1">{d.replace('hours', '')} Hours</div>
-                           <div className="text-sm font-black">₹{d === 'hours24' ? Math.floor(account.pricing.hours24 * 0.9) : account.pricing[d]}</div>
+                           <div className="text-[10px] uppercase mb-1">{d.replace('hours', '')} H</div>
+                           <div className="text-xs font-black">
+                              ₹{d === 'hours24' ? Math.floor(account.pricing.hours24 * 0.9) : (account.pricing[d] || 'N/A')}
+                           </div>
                         </button>
                      ))}
                   </div>

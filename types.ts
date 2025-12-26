@@ -13,6 +13,7 @@ export enum Rank {
 }
 
 export interface Pricing {
+  hours1: number; // Added 1 Hour slot
   hours3: number;
   hours12: number;
   hours24: number;
@@ -69,7 +70,7 @@ export interface Booking {
   orderId: string;
   accountId: string;
   accountName: string;
-  durationLabel: '3 Hours' | '12 Hours' | '24 Hours';
+  durationLabel: '1 Hour' | '3 Hours' | '12 Hours' | '24 Hours'; // Updated type
   hours: number;
   totalPrice: number;
   startTime: string; 
