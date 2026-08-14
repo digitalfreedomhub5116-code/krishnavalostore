@@ -1,0 +1,562 @@
+
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { Account, Booking, Rank, BookingStatus, User, HomeConfig, Skin, Message } from '../types';
+
+const SUPABASE_URL = 'https://akwdzwrkhpyhrrcyvkpx.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_EjqnCcOPSh6uoT9y-g2OFw_ACj0byDo';
+
+// REPLACE THIS URL WITH YOUR OWN LOGO IMAGE URL
+// Using a Data URI for the Shield SVG to ensure it matches brand colors perfectly
+export const SITE_LOGO_URL = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJyZ2JhKDI1NSwgNzAsIDg1LCAwLjIpIiBzdHJva2U9IiNmZjQ2NTUiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMjAgMTNjMCA1LTMuNSA3LjUtNy42NiA4Ljk1YTEgMSAwIDAgMS0uNjctLjAxQzcuNSAyMC41IDQgMTggNCAxM1Y2YTEgMSAwIDAgMSAxLTFjMiAwIDQuNS0xLjIgNi4yNC0yLjcyYTEuMTcgMS4xNyAwIDAgMSAxLjUyIDBDMTQuNTEgMy44MSAxNyA1IDE5IDVhMSAxIDAgMCAxIDEgMXoiLz48L3N2Zz4=";
+
+// Lazy load Supabase to avoid constructor issues at module-level load
+let supabaseInstance: SupabaseClient | null = null;
+const getSupabase = () => {
+  if (!supabaseInstance) {
+    supabaseInstance = createClient(SUPABASE_URL, SUPABASE_KEY);
+  }
+  return supabaseInstance;
+};
+
+const CURRENT_USER_KEY = 'kv_current_user';
+
+// Internal listener system to avoid manual Event constructor usage
+type StorageListener = () => void;
+const listeners = new Set<StorageListener>();
+
+const notifyStorageChange = () => {
+  listeners.forEach(listener => {
+    try {
+      listener();
+    } catch (e) {
+      // Ignore listener errors
+    }
+  });
+
+  try {
+    localStorage.setItem('valo_storage_sync', Date.now().toString());
+  } catch (e) {
+    // Ignore storage errors
+  }
+};
+
+export const DEFAULT_HOME_CONFIG: HomeConfig = {
+  marqueeText: [
+    "⚡ NEW RADIANT BUNDLES ADDED TO INVENTORY",
+    "🔥 GET 10% OFF ON ALL 24-HOUR RENTALS",
+    "🛡️ VANGUARD BYPASS SECURED - 0% BAN RATE",
+    "⚡ INSTANT CREDENTIAL DELIVERY VIA WHATSAPP",
+    "🏆 TRUSTED BY 5000+ PREMIUM AGENTS"
+  ],
+  heroSlides: [
+    {
+      id: 1,
+      image: "https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=2670&auto=format&fit=crop",
+      title: "UNLEASH RADIANT POWER",
+      subtitle: "Dominate the lobby with 50+ premium skins and verified immortal MMR.",
+      accent: "text-brand-accent",
+      buttonColor: "bg-brand-accent hover:bg-red-600"
+    },
+    {
+      id: 2,
+      image: "https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=2670&auto=format&fit=crop",
+      title: "INSTANT DEPLOYMENT",
+      subtitle: "Get credentials delivered to your WhatsApp in under 120 seconds.",
+      accent: "text-brand-cyan",
+      buttonColor: "bg-brand-cyan hover:bg-cyan-400 text-brand-darker"
+    }
+  ],
+  trustItems: [
+    { label: "Instant", sub: "Auto-Delivery" },
+    { label: "Secure", sub: "Anti-Ban Tech" },
+    { label: "Cheap", sub: "Starts ₹49" },
+    { label: "Elite", sub: "Verified MMR" }
+  ],
+  stepItems: [
+    { title: "SELECT AGENT", desc: "Browse our premium inventory." },
+    { title: "CHOOSE TIME", desc: "Pick 3h, 12h, or 24h plans." },
+    { title: "SECURE PAY", desc: "Scan QR and enter UTR ID." },
+    { title: "PLAY NOW", desc: "Get details on WhatsApp." }
+  ],
+  reviews: [
+    {
+      id: 1,
+      type: 'video',
+      name: 'Aditya Rao',
+      rank: 'Immortal',
+      quote: 'The best rental service I\'ve used. Instant delivery via WhatsApp is a game changer.',
+      thumbnail: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=1000&auto=format&fit=crop',
+      videoUrl: 'https://go.screenpal.com/watch/cTlqlMnYGuh'
+    },
+    {
+      id: 2,
+      type: 'video',
+      name: 'Rahul Verma',
+      rank: 'Ascendant',
+      quote: 'Finally a legit store! The account quality is top notch. Will rent again.',
+      thumbnail: 'https://images.unsplash.com/photo-1552820728-8b83bb6b773f?q=80&w=1000&auto=format&fit=crop',
+      videoUrl: 'https://go.screenpal.com/watch/cTlql6nYGqu'
+    },
+    {
+      id: 3,
+      type: 'video',
+      name: 'Vikram Singh',
+      rank: 'Radiant',
+      quote: 'Insane skins. The reaver vandal aimbot feels real lol. 10/10.',
+      thumbnail: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=1000&auto=format&fit=crop',
+      videoUrl: 'https://go.screenpal.com/watch/cTlqlMnYGuh'
+    },
+    {
+      id: 4,
+      type: 'video',
+      name: 'Karthik N',
+      rank: 'Diamond',
+      quote: 'Cheap and reliable. The support is also very quick.',
+      thumbnail: 'https://images.unsplash.com/photo-1538481199705-c710c4e965fc?q=80&w=1000&auto=format&fit=crop',
+      videoUrl: 'https://go.screenpal.com/watch/cTlql6nYGqu'
+    }
+  ],
+  ultraPoints: {
+    tagline: "NEW REWARDS PROTOCOL",
+    titlePart1: "EARN",
+    titleHighlight: "ULTRA POINTS",
+    titlePart2: "WHILE YOU PLAY",
+    description: "Join the most rewarding rental ecosystem. Every deployment earns you points that convert directly into Valorant Points (VP) for your main account.",
+    card1Title: "Earn 1 UP for ₹9",
+    card1Desc: "Simply rent any ID. Points are calculated as Amount / 9 and added on approval.",
+    card2Title: "1 UP = 2 VP",
+    card2Desc: "Your earned points double in value when converting to Valorant Point vouchers."
+  },
+  coupons: [
+    { code: 'WELCOME20', type: 'PERCENT', value: 20, active: true, currentUses: 0 },
+    { code: 'KV50', type: 'FLAT', value: 50, active: true, currentUses: 0 },
+    { code: 'VALO10', type: 'PERCENT', value: 10, active: true, currentUses: 0 }
+  ],
+  cta: {
+    titleLine1: "Dont Just Play.",
+    titleLine2: "DOMINATE.",
+    subtitle: "Inventory updated every 24 hours. Grab your main before it's gone.",
+    buttonText: "VIEW LIVE INVENTORY"
+  }
+};
+
+export const StorageService = {
+  subscribe: (callback: StorageListener) => {
+    listeners.add(callback);
+    return () => listeners.delete(callback);
+  },
+
+  // --- Messages ---
+  sendMessage: async (message: Message) => {
+    // Assuming a 'messages' table exists in Supabase with a 'data' jsonb column similar to other tables
+    await getSupabase().from('messages').insert({ id: message.id, data: message });
+    notifyStorageChange();
+  },
+
+  getMessages: async (userId1: string, userId2: string, accountId: string): Promise<Message[]> => {
+    const { data, error } = await getSupabase().from('messages').select('data');
+    if (error || !data) return [];
+    
+    const allMessages = data.map(row => row.data as Message);
+    
+    // Filter messages between these two users related to specific account
+    // Order by createdAt ASC
+    return allMessages
+      .filter(m => 
+        m.accountId === accountId && 
+        ((m.senderId === userId1 && m.receiverId === userId2) || 
+         (m.senderId === userId2 && m.receiverId === userId1))
+      )
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  },
+
+  getAllUserMessages: async (userId: string): Promise<Message[]> => {
+    // Fetch all messages where user is sender or receiver
+    const { data, error } = await getSupabase().from('messages').select('data');
+    if (error || !data) return [];
+    
+    return data
+      .map(row => row.data as Message)
+      .filter(m => m.senderId === userId || m.receiverId === userId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  },
+
+  markMessagesAsRead: async (senderId: string, receiverId: string, accountId: string) => {
+    // In a real DB, we would do an UPDATE query. Here we have to fetch, update, and save back if simulating with JSONB
+    // Since this uses Supabase 'data' column, we can't easily do a bulk update on JSON fields without PG logic.
+    // For this implementation, we will assume the client handles 'read' state optimistically or 
+    // we fetch relevant messages and update them one by one.
+    
+    const { data } = await getSupabase().from('messages').select('*');
+    if (!data) return;
+
+    const updates = data
+      .map(row => ({ id: row.id, data: row.data as Message }))
+      .filter(item => 
+        item.data.senderId === senderId && 
+        item.data.receiverId === receiverId && 
+        item.data.accountId === accountId &&
+        !item.data.isRead
+      );
+
+    for (const item of updates) {
+      item.data.isRead = true;
+      await getSupabase().from('messages').update({ data: item.data }).eq('id', item.id);
+    }
+    notifyStorageChange();
+  },
+
+  validateCoupon: async (code: string): Promise<{ valid: boolean; type?: 'PERCENT' | 'FLAT'; value?: number; message: string }> => {
+    const normalized = code.toUpperCase().trim();
+    
+    // Fetch latest config to get dynamic coupons
+    const config = await StorageService.getHomeConfig();
+    const coupons = config.coupons || DEFAULT_HOME_CONFIG.coupons || [];
+
+    // Simulate Network Delay for realism
+    await new Promise(resolve => setTimeout(resolve, 600));
+
+    const matched = coupons.find(c => c.code === normalized && c.active);
+
+    if (!matched) {
+       return { valid: false, message: 'Invalid or expired coupon code.' };
+    }
+
+    // Check Expiration
+    if (matched.expiryDate) {
+      const now = new Date();
+      const expiry = new Date(matched.expiryDate);
+      // Set expiry to end of that day
+      expiry.setHours(23, 59, 59, 999);
+      
+      if (now > expiry) {
+        return { valid: false, message: 'This coupon has expired.' };
+      }
+    }
+
+    // Check Usage Limit
+    if (matched.maxUses !== null && matched.maxUses !== undefined) {
+      if (matched.currentUses >= matched.maxUses) {
+        return { valid: false, message: 'Coupon usage limit reached.' };
+      }
+    }
+
+    return { valid: true, type: matched.type, value: matched.value, message: 'Coupon applied successfully!' };
+  },
+
+  incrementCouponUsage: async (code: string) => {
+    try {
+      const config = await StorageService.getHomeConfig();
+      if (!config.coupons) return;
+      
+      const updatedCoupons = config.coupons.map(c => {
+          if (c.code === code) {
+              return { ...c, currentUses: (c.currentUses || 0) + 1 };
+          }
+          return c;
+      });
+      
+      await StorageService.saveHomeConfig({ ...config, coupons: updatedCoupons });
+    } catch (e) {
+      console.error("Failed to increment coupon usage:", e);
+    }
+  },
+
+  getAccounts: async (rankFilter?: string): Promise<Account[]> => {
+    let query = getSupabase().from('accounts').select('*');
+    
+    // Server-side filtering for Rank using JSONB syntax
+    if (rankFilter && rankFilter !== 'All') {
+       query = query.eq('data->>rank', rankFilter);
+    }
+    
+    const { data, error } = await query;
+    if (error || !data) return [];
+    return data.map(row => row.data as Account);
+  },
+
+  getUserListings: async (userId: string): Promise<Account[]> => {
+    const { data, error } = await getSupabase().from('accounts').select('*').eq('data->>listedBy', userId);
+    if (error || !data) return [];
+    return data.map(row => row.data as Account);
+  },
+
+  getAccountById: async (id: string): Promise<Account | undefined> => {
+    const { data, error } = await getSupabase().from('accounts').select('data').eq('id', id).single();
+    if (error || !data) return undefined;
+    return data.data as Account;
+  },
+
+  saveAccount: async (account: Account) => {
+    await getSupabase().from('accounts').upsert({ id: account.id, data: account });
+    notifyStorageChange();
+  },
+
+  updateAccountPassword: async (accountId: string, newPassword: string) => {
+    const account = await StorageService.getAccountById(accountId);
+    if (account) {
+      account.password = newPassword;
+      await StorageService.saveAccount(account);
+    }
+  },
+
+  deleteAccount: async (id: string) => {
+    await getSupabase().from('accounts').delete().eq('id', id);
+    notifyStorageChange();
+  },
+
+  getBookings: async (accountId?: string): Promise<Booking[]> => {
+    let query = getSupabase().from('bookings').select('*').order('data->createdAt', { ascending: false });
+    const { data, error } = await query;
+    if (error || !data) return [];
+    
+    let bookings = data.map(row => row.data as Booking);
+    if (accountId) {
+      bookings = bookings.filter(b => b.accountId === accountId);
+    }
+    return bookings;
+  },
+
+  getUserBookings: async (userId: string): Promise<Booking[]> => {
+    const bookings = await StorageService.getBookings();
+    return bookings.filter(b => b.customerId === userId);
+  },
+
+  // Check if a time slot is available for an account
+  checkAvailability: async (accountId: string, startTime: string, endTime: string): Promise<boolean> => {
+    const bookings = await StorageService.getBookings(accountId);
+    
+    const newStart = new Date(startTime).getTime();
+    const newEnd = new Date(endTime).getTime();
+
+    const conflicts = bookings.filter(b => {
+      // Ignore Cancelled, Completed, AND PENDING (Requested but not approved/locked yet)
+      if (b.status === BookingStatus.CANCELLED || 
+          b.status === BookingStatus.COMPLETED || 
+          b.status === BookingStatus.PENDING) return false;
+      
+      const bStart = new Date(b.startTime).getTime();
+      const bEnd = new Date(b.endTime).getTime();
+
+      // Check overlap: (StartA < EndB) and (EndA > StartB)
+      return (newStart < bEnd && newEnd > bStart);
+    });
+
+    return conflicts.length === 0;
+  },
+
+  createBooking: async (booking: Booking) => {
+    await getSupabase().from('bookings').upsert({ order_id: booking.orderId, data: booking, status: booking.status });
+    notifyStorageChange();
+  },
+
+  updateBooking: async (booking: Booking) => {
+    await getSupabase().from('bookings').update({ data: booking, status: booking.status }).eq('order_id', booking.orderId);
+    notifyStorageChange();
+  },
+
+  deleteBooking: async (orderId: string) => {
+    await getSupabase().from('bookings').delete().eq('order_id', orderId);
+    notifyStorageChange();
+  },
+
+  updateBookingStatus: async (orderId: string, status: BookingStatus) => {
+    const { data: row } = await getSupabase().from('bookings').select('data').eq('order_id', orderId).single();
+    
+    if (row?.data) {
+      const booking = row.data as Booking;
+      
+      // Safety Check: If trying to approve (ACTIVE/PRE_BOOKED), ensure slot is still free from *other* active bookings
+      if (status === BookingStatus.ACTIVE || status === BookingStatus.PRE_BOOKED) {
+         // checkAvailability ignores PENDING, so it won't flag this booking itself as a conflict.
+         // It will only flag if there is already an ACTIVE/PRE_BOOKED session overlapping.
+         const isAvailable = await StorageService.checkAvailability(booking.accountId, booking.startTime, booking.endTime);
+         if (!isAvailable) {
+             throw new Error("Conflict detected: This slot has already been approved for another user.");
+         }
+      }
+
+      const oldStatus = booking.status;
+      if (oldStatus === status) return;
+
+      booking.status = status;
+      
+      await getSupabase().from('bookings').update({ data: booking, status: status }).eq('order_id', orderId);
+      
+      // Points Logic
+      if (booking.customerId) {
+        const points = Math.floor(booking.totalPrice / 9);
+        
+        // Mark as active/pre-booked (Approved) -> Add points
+        if (oldStatus === BookingStatus.PENDING && (status === BookingStatus.ACTIVE || status === BookingStatus.PRE_BOOKED)) {
+          await StorageService.updateUserPoints(booking.customerId, points);
+        } 
+        // Cancelled -> Deduct points
+        else if ((oldStatus === BookingStatus.ACTIVE || oldStatus === BookingStatus.PRE_BOOKED) && status === BookingStatus.CANCELLED) {
+          await StorageService.updateUserPoints(booking.customerId, -points);
+        }
+      }
+
+      const account = await StorageService.getAccountById(booking.accountId);
+      
+      if (account) {
+        // Logic for account status updates
+        // If a booking transitions to ACTIVE, we lock the account
+        if (status === BookingStatus.ACTIVE) {
+          account.isBooked = true;
+          account.bookedUntil = booking.endTime;
+        } 
+        // If a booking is Cancelled or Completed, we only unlock if THIS booking was the one locking it
+        else if (status === BookingStatus.COMPLETED || status === BookingStatus.CANCELLED) {
+          if (account.isBooked && account.bookedUntil === booking.endTime) {
+            account.isBooked = false;
+            account.bookedUntil = null;
+          }
+        }
+        await StorageService.saveAccount(account);
+      }
+      
+      notifyStorageChange();
+    }
+  },
+
+  // Automatically check for expired bookings and pending locks
+  checkExpiredBookings: async () => {
+    try {
+      const bookings = await StorageService.getBookings();
+      const now = new Date().getTime();
+      let hasUpdates = false;
+
+      for (const booking of bookings) {
+        const endTime = new Date(booking.endTime).getTime();
+        const startTime = new Date(booking.startTime).getTime();
+        const createdAt = new Date(booking.createdAt).getTime();
+
+        // 1. Expire Active Bookings
+        if (booking.status === BookingStatus.ACTIVE && endTime <= now) {
+          await StorageService.updateBookingStatus(booking.orderId, BookingStatus.COMPLETED);
+          hasUpdates = true;
+        }
+
+        // 2. Activate Pre-Bookings when time arrives
+        if (booking.status === BookingStatus.PRE_BOOKED && startTime <= now && endTime > now) {
+          await StorageService.updateBookingStatus(booking.orderId, BookingStatus.ACTIVE);
+          hasUpdates = true;
+        }
+
+        // 3. Cleanup Pending Locks (> 10 mins old)
+        if (booking.status === BookingStatus.PENDING) {
+           const tenMins = 10 * 60 * 1000;
+           if (now - createdAt > tenMins) {
+             // Silently delete or cancel expired pending requests to free up the slot
+             await StorageService.deleteBooking(booking.orderId);
+             hasUpdates = true;
+           }
+        }
+      }
+
+      if (hasUpdates) {
+        notifyStorageChange();
+      }
+    } catch (e) {
+      console.error("Error checking expired bookings:", e);
+    }
+  },
+
+  updateUserPoints: async (userId: string, amount: number) => {
+    const { data: row } = await getSupabase().from('users').select('data').eq('id', userId).single();
+    if (row?.data) {
+      const userData = row.data as User;
+      userData.ultraPoints = Math.max(0, (userData.ultraPoints || 0) + amount);
+      
+      await getSupabase().from('users').update({ data: userData }).eq('id', userId);
+      
+      const currentUser = StorageService.getCurrentUser();
+      if (currentUser && currentUser.id === userId) {
+        localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(userData));
+      }
+      notifyStorageChange();
+    }
+  },
+
+  getHomeConfig: async (): Promise<HomeConfig> => {
+    try {
+      const { data, error } = await getSupabase().from('home_config').select('data').eq('id', 'global').single();
+      if (error || !data?.data) return DEFAULT_HOME_CONFIG;
+      
+      const config = data.data as HomeConfig;
+      return {
+        ...DEFAULT_HOME_CONFIG,
+        ...config,
+        trustItems: config.trustItems && config.trustItems.length > 0 ? config.trustItems : DEFAULT_HOME_CONFIG.trustItems,
+        heroSlides: config.heroSlides && config.heroSlides.length > 0 ? config.heroSlides : DEFAULT_HOME_CONFIG.heroSlides,
+        marqueeText: config.marqueeText && config.marqueeText.length > 0 ? config.marqueeText : DEFAULT_HOME_CONFIG.marqueeText,
+        stepItems: config.stepItems && config.stepItems.length > 0 ? config.stepItems : DEFAULT_HOME_CONFIG.stepItems,
+        reviews: config.reviews && config.reviews.length > 0 ? config.reviews : DEFAULT_HOME_CONFIG.reviews,
+        ultraPoints: config.ultraPoints || DEFAULT_HOME_CONFIG.ultraPoints,
+        coupons: config.coupons || DEFAULT_HOME_CONFIG.coupons,
+        cta: config.cta || DEFAULT_HOME_CONFIG.cta
+      };
+    } catch {
+      return DEFAULT_HOME_CONFIG;
+    }
+  },
+
+  saveHomeConfig: async (config: HomeConfig) => {
+    const { error } = await getSupabase().from('home_config').upsert({ id: 'global', data: config });
+    if (error) throw error;
+    notifyStorageChange();
+  },
+
+  getCurrentUser: (): User | null => {
+    const data = localStorage.getItem(CURRENT_USER_KEY);
+    return data ? JSON.parse(data) : null;
+  },
+
+  logoutUser: () => {
+    localStorage.removeItem(CURRENT_USER_KEY);
+    notifyStorageChange();
+  },
+
+  getAllUsers: async (): Promise<User[]> => {
+    const { data, error } = await getSupabase().from('users').select('data');
+    if (error || !data) return [];
+    return data.map(row => row.data as User);
+  },
+
+  deleteUser: async (userId: string) => {
+    await getSupabase().from('users').delete().eq('id', userId);
+    notifyStorageChange();
+  },
+
+  registerUser: async (name: string, email: string, phone: string, password: string): Promise<User> => {
+    const newUser: User = {
+      id: 'usr-' + Date.now(),
+      name, email, phone, password,
+      avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${name}`,
+      role: 'customer',
+      isVerified: true,
+      ultraPoints: 20, // Welcome Bonus
+      createdAt: new Date().toISOString(),
+      lastLogin: new Date().toISOString()
+    };
+    await getSupabase().from('users').insert({ id: newUser.id, email: newUser.email, data: newUser });
+    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(newUser));
+    notifyStorageChange();
+    return newUser;
+  },
+
+  loginUser: async (email: string, password: string): Promise<User> => {
+    const { data, error } = await getSupabase().from('users').select('data').eq('email', email).single();
+    if (error || !data) throw new Error("Invalid credentials");
+    const user = data.data as User;
+    if (user.password !== password) throw new Error("Invalid credentials");
+    
+    user.lastLogin = new Date().toISOString();
+    await getSupabase().from('users').update({ data: user }).eq('id', user.id);
+    
+    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
+    notifyStorageChange();
+    return user;
+  }
+};

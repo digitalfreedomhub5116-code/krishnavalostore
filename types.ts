@@ -1,0 +1,171 @@
+
+export enum Rank {
+  IRON = 'Iron',
+  BRONZE = 'Bronze',
+  SILVER = 'Silver',
+  GOLD = 'Gold',
+  PLATINUM = 'Platinum',
+  DIAMOND = 'Diamond',
+  ASCENDANT = 'Ascendant',
+  IMMORTAL = 'Immortal',
+  RADIANT = 'Radiant'
+}
+
+export interface Pricing {
+  hours1: number; // Added 1 Hour slot
+  hours3: number;
+  hours12: number;
+  hours24: number;
+}
+
+export interface Skin {
+  name: string;
+  isHighlighted: boolean;
+  imageUrl?: string;
+}
+
+export interface Account {
+  id: string;
+  name: string;
+  rank: Rank;
+  skins: Skin[];
+  totalSkins?: number; 
+  initialSkinsCount?: number; // Added: Control for initial skins display limit
+  description?: string; 
+  pricing: Pricing;
+  imageUrl: string;
+  isBooked: boolean;
+  bookedUntil: string | null; 
+  username?: string;
+  password?: string;
+  listedBy?: string; // ID of the user who listed this account
+  listedByName?: string; // Added: Name of the user for display
+  region?: string;   // Added region support
+  level?: number;    // Added account level
+}
+
+export type UserRole = 'customer' | 'admin';
+
+export interface User {
+  id: string;         
+  googleId?: string;   
+  name: string;
+  email: string;
+  phone?: string;     
+  password?: string;  
+  avatarUrl: string;  
+  role: UserRole;
+  isVerified: boolean;
+  verificationCode?: string;
+  createdAt: string;  
+  lastLogin: string;
+  ultraPoints: number; // Added for gamification
+}
+
+export interface Message {
+  id: string;
+  senderId: string;
+  receiverId: string;
+  accountId: string; // Context: Which account is this about?
+  accountName?: string; 
+  content: string;
+  createdAt: string;
+  isRead: boolean;
+}
+
+export enum BookingStatus {
+  PENDING = 'PENDING', 
+  ACTIVE = 'ACTIVE',   
+  PRE_BOOKED = 'PRE_BOOKED',
+  COMPLETED = 'COMPLETED', 
+  CANCELLED = 'CANCELLED'
+}
+
+export interface Booking {
+  orderId: string;
+  accountId: string;
+  accountName: string;
+  durationLabel: '1 Hour' | '3 Hours' | '12 Hours' | '24 Hours'; // Updated type
+  hours: number;
+  totalPrice: number;
+  startTime: string; 
+  endTime: string;   
+  status: BookingStatus;
+  customerName?: string;
+  customerId?: string;
+  createdAt: string;
+  utr?: string;
+  couponCode?: string; // New: Track which coupon was used
+  discountApplied?: number; // New: Track amount saved
+}
+
+export const UPI_ID = "8530085116@fam";
+
+export interface HeroSlide {
+  id: number;
+  image: string;
+  title: string;
+  subtitle: string;
+  accent: string;     
+  buttonColor: string; 
+}
+
+export interface Review {
+  id: number;
+  type: 'video' | 'text';
+  name: string;
+  rank: string;
+  quote: string;
+  thumbnail?: string; // Video only
+  videoUrl?: string;   // Video only
+  rating?: number;    // Text only (1-5)
+  date?: string;      // Text only
+}
+
+export interface TrustItem {
+  label: string;
+  sub: string;
+}
+
+export interface StepItem {
+  title: string;
+  desc: string;
+}
+
+export interface UltraPointsConfig {
+  tagline: string;
+  titlePart1: string;
+  titleHighlight: string;
+  titlePart2: string;
+  description: string;
+  card1Title: string;
+  card1Desc: string;
+  card2Title: string;
+  card2Desc: string;
+}
+
+export interface Coupon {
+  code: string;
+  type: 'PERCENT' | 'FLAT';
+  value: number;
+  active: boolean;
+  expiryDate?: string | null; // ISO Date string or null for no expiry
+  maxUses?: number | null;    // Null for unlimited
+  currentUses: number;        // Track how many times used
+}
+
+export interface HomeConfig {
+  marqueeText: string[];
+  heroSlides: HeroSlide[];
+  trustItems: TrustItem[]; 
+  stepItems: StepItem[];   
+  reviews: Review[];
+  ultraPoints?: UltraPointsConfig;
+  coupons?: Coupon[]; // Added for dynamic coupon management
+  cta: {
+    titleLine1: string;
+    titleLine2: string; 
+    subtitle: string;
+    buttonText: string;
+  };
+}
