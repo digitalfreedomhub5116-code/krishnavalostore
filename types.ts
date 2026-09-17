@@ -59,6 +59,7 @@ export interface User {
   verificationCode?: string;
   createdAt: string;  
   lastLogin: string;
+  isGuest?: boolean;
 }
 
 export interface Message {

@@ -76,11 +76,13 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   const isActive = (path: string) => location.pathname === path;
   
+  const isAuthenticatedUser = currentUser && !currentUser.isGuest;
+
   // Mobile Navigation Items
   const mobileNavItems = [
     { label: 'Home', path: '/', icon: Home },
     { label: 'Rent', path: '/browse', icon: Gamepad2 },
-    { label: currentUser ? 'Profile' : 'Login', path: currentUser ? '/dashboard' : '/login', icon: currentUser ? UserIcon : UserIcon },
+    { label: isAuthenticatedUser ? 'Profile' : 'Login', path: isAuthenticatedUser ? '/dashboard' : '/login', icon: UserIcon },
   ];
 
   return (
@@ -147,7 +149,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
               {/* Desktop Profile / Login */}
               <div>
-                {currentUser ? (
+                {isAuthenticatedUser ? (
                   <div className="relative group">
                      <button 
                        onClick={() => setShowProfileMenu(!showProfileMenu)} 

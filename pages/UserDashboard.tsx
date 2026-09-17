@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { Navigate, useNavigate, useLocation, Link } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { StorageService } from '../services/storage';
 import { User, Booking, BookingStatus, Account, Message } from '../types';
@@ -590,7 +590,9 @@ const UserDashboard: React.FC = () => {
                   <img src={user.avatarUrl} className="w-10 h-10 rounded-full border border-white/20" alt="" />
                   <div className="overflow-hidden">
                      <div className="font-bold text-white truncate">{user.name}</div>
-                     <div className="text-xs text-slate-400 truncate uppercase tracking-tighter">{user.role}</div>
+                     <div className="text-xs text-slate-400 truncate uppercase tracking-tighter">
+                        {user.isGuest ? 'Guest Session' : user.role}
+                     </div>
                   </div>
                </div>
              </div>
@@ -641,6 +643,20 @@ const UserDashboard: React.FC = () => {
 
         {/* Main Content Area */}
         <main className="flex-1 min-h-[500px]">
+           {user.isGuest && (
+             <div className="mb-6 p-4 rounded-xl bg-gradient-to-r from-brand-accent/10 via-brand-surface to-brand-cyan/10 border border-brand-accent/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xl animate-in fade-in duration-300">
+               <div>
+                 <div className="flex items-center gap-2">
+                   <span className="px-2 py-0.5 rounded bg-brand-accent/20 border border-brand-accent/30 text-brand-accent text-[10px] font-mono font-bold uppercase">Guest Mode</span>
+                   <p className="text-xs font-bold text-white">Temporary Session Active</p>
+                 </div>
+                 <p className="text-[11px] text-slate-400 mt-1">Your rental orders are saved to this browser. Want to access them anywhere? Sign in or create an account to link your bookings permanently.</p>
+               </div>
+               <Link to="/login" className="px-5 py-2.5 bg-white text-brand-darker hover:bg-brand-accent hover:text-white font-bold text-xs uppercase tracking-widest rounded-lg transition-all shrink-0 shadow-md">
+                 Sign In / Register
+               </Link>
+             </div>
+           )}
            {renderTabContent()}
         </main>
       </div>

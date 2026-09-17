@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Loader2, Gamepad2, AlertTriangle, User, Mail, Phone, Lock, ArrowRight } from 'lucide-react';
+import { Loader2, Gamepad2, User, Mail, Phone, Lock, ArrowRight } from 'lucide-react';
 import { StorageService, SITE_LOGO_URL } from '../services/storage';
 
 const UserAuth: React.FC = () => {
@@ -84,16 +84,6 @@ const UserAuth: React.FC = () => {
                 {/* Top highlight line */}
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-brand-accent to-transparent opacity-50"></div>
                 
-                {returnTo && (
-                  <div className="mb-6 bg-brand-accent/10 border border-brand-accent/20 rounded-lg p-3 flex items-start gap-3 animate-in slide-in-from-top-2">
-                    <AlertTriangle className="w-5 h-5 text-brand-accent shrink-0" />
-                    <div className="text-sm">
-                      <p className="font-bold text-white">Login Required</p>
-                      <p className="text-brand-accent/80 text-xs">Please sign in to complete your booking.</p>
-                    </div>
-                  </div>
-                )}
-
                 {/* Form */}
                 <form onSubmit={handleSubmit} className="space-y-4">
                   

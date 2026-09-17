@@ -272,7 +272,6 @@ const ProductDetails: React.FC = () => {
 
 const BookingWizard = ({ account, onClose }: { account: Account, onClose: () => void }) => {
    const navigate = useNavigate();
-   const user = StorageService.getCurrentUser();
    
    const [duration, setDuration] = useState<keyof Pricing>('hours3');
    
@@ -312,6 +311,9 @@ const BookingWizard = ({ account, onClose }: { account: Account, onClose: () => 
            throw new Error("Invalid price configuration. Please contact support.");
         }
 
+        // Seamless Auto-login as Guest or use active user
+        const activeUser = StorageService.getOrCreateGuestUser();
+
         // LOCKING: Create PENDING Booking
         const orderId = 'KV-' + Math.floor(1000 + Math.random() * 9000);
         const booking: Booking = {
@@ -325,8 +327,8 @@ const BookingWizard = ({ account, onClose }: { account: Account, onClose: () => 
            endTime: end.toISOString(),
            status: BookingStatus.PENDING,
            createdAt: new Date().toISOString(),
-           customerId: user?.id,
-           customerName: user?.name
+           customerId: activeUser.id,
+           customerName: activeUser.name
         };
 
         await StorageService.createBooking(booking);
@@ -341,9 +343,8 @@ const BookingWizard = ({ account, onClose }: { account: Account, onClose: () => 
            scheduledTime: start.toISOString()
         };
         
-        navigate(user ? '/checkout' : '/login', { 
-           state: user ? state : { returnTo: '/checkout', checkoutState: state } 
-        });
+        // Navigate directly to checkout without obstacle
+        navigate('/checkout', { state });
 
       } catch (err: any) {
          setError(err.message);

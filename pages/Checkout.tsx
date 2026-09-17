@@ -47,7 +47,7 @@ const Checkout: React.FC = () => {
   const [couponMessage, setCouponMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
 
-  const currentUser = StorageService.getCurrentUser();
+  const currentUser = StorageService.getOrCreateGuestUser();
 
   useEffect(() => {
     if (state && !state.orderId) {

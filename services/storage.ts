@@ -477,6 +477,42 @@ export const StorageService = {
     return data ? JSON.parse(data) : null;
   },
 
+  getOrCreateGuestUser: (): User => {
+    const existing = StorageService.getCurrentUser();
+    if (existing) return existing;
+
+    const guestNum = Math.floor(1000 + Math.random() * 9000);
+    const guestId = `guest_${Date.now()}_${guestNum}`;
+    const guestUser: User = {
+      id: guestId,
+      name: `Guest #${guestNum}`,
+      email: `${guestId}@guest.krishnavalostore.com`,
+      phone: '',
+      role: 'customer',
+      avatarUrl: `https://api.dicebear.com/7.x/bottts/svg?seed=${guestId}`,
+      isVerified: false,
+      createdAt: new Date().toISOString(),
+      lastLogin: new Date().toISOString(),
+      isGuest: true
+    };
+    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(guestUser));
+    notifyStorageChange();
+    return guestUser;
+  },
+
+  migrateGuestBookings: async (guestId: string, newUserId: string, newUserName: string) => {
+    try {
+      const bookings = await StorageService.getUserBookings(guestId);
+      for (const b of bookings) {
+        b.customerId = newUserId;
+        b.customerName = newUserName;
+        await StorageService.updateBooking(b);
+      }
+    } catch (err) {
+      console.warn("Failed to migrate guest bookings:", err);
+    }
+  },
+
   logoutUser: () => {
     localStorage.removeItem(CURRENT_USER_KEY);
     notifyStorageChange();
@@ -494,6 +530,7 @@ export const StorageService = {
   },
 
   registerUser: async (name: string, email: string, phone: string, password: string): Promise<User> => {
+    const prev = StorageService.getCurrentUser();
     const newUser: User = {
       id: 'usr-' + Date.now(),
       name, email, phone, password,
@@ -505,11 +542,15 @@ export const StorageService = {
     };
     await getSupabase().from('users').insert({ id: newUser.id, email: newUser.email, data: newUser });
     localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(newUser));
+    if (prev && prev.isGuest && prev.id !== newUser.id) {
+      await StorageService.migrateGuestBookings(prev.id, newUser.id, newUser.name);
+    }
     notifyStorageChange();
     return newUser;
   },
 
   loginUser: async (email: string, password: string): Promise<User> => {
+    const prev = StorageService.getCurrentUser();
     const { data, error } = await getSupabase().from('users').select('data').eq('email', email).single();
     if (error || !data) throw new Error("Invalid credentials");
     const user = data.data as User;
@@ -519,6 +560,9 @@ export const StorageService = {
     await getSupabase().from('users').update({ data: user }).eq('id', user.id);
     
     localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
+    if (prev && prev.isGuest && prev.id !== user.id) {
+      await StorageService.migrateGuestBookings(prev.id, user.id, user.name);
+    }
     notifyStorageChange();
     return user;
   }
