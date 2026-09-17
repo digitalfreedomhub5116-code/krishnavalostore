@@ -146,6 +146,9 @@ export interface PaymentConfig {
   companyName: string;
   upiId: string;
   qrCodeUrl?: string; // Custom QR code image URL or data URL
+  razorpayEnabled?: boolean;
+  razorpayKeyId?: string;
+  razorpayKeySecret?: string;
 }
 
 export interface HomeConfig {

@@ -221,13 +221,16 @@ const AdminDashboard: React.FC = () => {
         }
      }));
   };
-  const updatePaymentField = (field: keyof PaymentConfig, value: string) => {
+  const updatePaymentField = (field: keyof PaymentConfig, value: any) => {
     setHomeConfig(prev => ({
       ...prev,
       payment: {
         companyName: prev.payment?.companyName || 'Krishna Valo Store',
         upiId: prev.payment?.upiId || '8530085116@fam',
         qrCodeUrl: prev.payment?.qrCodeUrl || '',
+        razorpayEnabled: prev.payment?.razorpayEnabled !== false,
+        razorpayKeyId: prev.payment?.razorpayKeyId || 'rzp_live_Td1pJL2txvaNnH',
+        razorpayKeySecret: prev.payment?.razorpayKeySecret || 'vDX8p9Qqj6f5cI6NtPqbESEV',
         [field]: value
       }
     }));
@@ -722,6 +725,82 @@ const AdminDashboard: React.FC = () => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                {/* Left Column: Form Controls */}
                <div className="lg:col-span-2 space-y-6">
+                  {/* Razorpay Gateway Card */}
+                  <div className="bg-brand-surface p-6 rounded-xl border border-white/10 space-y-5 relative overflow-hidden">
+                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/5">
+                        <div className="flex items-center gap-3">
+                           <div className="p-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-yellow-400">
+                              <Zap size={20} />
+                           </div>
+                           <div>
+                              <h3 className="text-sm font-bold text-white uppercase tracking-wider">Razorpay Payment Gateway</h3>
+                              <p className="text-[11px] text-slate-400">Instant customer payments via UPI, Cards, NetBanking, and Wallets</p>
+                           </div>
+                        </div>
+
+                        {/* Enable/Disable Toggle */}
+                        <div 
+                           onClick={() => updatePaymentField('razorpayEnabled', homeConfig.payment?.razorpayEnabled === false ? true : false)}
+                           className="flex items-center gap-3 cursor-pointer select-none"
+                        >
+                           <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                              {homeConfig.payment?.razorpayEnabled !== false ? 'Enabled' : 'Disabled'}
+                           </span>
+                           <div 
+                              className={`w-12 h-6 rounded-full transition-colors relative cursor-pointer ${
+                                 homeConfig.payment?.razorpayEnabled !== false ? 'bg-brand-accent' : 'bg-slate-700'
+                              }`}
+                           >
+                              <div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-transform ${
+                                 homeConfig.payment?.razorpayEnabled !== false ? 'left-7' : 'left-1'
+                              }`} />
+                           </div>
+                        </div>
+                     </div>
+
+                     <div className="space-y-4">
+                        <div>
+                           <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                              Razorpay Key ID (Public Client Key)
+                           </label>
+                           <input 
+                              type="text" 
+                              value={homeConfig.payment?.razorpayKeyId || ''} 
+                              onChange={e => updatePaymentField('razorpayKeyId', e.target.value)} 
+                              placeholder="rzp_live_Td1pJL2txvaNnH" 
+                              className="w-full bg-brand-dark border border-white/10 rounded-lg px-4 py-3 text-brand-cyan font-mono text-xs focus:border-brand-accent outline-none"
+                           />
+                           <p className="text-[11px] text-slate-500 mt-1">
+                              Used by the customer's browser to launch the Razorpay checkout modal.
+                           </p>
+                        </div>
+
+                        <div>
+                           <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                              Razorpay Key Secret (Private / Secure)
+                           </label>
+                           <input 
+                              type="password" 
+                              value={homeConfig.payment?.razorpayKeySecret || ''} 
+                              onChange={e => updatePaymentField('razorpayKeySecret', e.target.value)} 
+                              placeholder="••••••••••••••••••••••••" 
+                              className="w-full bg-brand-dark border border-white/10 rounded-lg px-4 py-3 text-white font-mono text-xs focus:border-brand-accent outline-none"
+                           />
+                           <p className="text-[11px] text-slate-500 mt-1">
+                              Stored securely in your admin database.
+                           </p>
+                        </div>
+
+                        <div className="p-3 bg-white/5 border border-white/5 rounded-lg flex items-center justify-between text-xs">
+                           <span className="text-slate-400">Gateway Status:</span>
+                           <span className="font-bold flex items-center gap-1.5 text-green-400">
+                              <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+                              {homeConfig.payment?.razorpayEnabled !== false ? 'Live & Active on Checkout' : 'Gateway Disabled'}
+                           </span>
+                        </div>
+                     </div>
+                  </div>
+
                   {/* Company Name */}
                   <div className="bg-brand-surface p-6 rounded-xl border border-white/10 space-y-4">
                      <div className="flex items-center gap-2 pb-3 border-b border-white/5">

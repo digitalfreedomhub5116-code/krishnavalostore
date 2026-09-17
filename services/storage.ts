@@ -124,7 +124,10 @@ export const DEFAULT_HOME_CONFIG: HomeConfig = {
   payment: {
     companyName: "Krishna Valo Store",
     upiId: "8530085116@fam",
-    qrCodeUrl: ""
+    qrCodeUrl: "",
+    razorpayEnabled: true,
+    razorpayKeyId: "rzp_live_Td1pJL2txvaNnH",
+    razorpayKeySecret: "vDX8p9Qqj6f5cI6NtPqbESEV"
   },
   cta: {
     titleLine1: "Dont Just Play.",
@@ -458,7 +461,14 @@ export const StorageService = {
         stepItems: config.stepItems && config.stepItems.length > 0 ? config.stepItems : DEFAULT_HOME_CONFIG.stepItems,
         reviews: config.reviews && config.reviews.length > 0 ? config.reviews : DEFAULT_HOME_CONFIG.reviews,
         coupons: config.coupons || DEFAULT_HOME_CONFIG.coupons,
-        payment: config.payment || DEFAULT_HOME_CONFIG.payment,
+        payment: config.payment ? {
+          companyName: config.payment.companyName || DEFAULT_HOME_CONFIG.payment?.companyName || "Krishna Valo Store",
+          upiId: config.payment.upiId || DEFAULT_HOME_CONFIG.payment?.upiId || "8530085116@fam",
+          qrCodeUrl: config.payment.qrCodeUrl || "",
+          razorpayEnabled: config.payment.razorpayEnabled ?? true,
+          razorpayKeyId: config.payment.razorpayKeyId || DEFAULT_HOME_CONFIG.payment?.razorpayKeyId,
+          razorpayKeySecret: config.payment.razorpayKeySecret || DEFAULT_HOME_CONFIG.payment?.razorpayKeySecret
+        } : DEFAULT_HOME_CONFIG.payment,
         cta: config.cta || DEFAULT_HOME_CONFIG.cta
       };
     } catch {
