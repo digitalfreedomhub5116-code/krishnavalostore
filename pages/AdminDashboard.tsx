@@ -4,14 +4,14 @@ import { Navigate, useNavigate, Link } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { StorageService, DEFAULT_HOME_CONFIG } from '../services/storage';
 import { AIService } from '../services/ai';
-import { Account, Booking, BookingStatus, Rank, User, HomeConfig, Review, Skin, HeroSlide, TrustItem, StepItem, Coupon } from '../types';
-import { Plus, Trash2, Check, X, Edit2, Loader2, LogOut, Square, CheckSquare, BarChart3, IndianRupee, Users, Gamepad2, Home, Save, Zap, Shield, Star, MessageSquare, AlertCircle, Cpu, Search, Video, FileText, Play, Copy, Terminal, Layout, Image as ImageIcon, ShieldCheck, Lock, Ban, Type as TypeIcon, Clock, Ticket, CalendarDays, Repeat } from 'lucide-react';
+import { Account, Booking, BookingStatus, Rank, User, HomeConfig, Review, Skin, HeroSlide, TrustItem, StepItem, Coupon, PaymentConfig } from '../types';
+import { Plus, Trash2, Check, X, Edit2, Loader2, LogOut, Square, CheckSquare, BarChart3, IndianRupee, Users, Gamepad2, Home, Save, Zap, Shield, Star, MessageSquare, AlertCircle, Cpu, Search, Video, FileText, Play, Copy, Terminal, Layout, Image as ImageIcon, ShieldCheck, Lock, Ban, Type as TypeIcon, Clock, Ticket, CalendarDays, Repeat, Building, CreditCard, QrCode, Upload } from 'lucide-react';
 
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
   const isAuthenticated = localStorage.getItem('isAdmin') === 'true' || sessionStorage.getItem('isAdmin') === 'true';
   
-  const [activeTab, setActiveTab] = useState<'bookings' | 'accounts' | 'user_listings' | 'users' | 'edithome' | 'coupons'>('bookings');
+  const [activeTab, setActiveTab] = useState<'bookings' | 'accounts' | 'user_listings' | 'users' | 'edithome' | 'coupons' | 'payment'>('bookings');
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [users, setUsers] = useState<User[]>([]);
@@ -221,6 +221,36 @@ const AdminDashboard: React.FC = () => {
         }
      }));
   };
+  const updatePaymentField = (field: keyof PaymentConfig, value: string) => {
+    setHomeConfig(prev => ({
+      ...prev,
+      payment: {
+        companyName: prev.payment?.companyName || 'Krishna Valo Store',
+        upiId: prev.payment?.upiId || '8530085116@fam',
+        qrCodeUrl: prev.payment?.qrCodeUrl || '',
+        [field]: value
+      }
+    }));
+  };
+
+  const handleQrImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 1024 * 1024) {
+      alert("Image is too large. Please select an image under 1MB.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result as string;
+      if (dataUrl) {
+        updatePaymentField('qrCodeUrl', dataUrl);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   const saveGlobalConfig = async () => {
     setIsSavingConfig(true);
@@ -238,6 +268,12 @@ const AdminDashboard: React.FC = () => {
   if (!isAuthenticated) return <Navigate to="/admin" />;
   if (loading && !showAddModal) return <div className="min-h-screen flex items-center justify-center bg-brand-darker"><Loader2 className="w-10 h-10 text-brand-accent animate-spin" /></div>;
 
+  const previewUpiId = homeConfig.payment?.upiId || '8530085116@fam';
+  const previewCompany = homeConfig.payment?.companyName || 'Krishna Valo Store';
+  const previewQrUrl = homeConfig.payment?.qrCodeUrl?.trim() 
+    ? homeConfig.payment.qrCodeUrl 
+    : `https://api.qrserver.com/v1/create-qr-code/?size=250x250&margin=10&data=${encodeURIComponent(`upi://pay?pa=${previewUpiId}&pn=${encodeURIComponent(previewCompany)}&am=100.00&cu=INR`)}`;
+
   // Enhance bookings with listing info
   const enhancedBookings = bookings.map(b => {
      const acc = accounts.find(a => a.id === b.accountId);
@@ -249,11 +285,19 @@ const AdminDashboard: React.FC = () => {
   });
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8 pb-32">
-      {/* Mobile Responsive Header */}
+    <div className="min-h-screen bg-brand-darker text-white p-4 md:p-8">
+      {/* Top Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-        <h1 className="text-3xl font-display font-bold text-white tracking-tight">Vanguard <span className="text-brand-accent">OS</span></h1>
-        <div className="flex gap-3 w-full md:w-auto">
+        <div>
+           <div className="flex items-center gap-3">
+              <h1 className="text-3xl font-display font-black tracking-wider uppercase italic">Mission Control</h1>
+              <span className="px-2 py-0.5 rounded bg-brand-accent/20 border border-brand-accent/30 text-brand-accent text-[10px] font-mono font-bold">ADMIN</span>
+           </div>
+           <p className="text-slate-400 text-xs font-mono mt-1">SECURE TERMINAL // VANGUARD PROTOCOL ACTIVE</p>
+        </div>
+
+        <div className="flex items-center gap-3 w-full md:w-auto">
+           <Link to="/" className="p-2.5 bg-brand-surface border border-white/10 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-all flex-1 md:flex-none justify-center flex"><Home size={20} /></Link>
            <button onClick={() => { localStorage.removeItem('isAdmin'); sessionStorage.removeItem('isAdmin'); navigate('/admin'); }} className="p-2.5 bg-brand-surface border border-white/10 rounded-lg text-slate-400 hover:text-white hover:bg-red-500/20 transition-all flex-1 md:flex-none justify-center flex"><LogOut size={20} /></button>
         </div>
       </div>
@@ -273,7 +317,8 @@ const AdminDashboard: React.FC = () => {
           { id: 'user_listings', icon: Users, label: 'User IDs' },
           { id: 'users', icon: Users, label: 'Users' },
           { id: 'coupons', icon: Ticket, label: 'Coupons' },
-          { id: 'edithome', icon: Layout, label: 'Edit Home' }
+          { id: 'edithome', icon: Layout, label: 'Edit Home' },
+          { id: 'payment', icon: QrCode, label: 'Payment Settings' }
         ].map((tab) => (
           <button 
             key={tab.id} 
@@ -632,6 +677,190 @@ const AdminDashboard: React.FC = () => {
                          <textarea rows={2} value={homeConfig.cta?.subtitle} onChange={e => updateCTA('subtitle', e.target.value)} className="w-full bg-brand-dark border border-white/10 rounded px-3 py-2 text-white text-sm resize-none" />
                     </div>
                 </div>
+            </div>
+         </div>
+      )}
+
+      {/* Payment Settings Tab */}
+      {activeTab === 'payment' && (
+         <div className="space-y-8 animate-in fade-in duration-300">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-brand-surface p-6 rounded-xl border border-white/10 shadow-2xl">
+               <div>
+                  <div className="flex items-center gap-3">
+                     <div className="p-2 rounded-lg bg-brand-accent/10 border border-brand-accent/20 text-brand-accent">
+                        <QrCode size={22} />
+                     </div>
+                     <h2 className="text-xl font-bold uppercase tracking-wider italic">Payment & Merchant Settings</h2>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-1">Configure company name, business UPI ID, and QR code for checkout payments.</p>
+               </div>
+               <button 
+                 onClick={saveGlobalConfig} 
+                 disabled={isSavingConfig}
+                 className="flex items-center gap-2 px-6 py-3 bg-brand-accent hover:bg-red-600 disabled:opacity-50 text-white rounded-xl font-bold text-xs uppercase tracking-widest transition-all shadow-lg shadow-brand-accent/20"
+               >
+                 {isSavingConfig ? <Loader2 size={16} className="animate-spin" /> : (configSaved ? <Check size={16} /> : <Save size={16} />)}
+                 {configSaved ? "Settings Saved!" : "Save Payment Settings"}
+               </button>
+            </div>
+
+            {/* Merchant Privacy & NPCI Info Banner */}
+            <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl flex items-start gap-3">
+               <AlertCircle className="text-blue-400 shrink-0 mt-0.5" size={18} />
+               <div className="text-xs text-slate-300 leading-relaxed">
+                  <span className="text-blue-400 font-bold uppercase tracking-wider block mb-1">How UPI Name Display Works:</span>
+                  When customers make a UPI payment, banking apps (Google Pay, PhonePe, Paytm, BHIM) display the account holder's name registered with their bank/NPCI.
+                  To ensure your <strong>Company Name</strong> is displayed:
+                  <ul className="list-disc list-inside mt-1 space-y-0.5 text-slate-400">
+                     <li>Enter your registered <strong className="text-white">Business / Merchant UPI ID</strong> (e.g., from PhonePe Business, Paytm for Business, or Google Pay for Business) below.</li>
+                     <li>Or upload your official company <strong className="text-white">Merchant QR Code</strong> image below.</li>
+                     <li>The Company Name you configure here will also be presented everywhere on the customer's checkout screen and payment links.</li>
+                  </ul>
+               </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+               {/* Left Column: Form Controls */}
+               <div className="lg:col-span-2 space-y-6">
+                  {/* Company Name */}
+                  <div className="bg-brand-surface p-6 rounded-xl border border-white/10 space-y-4">
+                     <div className="flex items-center gap-2 pb-3 border-b border-white/5">
+                        <Building className="text-brand-accent" size={18} />
+                        <h3 className="text-sm font-bold text-white uppercase tracking-wider">Company / Business Display Name</h3>
+                     </div>
+                     <div>
+                        <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Display Name on Checkout</label>
+                        <input 
+                           type="text" 
+                           value={homeConfig.payment?.companyName || ''} 
+                           onChange={e => updatePaymentField('companyName', e.target.value)} 
+                           placeholder="e.g. Krishna Valo Store / Nexus Gaming" 
+                           className="w-full bg-brand-dark border border-white/10 rounded-lg px-4 py-3 text-white text-sm focus:border-brand-accent outline-none font-medium"
+                        />
+                        <p className="text-[11px] text-slate-500 mt-2">This name appears prominently on the customer checkout page, copy instructions, and payment references.</p>
+                     </div>
+                  </div>
+
+                  {/* Merchant UPI ID */}
+                  <div className="bg-brand-surface p-6 rounded-xl border border-white/10 space-y-4">
+                     <div className="flex items-center gap-2 pb-3 border-b border-white/5">
+                        <CreditCard className="text-brand-accent" size={18} />
+                        <h3 className="text-sm font-bold text-white uppercase tracking-wider">Merchant UPI ID (VPA)</h3>
+                     </div>
+                     <div>
+                        <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">UPI Virtual Payment Address</label>
+                        <input 
+                           type="text" 
+                           value={homeConfig.payment?.upiId || ''} 
+                           onChange={e => updatePaymentField('upiId', e.target.value)} 
+                           placeholder="e.g. 8530085116@fam or merchant@bank" 
+                           className="w-full bg-brand-dark border border-white/10 rounded-lg px-4 py-3 text-brand-cyan font-mono text-sm focus:border-brand-cyan outline-none"
+                        />
+                        <p className="text-[11px] text-slate-500 mt-2">All customer payments and dynamic QR codes will route to this UPI ID. Customers can also copy this ID with a single tap on checkout.</p>
+                     </div>
+                  </div>
+
+                  {/* Custom Business QR Code */}
+                  <div className="bg-brand-surface p-6 rounded-xl border border-white/10 space-y-4">
+                     <div className="flex items-center justify-between pb-3 border-b border-white/5">
+                        <div className="flex items-center gap-2">
+                           <QrCode className="text-brand-accent" size={18} />
+                           <h3 className="text-sm font-bold text-white uppercase tracking-wider">Custom Merchant QR Code (Optional)</h3>
+                        </div>
+                        {homeConfig.payment?.qrCodeUrl && (
+                           <button 
+                              type="button"
+                              onClick={() => updatePaymentField('qrCodeUrl', '')}
+                              className="text-[10px] text-red-400 hover:text-red-300 font-bold uppercase tracking-wider flex items-center gap-1"
+                           >
+                              <Trash2 size={12} /> Clear Custom QR
+                           </button>
+                        )}
+                     </div>
+
+                     <div className="space-y-4">
+                        <div>
+                           <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Direct Upload (Image File)</label>
+                           <label className="flex flex-col items-center justify-center border-2 border-dashed border-white/10 hover:border-brand-accent/50 rounded-xl p-6 cursor-pointer bg-brand-dark/50 hover:bg-brand-dark transition-all group">
+                              <Upload className="text-slate-500 group-hover:text-brand-accent mb-2 transition-colors" size={28} />
+                              <span className="text-xs text-slate-300 font-bold">Click to upload Merchant QR image</span>
+                              <span className="text-[10px] text-slate-500 mt-1">PNG, JPG, WEBP up to 1MB</span>
+                              <input type="file" accept="image/*" onChange={handleQrImageUpload} className="hidden" />
+                           </label>
+                        </div>
+
+                        <div className="relative flex items-center justify-center my-2">
+                           <div className="border-t border-white/10 w-full"></div>
+                           <span className="bg-brand-surface px-3 text-[10px] font-bold uppercase tracking-widest text-slate-500 absolute">OR Enter Image URL</span>
+                        </div>
+
+                        <div>
+                           <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">QR Code Image URL</label>
+                           <input 
+                              type="text" 
+                              value={homeConfig.payment?.qrCodeUrl || ''} 
+                              onChange={e => updatePaymentField('qrCodeUrl', e.target.value)} 
+                              placeholder="https://your-domain.com/company-qr.png" 
+                              className="w-full bg-brand-dark border border-white/10 rounded-lg px-4 py-3 text-white text-xs font-mono focus:border-brand-accent outline-none"
+                           />
+                           <p className="text-[11px] text-slate-500 mt-2">
+                              {homeConfig.payment?.qrCodeUrl 
+                                 ? "✓ Custom QR code is active and will be displayed on the checkout screen."
+                                 : "When empty, the system automatically generates dynamic UPI QR codes containing your configured UPI ID and company name."
+                              }
+                           </p>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+
+               {/* Right Column: Live Checkout Preview */}
+               <div className="space-y-4">
+                  <div className="bg-brand-surface p-6 rounded-xl border border-white/10 space-y-4">
+                     <div className="flex items-center justify-between pb-3 border-b border-white/5">
+                        <h3 className="text-xs font-bold text-white uppercase tracking-wider">Live Customer Preview</h3>
+                        <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${homeConfig.payment?.qrCodeUrl ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : 'bg-green-500/20 text-green-400 border border-green-500/30'}`}>
+                           {homeConfig.payment?.qrCodeUrl ? 'Custom QR' : 'Dynamic QR'}
+                        </span>
+                     </div>
+
+                     <div className="bg-brand-dark p-6 rounded-xl border border-white/5 flex flex-col items-center text-center space-y-4">
+                        <div className="w-48 h-48 bg-white p-3 rounded-xl shadow-2xl flex items-center justify-center overflow-hidden">
+                           <img 
+                              src={previewQrUrl} 
+                              alt="Payment QR Preview" 
+                              className="w-full h-full object-contain"
+                              onError={(e) => {
+                                 (e.target as HTMLElement).style.display = 'none';
+                              }}
+                           />
+                        </div>
+
+                        <div>
+                           <span className="text-[10px] text-slate-500 uppercase font-mono tracking-widest block">Payable To</span>
+                           <h4 className="text-base font-bold text-white mt-0.5">{previewCompany}</h4>
+                        </div>
+
+                        <div className="w-full bg-brand-surface p-3 rounded-lg border border-white/5">
+                           <span className="text-[9px] uppercase tracking-wider text-slate-500 block mb-1">Merchant UPI ID</span>
+                           <code className="text-xs text-brand-cyan font-mono font-bold break-all">{previewUpiId}</code>
+                        </div>
+
+                        <p className="text-[10px] text-slate-400 italic">
+                           This is an exact preview of what your customers will see on the checkout screen.
+                        </p>
+                     </div>
+                  </div>
+
+                  <button 
+                    onClick={saveGlobalConfig} 
+                    disabled={isSavingConfig}
+                    className="w-full flex items-center justify-center gap-2 py-4 bg-brand-accent hover:bg-red-600 disabled:opacity-50 text-white rounded-xl font-bold text-xs uppercase tracking-widest transition-all shadow-xl shadow-brand-accent/20"
+                  >
+                    {isSavingConfig ? <Loader2 size={16} className="animate-spin" /> : (configSaved ? <Check size={16} /> : <Save size={16} />)}
+                    {configSaved ? "Settings Saved!" : "Save Payment Settings"}
+                  </button>
+               </div>
             </div>
          </div>
       )}

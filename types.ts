@@ -141,6 +141,12 @@ export interface Coupon {
   currentUses: number;        // Track how many times used
 }
 
+export interface PaymentConfig {
+  companyName: string;
+  upiId: string;
+  qrCodeUrl?: string; // Custom QR code image URL or data URL
+}
+
 export interface HomeConfig {
   marqueeText: string[];
   heroSlides: HeroSlide[];
@@ -148,6 +154,7 @@ export interface HomeConfig {
   stepItems: StepItem[];   
   reviews: Review[];
   coupons?: Coupon[]; // Added for dynamic coupon management
+  payment?: PaymentConfig; // Added for custom business payment configuration
   cta: {
     titleLine1: string;
     titleLine2: string; 

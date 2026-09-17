@@ -121,6 +121,11 @@ export const DEFAULT_HOME_CONFIG: HomeConfig = {
     { code: 'KV50', type: 'FLAT', value: 50, active: true, currentUses: 0 },
     { code: 'VALO10', type: 'PERCENT', value: 10, active: true, currentUses: 0 }
   ],
+  payment: {
+    companyName: "Krishna Valo Store",
+    upiId: "8530085116@fam",
+    qrCodeUrl: ""
+  },
   cta: {
     titleLine1: "Dont Just Play.",
     titleLine2: "DOMINATE.",
@@ -453,6 +458,7 @@ export const StorageService = {
         stepItems: config.stepItems && config.stepItems.length > 0 ? config.stepItems : DEFAULT_HOME_CONFIG.stepItems,
         reviews: config.reviews && config.reviews.length > 0 ? config.reviews : DEFAULT_HOME_CONFIG.reviews,
         coupons: config.coupons || DEFAULT_HOME_CONFIG.coupons,
+        payment: config.payment || DEFAULT_HOME_CONFIG.payment,
         cta: config.cta || DEFAULT_HOME_CONFIG.cta
       };
     } catch {

@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate, Navigate } from 'react-router-dom';
-import { Account, UPI_ID, BookingStatus, Booking } from '../types';
+import { Account, UPI_ID, BookingStatus, Booking, PaymentConfig } from '../types';
 import { StorageService } from '../services/storage';
 import { Copy, ArrowRight, Timer, CalendarClock, Smartphone, ShieldCheck, Zap, Send, Ticket, CheckCircle, XCircle, Loader2, AlertCircle, MessageCircle } from 'lucide-react';
 
@@ -25,6 +25,21 @@ const Checkout: React.FC = () => {
   const [timer, setTimer] = useState(600); // 10 minutes for payment
   const [utr, setUtr] = useState('');
   const [error, setError] = useState('');
+  
+  // Dynamic Payment Settings
+  const [paymentConfig, setPaymentConfig] = useState<PaymentConfig>({
+    companyName: 'Krishna Valo Store',
+    upiId: UPI_ID,
+    qrCodeUrl: ''
+  });
+
+  useEffect(() => {
+    StorageService.getHomeConfig().then(cfg => {
+      if (cfg.payment) {
+        setPaymentConfig(cfg.payment);
+      }
+    });
+  }, []);
   
   // Coupon State
   const [couponCode, setCouponCode] = useState('');
@@ -86,10 +101,15 @@ const Checkout: React.FC = () => {
     finalPrice = basePrice - discountAmount;
   }
 
+  const activeUpiId = paymentConfig.upiId || UPI_ID;
+  const activeCompanyName = paymentConfig.companyName || 'Krishna Valo Store';
+
   // Construct UPI URI with amount and order ID
   // tn (Transaction Note) is critical here - it puts the Order ID in the bank statement for the admin
-  const upiString = `upi://pay?pa=${UPI_ID}&pn=KrishnaValo&am=${finalPrice.toFixed(2)}&cu=INR&tn=${orderId}`;
-  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&margin=10&data=${encodeURIComponent(upiString)}`;
+  const upiString = `upi://pay?pa=${activeUpiId}&pn=${encodeURIComponent(activeCompanyName)}&am=${finalPrice.toFixed(2)}&cu=INR&tn=${orderId}`;
+  const qrCodeUrl = paymentConfig.qrCodeUrl?.trim()
+    ? paymentConfig.qrCodeUrl
+    : `https://api.qrserver.com/v1/create-qr-code/?size=250x250&margin=10&data=${encodeURIComponent(upiString)}`;
 
   // --- Coupon Handlers ---
   const handleApplyCoupon = async () => {
@@ -405,17 +425,17 @@ I have made the payment. Please verify.
                       </div>
                     </div>
 
-                    <div className="bg-white p-4 rounded-xl shadow-inner relative group mx-auto">
+                    <div className="bg-white p-4 rounded-xl shadow-inner relative group mx-auto flex items-center justify-center min-w-[200px] min-h-[200px]">
                       <img 
                         src={qrCodeUrl} 
                         alt="UPI QR Code" 
-                        className="w-48 h-48 mix-blend-multiply"
+                        className="w-48 h-48 object-contain"
                       />
                       {/* Scan Overlay */}
                       <div className="absolute top-0 left-0 w-full h-1 bg-brand-accent/50 animate-[scan_2s_infinite_linear] pointer-events-none" />
                     </div>
                     <div className="text-center mt-4">
-                        <p className="text-slate-400 text-sm mb-1">Scan to pay</p>
+                        <p className="text-slate-400 text-sm mb-1">Scan to pay <span className="text-white font-bold">{activeCompanyName}</span></p>
                         <p className="text-2xl font-black text-white">₹{finalPrice}</p>
                     </div>
                  </div>
@@ -423,14 +443,15 @@ I have made the payment. Please verify.
                  {/* UTR Column */}
                  <div className="flex flex-col justify-center space-y-6">
                     <div className="bg-brand-dark p-4 rounded-lg border border-white/10">
-                       <div className="text-xs text-slate-400 uppercase font-bold mb-2">Merchant UPI ID</div>
+                       <div className="text-xs text-slate-400 uppercase font-bold mb-2">Merchant UPI ID ({activeCompanyName})</div>
                        <div className="flex items-center justify-between">
-                          <span className="font-mono text-white text-lg">{UPI_ID}</span>
+                          <span className="font-mono text-white text-lg">{activeUpiId}</span>
                           <button 
                              onClick={() => {
-                               navigator.clipboard.writeText(UPI_ID);
+                               navigator.clipboard.writeText(activeUpiId);
                              }}
                              className="text-brand-accent hover:text-white transition-colors"
+                             title="Copy UPI ID"
                           >
                             <Copy className="w-5 h-5" />
                           </button>
