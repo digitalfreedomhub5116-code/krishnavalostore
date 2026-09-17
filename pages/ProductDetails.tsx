@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { StorageService } from '../services/storage';
 import { Account, Pricing, BookingStatus, Booking, Skin } from '../types';
+import TrustVideoSection from '../components/TrustVideoSection';
 import { ArrowLeft, Gem, Clock, Calendar, ChevronRight, MessageCircle, X, ArrowRight, Lock, Maximize2, ChevronDown, ChevronUp, Sparkles, Loader2, AlertCircle, ShieldCheck, PlayCircle, CalendarClock, Eye } from 'lucide-react';
 
 const ProductDetails: React.FC = () => {
@@ -218,6 +219,9 @@ const ProductDetails: React.FC = () => {
                   {account.description || "Premium account with verified skins and competitive MMR. Guaranteed 0% ban rate."}
                </p>
             </div>
+
+            {/* SOCIAL PROOF: VIDEO REVIEWS */}
+            <TrustVideoSection />
 
             <div className="bg-brand-surface/40 border border-white/5 rounded-2xl p-5 sm:p-6 relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-brand-cyan/5 blur-3xl rounded-full"></div>
