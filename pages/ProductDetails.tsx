@@ -86,19 +86,14 @@ const ProductDetails: React.FC = () => {
                   <Maximize2 className="text-white w-10 h-10" />
                </div>
                
-               <div className={`absolute top-4 right-4 px-4 py-2 backdrop-blur-xl rounded-lg text-xs font-black uppercase tracking-widest shadow-2xl border ${isEffectivelyAvailable ? 'text-green-400 bg-green-500/10 border-green-500/30' : 'text-brand-accent bg-brand-accent/10 border-brand-accent/30'}`}>
-                  {isEffectivelyAvailable ? (
-                    <span className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-                      Ready to Deploy
-                    </span>
-                  ) : (
-                    <span className="flex items-center gap-2">
-                      <Clock className="w-4 h-4 animate-spin-slow" />
-                      Locked: Opens in {timeLeft}
-                    </span>
-                  )}
-               </div>
+               {!isEffectivelyAvailable && (
+                 <div className="absolute top-4 right-4 px-4 py-2 backdrop-blur-xl rounded-lg text-xs font-black uppercase tracking-widest shadow-2xl border text-brand-accent bg-brand-accent/10 border-brand-accent/30">
+                   <span className="flex items-center gap-2">
+                     <Clock className="w-4 h-4 animate-spin-slow" />
+                     Locked: Opens in {timeLeft}
+                   </span>
+                 </div>
+               )}
             </div>
             
             <div className="bg-brand-surface/40 border border-white/5 rounded-2xl p-6">

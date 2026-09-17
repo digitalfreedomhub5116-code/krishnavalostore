@@ -479,7 +479,7 @@ Credentials automatically issued on screen.
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8">
+    <div className="max-w-3xl mx-auto px-4 pt-8 pb-32">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 mb-6 text-slate-400 text-sm">
         <span onClick={() => navigate('/browse')} className="cursor-pointer hover:text-white">Browse</span>
@@ -634,102 +634,43 @@ Credentials automatically issued on screen.
             </div>
          </div>
 
-         {/* SECTION 2: AUTOMATED RAZORPAY PAYMENT (100% Instant Delivery) */}
-         <div className="bg-brand-surface border border-white/10 rounded-xl p-6 relative overflow-hidden">
-             <div className="absolute top-0 right-0 w-64 h-64 bg-brand-accent/5 blur-3xl rounded-full pointer-events-none"></div>
-
-             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-                <h2 className="text-xl font-bold flex items-center gap-2">
-                  <span className="w-8 h-8 rounded-full bg-brand-accent flex items-center justify-center text-sm text-white shadow-[0_0_15px_rgba(255,70,85,0.4)]">2</span>
-                  Instant Payment Checkout
+         {/* SECTION 2: PAY VIA RAZORPAY */}
+         <div className="bg-brand-surface border border-white/10 rounded-xl p-5 sm:p-6 relative overflow-hidden">
+             <div className="flex items-center justify-between gap-4 mb-5">
+                <h2 className="text-lg sm:text-xl font-bold flex items-center gap-2 text-white">
+                  <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-brand-accent flex items-center justify-center text-xs sm:text-sm text-white shadow-[0_0_15px_rgba(255,70,85,0.4)]">2</span>
+                  Pay via Razorpay
                 </h2>
-
-                <span className="px-3 py-1 rounded-full bg-green-500/10 text-green-400 border border-green-500/20 text-[10px] font-bold uppercase tracking-widest inline-flex items-center gap-1.5">
-                   <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span> Instant Credential Delivery
+                <span className="text-xl sm:text-2xl font-display font-black text-white">
+                  ₹{finalPrice}
                 </span>
              </div>
 
-             <div className="space-y-6">
-                <div className="p-6 rounded-2xl bg-gradient-to-br from-brand-accent/10 via-brand-surface to-brand-cyan/10 border border-brand-accent/30 shadow-2xl relative overflow-hidden">
-                   <div className="flex items-start justify-between gap-4 mb-4">
-                      <div>
-                         <span className="px-2.5 py-0.5 rounded-full bg-green-500/20 text-green-400 border border-green-500/30 text-[10px] font-bold uppercase tracking-widest inline-flex items-center gap-1.5 mb-2">
-                            <Zap size={11} className="text-yellow-400 fill-yellow-400" /> Automated Instant Gateway
-                         </span>
-                         <h3 className="text-xl font-display font-black text-white uppercase italic tracking-wide">
-                            Pay via Razorpay
-                         </h3>
-                         <p className="text-xs text-slate-300 mt-1">
-                            Instant automated verification & immediate credential delivery for <span className="text-brand-cyan font-bold">{activeCompanyName}</span>
-                         </p>
-                      </div>
-                      <div className="w-12 h-12 rounded-xl bg-black/40 border border-white/10 flex items-center justify-center shrink-0">
-                         <ShieldCheck className="text-brand-cyan" size={26} />
-                      </div>
-                   </div>
-
-                   {/* Supported Badges */}
-                   <div className="space-y-2 py-4 border-y border-white/10">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Supported Payment Modes:</span>
-                      <div className="flex flex-wrap gap-2 text-xs font-medium text-slate-200">
-                         <span className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 flex items-center gap-1.5">
-                            <Smartphone size={13} className="text-green-400" /> Google Pay / PhonePe / Paytm / UPI
-                         </span>
-                         <span className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 flex items-center gap-1.5">
-                            <CreditCard size={13} className="text-brand-cyan" /> Credit / Debit Cards
-                         </span>
-                         <span className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10">
-                            NetBanking (All Banks)
-                         </span>
-                         <span className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10">
-                            Wallets & Cred
-                         </span>
-                      </div>
-                   </div>
-
-                   <div className="flex justify-between items-center py-4">
-                      <div>
-                         <span className="text-[10px] text-slate-400 uppercase font-mono tracking-widest block">Total Payable</span>
-                         <span className="text-3xl font-display font-black text-white">₹{finalPrice}</span>
-                      </div>
-                      <div className="text-right text-[11px] text-slate-400 font-mono">
-                         <div>Zero Convenience Fee</div>
-                         <div className="text-green-400 font-bold">✓ 256-bit Encrypted</div>
-                      </div>
-                   </div>
-
-                   {error && (
-                      <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex items-center gap-2 font-medium">
-                         <AlertCircle size={14} className="shrink-0" />
-                         {error}
-                      </div>
-                   )}
-
-                   <button
-                      type="button"
-                      onClick={handleRazorpayPayment}
-                      disabled={isProcessingRazorpay}
-                      className="w-full py-5 bg-gradient-to-r from-brand-accent to-red-600 hover:from-red-600 hover:to-brand-accent text-white font-black text-sm uppercase tracking-[0.2em] rounded-xl transition-all shadow-[0_0_30px_rgba(255,70,85,0.4)] hover:shadow-[0_0_40px_rgba(255,70,85,0.6)] hover:scale-[1.01] active:scale-95 flex items-center justify-center gap-3 disabled:opacity-50 cursor-pointer"
-                   >
-                      {isProcessingRazorpay ? (
-                         <>
-                            <Loader2 className="w-5 h-5 animate-spin" />
-                            <span>Connecting to Razorpay...</span>
-                         </>
-                      ) : (
-                         <>
-                            <Zap size={18} className="text-yellow-400 fill-yellow-400" />
-                            <span>PAY ₹{finalPrice} VIA RAZORPAY</span>
-                            <ArrowRight size={18} />
-                         </>
-                      )}
-                   </button>
-
-                   <p className="text-[11px] text-center text-slate-400 mt-3 font-mono uppercase tracking-wider flex items-center justify-center gap-1.5">
-                      <Lock size={12} className="text-green-400" /> Riot ID & Password will be delivered instantly on this screen
-                   </p>
+             {error && (
+                <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex items-center gap-2 font-medium">
+                   <AlertCircle size={14} className="shrink-0" />
+                   {error}
                 </div>
-             </div>
+             )}
+
+             <button
+                type="button"
+                onClick={handleRazorpayPayment}
+                disabled={isProcessingRazorpay}
+                className="w-full py-4 bg-gradient-to-r from-brand-accent to-red-600 hover:from-red-600 hover:to-brand-accent text-white font-black text-sm uppercase tracking-[0.15em] rounded-xl transition-all shadow-[0_0_25px_rgba(255,70,85,0.4)] hover:shadow-[0_0_35px_rgba(255,70,85,0.6)] hover:scale-[1.01] active:scale-95 flex items-center justify-center gap-2.5 disabled:opacity-50 cursor-pointer"
+             >
+                {isProcessingRazorpay ? (
+                   <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <span>Connecting to Razorpay...</span>
+                   </>
+                ) : (
+                   <>
+                      <span>Pay ₹{finalPrice} via Razorpay</span>
+                      <ArrowRight size={18} />
+                   </>
+                )}
+             </button>
          </div>
       </div>
     </div>
