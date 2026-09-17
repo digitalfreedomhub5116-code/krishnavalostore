@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { UserCog, Home, Gamepad2, User as UserIcon, LogOut, LayoutDashboard, Zap, Award, Sparkles, X, Trophy, Shield, PlusCircle } from 'lucide-react';
+import { UserCog, Home, Gamepad2, User as UserIcon, LogOut, LayoutDashboard, Zap, X, Trophy, Shield } from 'lucide-react';
 import { StorageService, DEFAULT_HOME_CONFIG, SITE_LOGO_URL } from '../services/storage';
 import { User, HomeConfig } from '../types';
 import SkinSearchFloatingBar from './SkinSearchFloatingBar';
@@ -11,9 +11,6 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const [showBonusPopup, setShowBonusPopup] = useState(false);
-  const [prevPoints, setPrevPoints] = useState<number | null>(null);
-  const [pointDiff, setPointDiff] = useState<number | null>(null);
   const [scrolled, setScrolled] = useState(false);
   const [homeConfig, setHomeConfig] = useState<HomeConfig>(DEFAULT_HOME_CONFIG);
 
@@ -45,24 +42,8 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   const syncData = () => {
     const user = StorageService.getCurrentUser();
-    
-    // Animate point changes
-    if (user && prevPoints !== null && user.ultraPoints > prevPoints) {
-      const diff = user.ultraPoints - prevPoints;
-      setPointDiff(diff);
-      setTimeout(() => setPointDiff(null), 4000);
-    }
-    
     setCurrentUser(user);
-    if (user) setPrevPoints(user.ultraPoints);
-    
     loadConfig();
-
-    // Show bonus popup if user has exactly 20 points (newly registered) and hasn't seen it this session
-    if (user && user.ultraPoints === 20 && !sessionStorage.getItem('bonus_shown')) {
-      setShowBonusPopup(true);
-      sessionStorage.setItem('bonus_shown', 'true');
-    }
   };
 
   useEffect(() => {
@@ -115,30 +96,6 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
          </div>
       </div>
 
-      {/* Point Earned Floating Animation */}
-      {pointDiff !== null && (
-        <div className="fixed top-24 right-4 md:right-12 z-[100] pointer-events-none animate-in fade-in slide-in-from-bottom-4 duration-700">
-           <div className="flex items-center gap-2 bg-yellow-500/20 backdrop-blur-md border border-yellow-500/50 px-4 py-2 rounded-full shadow-[0_0_30px_rgba(234,179,8,0.4)]">
-              <Sparkles className="text-yellow-400 w-5 h-5 animate-spin-slow" />
-              <span className="text-yellow-400 font-black text-xl">+{pointDiff} UP</span>
-           </div>
-        </div>
-      )}
-
-      {/* Bonus Popup */}
-      {showBonusPopup && (
-         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
-            <div className="bg-brand-surface border border-yellow-500/30 rounded-2xl p-8 max-w-sm relative text-center shadow-[0_0_50px_rgba(234,179,8,0.2)]">
-               <button onClick={() => setShowBonusPopup(false)} className="absolute top-4 right-4 text-slate-500 hover:text-white"><X size={20} /></button>
-               <div className="w-20 h-20 bg-yellow-500/20 rounded-full flex items-center justify-center mx-auto mb-6 animate-bounce">
-                  <Award size={40} className="text-yellow-500" />
-               </div>
-               <h3 className="text-2xl font-black text-white italic uppercase mb-2">Welcome Bonus!</h3>
-               <p className="text-slate-400 mb-6">You've received <span className="text-yellow-500 font-bold">20 Ultra Points</span> for joining the elite.</p>
-               <button onClick={() => setShowBonusPopup(false)} className="w-full py-3 bg-yellow-500 hover:bg-yellow-400 text-brand-darker font-black uppercase tracking-widest rounded-lg">Claim Reward</button>
-            </div>
-         </div>
-      )}
 
       {/* DESKTOP & MOBILE NAVIGATION BAR */}
       <header 
@@ -198,7 +155,6 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                      >
                         <div className="text-right">
                            <div className="text-xs font-bold text-white leading-none">{currentUser.name}</div>
-                           <div className="text-[9px] text-yellow-500 font-mono leading-none mt-1">{currentUser.ultraPoints} UP</div>
                         </div>
                         <img src={currentUser.avatarUrl} alt="" className="w-9 h-9 rounded-full bg-brand-surface object-cover border border-white/10" />
                      </button>

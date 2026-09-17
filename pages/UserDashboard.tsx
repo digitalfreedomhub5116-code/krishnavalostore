@@ -7,7 +7,7 @@ import { User, Booking, BookingStatus, Account, Message } from '../types';
 import { 
   User as UserIcon, Clock, History, LifeBuoy, LogOut, 
   Gamepad2, Copy, Eye, EyeOff, ShieldCheck, 
-  AlertTriangle, ChevronRight, MessageCircle, Award, Sparkles, Lock, ListPlus, Edit2, Trash2,
+  AlertTriangle, ChevronRight, MessageCircle, Lock, ListPlus, Edit2, Trash2,
   Inbox, CheckCircle2, XCircle, Key, Send, Hash, ArrowLeft
 } from 'lucide-react';
 
@@ -15,7 +15,7 @@ const UserDashboard: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [user, setUser] = useState<User | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'rentals' | 'listings' | 'requests' | 'messages' | 'history' | 'profile' | 'support' | 'rewards'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'rentals' | 'listings' | 'requests' | 'messages' | 'history' | 'profile' | 'support'>('overview');
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [myListings, setMyListings] = useState<Account[]>([]);
   const [incomingRequests, setIncomingRequests] = useState<Booking[]>([]);
@@ -209,27 +209,6 @@ const UserDashboard: React.FC = () => {
       case 'overview':
         return (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
-            {/* Ultra Points Hero */}
-            <div className="bg-gradient-to-br from-yellow-600/20 to-brand-surface border border-yellow-500/30 rounded-2xl p-6 relative overflow-hidden group">
-               <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
-                  <Award size={120} className="text-yellow-500 rotate-12" />
-               </div>
-               <div className="relative z-10">
-                  <div className="flex items-center gap-2 text-yellow-500 font-black text-[10px] uppercase tracking-[0.3em] mb-4">
-                     <Sparkles size={14} /> Ultra Wallet
-                  </div>
-                  <div className="flex items-end gap-3 mb-6">
-                     <div className="text-5xl font-display font-black text-white">{user.ultraPoints || 0}</div>
-                     <div className="text-yellow-500 font-bold mb-1 uppercase tracking-widest text-xs">Points</div>
-                  </div>
-                  <button 
-                    onClick={() => setActiveTab('rewards')}
-                    className="px-6 py-2 bg-yellow-500 hover:bg-yellow-400 text-brand-darker font-black text-[10px] rounded-lg transition-all uppercase tracking-widest"
-                  >
-                    View Rewards
-                  </button>
-               </div>
-            </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-brand-surface border border-white/10 rounded-xl p-4 flex flex-col justify-center items-center text-center">
@@ -494,61 +473,6 @@ const UserDashboard: React.FC = () => {
             </div>
          );
 
-      case 'rewards':
-        const pointsProgress = Math.min((user.ultraPoints / 500) * 100, 100);
-        return (
-          <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">
-             <div className="bg-brand-surface border border-white/10 rounded-2xl p-8">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10">
-                   <div>
-                      <h2 className="text-3xl font-display font-black text-white uppercase italic tracking-tight mb-2">Reward Milestones</h2>
-                      <p className="text-slate-400 text-sm">Reach 500 Ultra Points to claim your first reward.</p>
-                   </div>
-                   <div className="p-4 bg-yellow-500/10 rounded-2xl border border-yellow-500/20 text-center min-w-[120px]">
-                      <div className="text-2xl font-black text-yellow-500">{user.ultraPoints || 0}</div>
-                      <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Your Balance</div>
-                   </div>
-                </div>
-
-                <div className="space-y-12">
-                   {/* milestone 1 */}
-                   <div className={`relative p-6 rounded-2xl border transition-all ${user.ultraPoints >= 500 ? 'bg-yellow-500/10 border-yellow-500/50' : 'bg-brand-dark/50 border-white/5 opacity-60'}`}>
-                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-                         <div className="flex items-center gap-4">
-                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${user.ultraPoints >= 500 ? 'bg-yellow-500 text-brand-dark' : 'bg-white/5 text-slate-500'}`}>
-                               <Award size={24} />
-                            </div>
-                            <div>
-                               <h3 className="font-bold text-white uppercase tracking-widest text-sm">Elite Valorant Voucher</h3>
-                               <p className="text-[10px] text-slate-500 uppercase tracking-widest">1000 VP Code Delivery</p>
-                            </div>
-                         </div>
-                         <div className="text-right">
-                            <div className="text-lg font-black text-white">500 UP</div>
-                            <div className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Required</div>
-                         </div>
-                      </div>
-                      
-                      <div className="h-2 bg-brand-dark rounded-full overflow-hidden mb-6 border border-white/5">
-                         <div className="h-full bg-yellow-500 rounded-full transition-all duration-1000" style={{ width: `${pointsProgress}%` }} />
-                      </div>
-
-                      <button 
-                        disabled={user.ultraPoints < 500}
-                        className={`w-full py-4 rounded-xl font-black text-xs uppercase tracking-[0.2em] transition-all
-                          ${user.ultraPoints >= 500 
-                            ? 'bg-yellow-500 hover:bg-yellow-400 text-brand-dark shadow-lg shadow-yellow-500/20' 
-                            : 'bg-white/5 text-slate-600 border border-white/5 cursor-not-allowed'
-                          }`}
-                      >
-                        {user.ultraPoints >= 500 ? 'CLAIM 1000 VP VOUCHER' : `${500 - user.ultraPoints} POINTS REMAINING`}
-                      </button>
-                   </div>
-                </div>
-             </div>
-          </div>
-        );
-
       case 'rentals':
         return (
           <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
@@ -627,10 +551,6 @@ const UserDashboard: React.FC = () => {
                       <div className="font-mono text-white text-sm">{user.id}</div>
                    </div>
                    <div className="flex justify-between items-center p-3 hover:bg-white/5 rounded-lg transition-colors">
-                      <div className="text-sm text-slate-400">Ultra Points</div>
-                      <div className="font-mono text-yellow-500 text-sm font-bold">{user.ultraPoints || 0} UP</div>
-                   </div>
-                   <div className="flex justify-between items-center p-3 hover:bg-white/5 rounded-lg transition-colors">
                       <div className="text-sm text-slate-400">Member Since</div>
                       <div className="font-mono text-white text-sm">{new Date(user.createdAt).toLocaleDateString()}</div>
                    </div>
@@ -670,7 +590,7 @@ const UserDashboard: React.FC = () => {
                   <img src={user.avatarUrl} className="w-10 h-10 rounded-full border border-white/20" alt="" />
                   <div className="overflow-hidden">
                      <div className="font-bold text-white truncate">{user.name}</div>
-                     <div className="text-xs text-slate-400 truncate uppercase tracking-tighter">{user.role} // {user.ultraPoints} UP</div>
+                     <div className="text-xs text-slate-400 truncate uppercase tracking-tighter">{user.role}</div>
                   </div>
                </div>
              </div>
@@ -681,7 +601,6 @@ const UserDashboard: React.FC = () => {
                  { id: 'messages', icon: MessageCircle, label: 'Messages', count: conversations.reduce((acc, c) => acc + c.unreadCount, 0) },
                  { id: 'listings', icon: ListPlus, label: 'My Listed IDs' },
                  { id: 'requests', icon: Inbox, label: 'Incoming Requests', count: incomingRequests.filter(r => r.status === BookingStatus.PENDING).length },
-                 { id: 'rewards', icon: Award, label: 'Ultra Rewards' },
                  { id: 'rentals', icon: Clock, label: 'My Rentals' },
                  { id: 'history', icon: History, label: 'Booking History' },
                  { id: 'profile', icon: UserIcon, label: 'Profile' },

@@ -116,17 +116,6 @@ export const DEFAULT_HOME_CONFIG: HomeConfig = {
       videoUrl: 'https://go.screenpal.com/watch/cTlql6nYGqu'
     }
   ],
-  ultraPoints: {
-    tagline: "NEW REWARDS PROTOCOL",
-    titlePart1: "EARN",
-    titleHighlight: "ULTRA POINTS",
-    titlePart2: "WHILE YOU PLAY",
-    description: "Join the most rewarding rental ecosystem. Every deployment earns you points that convert directly into Valorant Points (VP) for your main account.",
-    card1Title: "Earn 1 UP for ₹9",
-    card1Desc: "Simply rent any ID. Points are calculated as Amount / 9 and added on approval.",
-    card2Title: "1 UP = 2 VP",
-    card2Desc: "Your earned points double in value when converting to Valorant Point vouchers."
-  },
   coupons: [
     { code: 'WELCOME20', type: 'PERCENT', value: 20, active: true, currentUses: 0 },
     { code: 'KV50', type: 'FLAT', value: 50, active: true, currentUses: 0 },
@@ -383,20 +372,6 @@ export const StorageService = {
       
       await getSupabase().from('bookings').update({ data: booking, status: status }).eq('order_id', orderId);
       
-      // Points Logic
-      if (booking.customerId) {
-        const points = Math.floor(booking.totalPrice / 9);
-        
-        // Mark as active/pre-booked (Approved) -> Add points
-        if (oldStatus === BookingStatus.PENDING && (status === BookingStatus.ACTIVE || status === BookingStatus.PRE_BOOKED)) {
-          await StorageService.updateUserPoints(booking.customerId, points);
-        } 
-        // Cancelled -> Deduct points
-        else if ((oldStatus === BookingStatus.ACTIVE || oldStatus === BookingStatus.PRE_BOOKED) && status === BookingStatus.CANCELLED) {
-          await StorageService.updateUserPoints(booking.customerId, -points);
-        }
-      }
-
       const account = await StorageService.getAccountById(booking.accountId);
       
       if (account) {
@@ -463,22 +438,6 @@ export const StorageService = {
     }
   },
 
-  updateUserPoints: async (userId: string, amount: number) => {
-    const { data: row } = await getSupabase().from('users').select('data').eq('id', userId).single();
-    if (row?.data) {
-      const userData = row.data as User;
-      userData.ultraPoints = Math.max(0, (userData.ultraPoints || 0) + amount);
-      
-      await getSupabase().from('users').update({ data: userData }).eq('id', userId);
-      
-      const currentUser = StorageService.getCurrentUser();
-      if (currentUser && currentUser.id === userId) {
-        localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(userData));
-      }
-      notifyStorageChange();
-    }
-  },
-
   getHomeConfig: async (): Promise<HomeConfig> => {
     try {
       const { data, error } = await getSupabase().from('home_config').select('data').eq('id', 'global').single();
@@ -493,7 +452,6 @@ export const StorageService = {
         marqueeText: config.marqueeText && config.marqueeText.length > 0 ? config.marqueeText : DEFAULT_HOME_CONFIG.marqueeText,
         stepItems: config.stepItems && config.stepItems.length > 0 ? config.stepItems : DEFAULT_HOME_CONFIG.stepItems,
         reviews: config.reviews && config.reviews.length > 0 ? config.reviews : DEFAULT_HOME_CONFIG.reviews,
-        ultraPoints: config.ultraPoints || DEFAULT_HOME_CONFIG.ultraPoints,
         coupons: config.coupons || DEFAULT_HOME_CONFIG.coupons,
         cta: config.cta || DEFAULT_HOME_CONFIG.cta
       };
@@ -536,7 +494,6 @@ export const StorageService = {
       avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${name}`,
       role: 'customer',
       isVerified: true,
-      ultraPoints: 20, // Welcome Bonus
       createdAt: new Date().toISOString(),
       lastLogin: new Date().toISOString()
     };

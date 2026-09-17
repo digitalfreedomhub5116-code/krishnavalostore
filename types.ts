@@ -59,7 +59,6 @@ export interface User {
   verificationCode?: string;
   createdAt: string;  
   lastLogin: string;
-  ultraPoints: number; // Added for gamification
 }
 
 export interface Message {
@@ -132,18 +131,6 @@ export interface StepItem {
   desc: string;
 }
 
-export interface UltraPointsConfig {
-  tagline: string;
-  titlePart1: string;
-  titleHighlight: string;
-  titlePart2: string;
-  description: string;
-  card1Title: string;
-  card1Desc: string;
-  card2Title: string;
-  card2Desc: string;
-}
-
 export interface Coupon {
   code: string;
   type: 'PERCENT' | 'FLAT';
@@ -160,7 +147,6 @@ export interface HomeConfig {
   trustItems: TrustItem[]; 
   stepItems: StepItem[];   
   reviews: Review[];
-  ultraPoints?: UltraPointsConfig;
   coupons?: Coupon[]; // Added for dynamic coupon management
   cta: {
     titleLine1: string;

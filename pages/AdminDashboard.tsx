@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { StorageService, DEFAULT_HOME_CONFIG } from '../services/storage';
 import { AIService } from '../services/ai';
 import { Account, Booking, BookingStatus, Rank, User, HomeConfig, Review, Skin, HeroSlide, TrustItem, StepItem, Coupon } from '../types';
-import { Plus, Trash2, Check, X, Edit2, Loader2, LogOut, Square, CheckSquare, BarChart3, IndianRupee, Users, Gamepad2, Home, Save, Zap, Shield, Star, MessageSquare, AlertCircle, Cpu, Search, Video, FileText, Play, Copy, Terminal, Layout, Image as ImageIcon, ShieldCheck, Lock, Ban, Type as TypeIcon, Minus, Award, Clock, Ticket, CalendarDays, Repeat } from 'lucide-react';
+import { Plus, Trash2, Check, X, Edit2, Loader2, LogOut, Square, CheckSquare, BarChart3, IndianRupee, Users, Gamepad2, Home, Save, Zap, Shield, Star, MessageSquare, AlertCircle, Cpu, Search, Video, FileText, Play, Copy, Terminal, Layout, Image as ImageIcon, ShieldCheck, Lock, Ban, Type as TypeIcon, Clock, Ticket, CalendarDays, Repeat } from 'lucide-react';
 
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -93,11 +93,6 @@ const AdminDashboard: React.FC = () => {
     activeRentals: accounts.filter(a => a.isBooked).length,
     totalUsers: users.length
   }), [bookings, accounts, users]);
-
-  const handleAdjustPoints = async (userId: string, amount: number) => {
-     await StorageService.updateUserPoints(userId, amount);
-     refreshData();
-  };
 
   const handleDeployAccount = async () => {
     if (!newAccount.name || !newAccount.username || !newAccount.password) {
@@ -487,7 +482,6 @@ const AdminDashboard: React.FC = () => {
               <tr className="bg-brand-darker text-slate-500 border-b border-white/10 uppercase font-bold tracking-widest text-[10px]">
                 <th className="p-5">Agent</th>
                 <th className="p-5">Contact</th>
-                <th className="p-5">Ultra Points</th>
                 <th className="p-5 text-right">Actions</th>
               </tr>
             </thead>
@@ -507,18 +501,9 @@ const AdminDashboard: React.FC = () => {
                     <div className="text-slate-300">{user.email}</div>
                     <div className="text-[10px] text-slate-500 font-mono">{user.phone}</div>
                   </td>
-                  <td className="p-5">
-                    <div className="flex items-center gap-2">
-                       <Award size={14} className="text-yellow-500" />
-                       <span className="font-black text-white">{user.ultraPoints || 0} UP</span>
-                    </div>
-                  </td>
                   <td className="p-5 text-right">
                      <div className="flex justify-end gap-2 items-center">
-                        <button onClick={() => handleAdjustPoints(user.id, 50)} className="p-1.5 bg-green-500/10 text-green-400 hover:bg-green-500 hover:text-white rounded border border-green-500/20 transition-all"><Plus size={14} /></button>
-                        <button onClick={() => handleAdjustPoints(user.id, -50)} className="p-1.5 bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white rounded border border-red-500/20 transition-all"><Minus size={14} /></button>
-                        <div className="w-px h-6 bg-white/10 mx-1"></div>
-                        <button onClick={async () => { if(window.confirm(`ELIMINATE AGENT ${user.name}? This action is irreversible.`)) { await StorageService.deleteUser(user.id); refreshData(); }}} className="p-1.5 bg-red-500/10 text-red-500 hover:bg-red-600 hover:text-white rounded border border-red-500/20 transition-all shadow-[0_0_10px_rgba(220,38,38,0.2)]"><Trash2 size={14} /></button>
+                        <button onClick={async () => { if(window.confirm(`ELIMINATE AGENT ${user.name}? This action is irreversible.`)) { await StorageService.deleteUser(user.id); refreshData(); }}} className="p-1.5 bg-red-500/10 text-red-500 hover:bg-red-600 hover:text-white rounded border border-red-500/20 transition-all shadow-[0_0_10px_rgba(220,38,38,0.2)]" title="Delete User"><Trash2 size={14} /></button>
                      </div>
                   </td>
                 </tr>
