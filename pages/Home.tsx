@@ -248,28 +248,6 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      <section className="bg-brand-darker border-y border-white/5 py-16 md:py-24 relative transform-gpu">
-        <div className="max-w-7xl mx-auto px-4 grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 relative z-10">
-          {(config.trustItems || []).map((item, i) => {
-            const Icon = trustIcons[i % trustIcons.length] || Star;
-            return (
-             <div key={i} className="animate-on-scroll reveal-up glass-panel p-6 md:p-10 rounded-2xl flex flex-col items-center gap-5 hover:bg-white/5 group border border-white/5 transition-all duration-700" style={{ transitionDelay: `${i * 150}ms` }}>
-                <div className="relative">
-                  <div className="absolute inset-0 bg-brand-cyan/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                  <Icon className={`w-10 h-10 md:w-14 md:h-14 text-brand-cyan group-hover:scale-110 transition-transform relative z-10`} />
-                </div>
-                <div className="text-center">
-                  <div className="font-display font-bold text-xl md:text-3xl text-white uppercase tracking-tight">{item.label}</div>
-                  <div className="text-[10px] md:text-xs font-mono text-slate-500 uppercase tracking-[0.4em] mt-2">{item.sub}</div>
-                </div>
-             </div>
-          )})}
-        </div>
-      </section>
-
-      {/* Replaced old scroll logic with optimized sub-component */}
-      <ProcedureSection config={config} />
-
       {/* VIDEO GRID SECTION (Portrait Layout - Split View) */}
       <section className="py-24 bg-black overflow-hidden border-y border-white/5 relative transform-gpu">
         <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10"></div>
@@ -376,6 +354,28 @@ const Home: React.FC = () => {
            </div>
         </div>
       </section>
+
+      <section className="bg-brand-darker border-y border-white/5 py-16 md:py-24 relative transform-gpu">
+        <div className="max-w-7xl mx-auto px-4 grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 relative z-10">
+          {(config.trustItems || []).map((item, i) => {
+            const Icon = trustIcons[i % trustIcons.length] || Star;
+            return (
+             <div key={i} className="animate-on-scroll reveal-up glass-panel p-6 md:p-10 rounded-2xl flex flex-col items-center gap-5 hover:bg-white/5 group border border-white/5 transition-all duration-700" style={{ transitionDelay: `${i * 150}ms` }}>
+                <div className="relative">
+                  <div className="absolute inset-0 bg-brand-cyan/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                  <Icon className={`w-10 h-10 md:w-14 md:h-14 text-brand-cyan group-hover:scale-110 transition-transform relative z-10`} />
+                </div>
+                <div className="text-center">
+                  <div className="font-display font-bold text-xl md:text-3xl text-white uppercase tracking-tight">{item.label}</div>
+                  <div className="text-[10px] md:text-xs font-mono text-slate-500 uppercase tracking-[0.4em] mt-2">{item.sub}</div>
+                </div>
+             </div>
+          )})}
+        </div>
+      </section>
+
+      {/* Replaced old scroll logic with optimized sub-component */}
+      <ProcedureSection config={config} />
 
       {/* Video Modal - Portrait Mode Optimized */}
       {selectedVideo && (
