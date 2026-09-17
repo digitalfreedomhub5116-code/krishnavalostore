@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Zap, Trophy } from 'lucide-react';
+import { Trophy } from 'lucide-react';
 
 const LOADING_TEXTS = [
   "INITIALIZING VANGUARD SYSTEM...",
@@ -56,15 +56,7 @@ const LoadingScreen: React.FC<{ onComplete: () => void }> = ({ onComplete }) => 
         {/* Scanline Overlay */}
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-brand-accent/5 to-transparent animate-scan pointer-events-none"></div>
 
-        <div className="relative z-10 flex flex-col items-center w-full max-w-md px-4">
-            {/* Logo Animation */}
-            <div className="relative mb-10 scale-125">
-                <div className="absolute inset-0 bg-brand-accent/20 blur-3xl rounded-full animate-pulse"></div>
-                <div className="relative w-20 h-20 flex items-center justify-center">
-                    <Zap className="w-12 h-12 text-white fill-white animate-[bounce_2s_infinite] drop-shadow-[0_0_20px_rgba(255,70,85,0.8)]" />
-                </div>
-            </div>
-
+        <div className="relative z-10 flex flex-col items-center w-full max-w-md px-4 -translate-y-8 sm:-translate-y-12">
             {/* Title */}
             <h1 className="text-4xl md:text-5xl font-display font-bold text-white mb-3 tracking-widest glitch-text text-center" data-text="KRISHNA VALO STORE">
                 KRISHNA VALO STORE
