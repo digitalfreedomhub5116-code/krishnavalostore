@@ -147,17 +147,6 @@ const Checkout: React.FC = () => {
     setCouponMessage(null);
   };
 
-  const handleStartChat = () => {
-    if (!currentUser) return;
-    navigate('/dashboard', {
-        state: {
-            tab: 'messages',
-            chatWith: state.account.listedBy,
-            accountId: state.account.id
-        }
-    });
-  };
-
   const loadRazorpayScript = (): Promise<boolean> => {
     return new Promise((resolve) => {
       if ((window as any).Razorpay) {
@@ -319,8 +308,6 @@ Credentials automatically issued on screen.
     setCopiedField(field);
     setTimeout(() => setCopiedField(null), 2000);
   };
-
-  const isUserListed = !!state.account.listedBy && state.account.listedBy !== currentUser?.id;
 
   // --- RENDER: INSTANT CREDENTIAL DELIVERY SCREEN ---
   if (deliveredCredentials) {
@@ -514,17 +501,6 @@ Credentials automatically issued on screen.
                       {state.account.rank}
                     </div>
                     <div className="text-sm text-slate-400 mt-2 font-mono">Order: {orderId}</div>
-                    
-                    {/* Chat with Owner Button */}
-                    {isUserListed && currentUser && (
-                        <button 
-                            onClick={handleStartChat}
-                            className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 bg-brand-dark hover:bg-brand-cyan/10 text-slate-300 hover:text-brand-cyan border border-white/10 hover:border-brand-cyan/50 rounded-lg text-xs font-bold uppercase tracking-wider transition-all"
-                        >
-                            <MessageCircle size={14} />
-                            Chat with Owner
-                        </button>
-                    )}
                   </div>
                </div>
                
