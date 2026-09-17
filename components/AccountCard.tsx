@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Account, Booking, BookingStatus } from '../types';
 import { StorageService } from '../services/storage';
-import { Trophy, Gem, Lock, Eye, Sparkles, Clock, CalendarDays, User } from 'lucide-react';
+import { Trophy, Lock, Eye, Clock, CalendarDays, User, Gamepad2 } from 'lucide-react';
 
 interface AccountCardProps {
   account: Account;
@@ -73,8 +73,6 @@ const AccountCard: React.FC<AccountCardProps> = ({ account }) => {
     if (rank.includes('Immortal')) return 'text-red-500';
     return 'text-slate-300';
   };
-
-  const skinCount = account.totalSkins || account.skins.length;
 
   return (
     <div className={`group relative rounded-none overflow-hidden border transition-all duration-300 ${isEffectivelyAvailable ? 'border-white/10 bg-brand-surface hover:border-brand-accent/50 hover:shadow-[0_0_30px_rgba(255,70,85,0.15)] hover:-translate-y-2' : 'border-white/5 bg-brand-dark opacity-90'}`}>
@@ -147,40 +145,6 @@ const AccountCard: React.FC<AccountCardProps> = ({ account }) => {
         <div className="p-5">
           <h3 className="text-xl font-display font-bold text-white mb-4 truncate group-hover:text-brand-accent transition-colors">{account.name}</h3>
           
-          {/* Skins */}
-          <div className="mb-5">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2 text-[10px] text-brand-cyan uppercase tracking-widest font-bold">
-                <Gem className="w-3 h-3" />
-                Loadout
-              </div>
-              <div className="text-[10px] font-bold text-yellow-400 bg-yellow-400/10 px-2 py-0.5 border border-yellow-400/20 rounded-sm shadow-[0_0_10px_rgba(250,204,21,0.1)]">
-                {skinCount} PREMIUM SKINS
-              </div>
-            </div>
-            
-            <div className="flex flex-wrap gap-2">
-              {account.skins.slice(0, 4).map((skin, idx) => (
-                <span 
-                  key={idx} 
-                  className={`text-[10px] px-2 py-1 border block max-w-[130px] truncate font-mono uppercase transition-all duration-300 flex items-center gap-1
-                    ${skin.isHighlighted 
-                        ? 'bg-brand-cyan/10 text-brand-cyan border-brand-cyan/40 shadow-[0_0_10px_rgba(0,240,255,0.2)] font-bold scale-105 z-10' 
-                        : 'bg-white/5 text-slate-300 border-white/10'
-                    }`}
-                >
-                  {skin.isHighlighted && <Sparkles className="w-2.5 h-2.5 shrink-0" />}
-                  {skin.name}
-                </span>
-              ))}
-              {account.skins.length > 4 && (
-                 <span className="text-[10px] px-2 py-1 bg-white/5 text-slate-500 border border-white/10 block font-mono">
-                   +{account.skins.length - 4}
-                 </span>
-              )}
-            </div>
-          </div>
-
           {/* Pricing Grid */}
           <div className="grid grid-cols-4 gap-2 mb-5">
             <div className="bg-brand-dark/50 p-2 border border-white/5 text-center flex flex-col justify-center transition-colors">
@@ -214,8 +178,8 @@ const AccountCard: React.FC<AccountCardProps> = ({ account }) => {
                 : 'bg-slate-800 text-slate-400 border border-white/5 hover:bg-slate-700'}`}
           >
             <div className="skew-x-[10deg] flex items-center gap-2">
-              <Eye className="w-4 h-4" /> 
-              {isEffectivelyAvailable ? 'View Details' : 'Check Slot'}
+              {isEffectivelyAvailable ? <Gamepad2 className="w-4 h-4" /> : <Eye className="w-4 h-4" />} 
+              {isEffectivelyAvailable ? 'RENT NOW!' : 'Check Slot'}
             </div>
           </div>
         </div>
