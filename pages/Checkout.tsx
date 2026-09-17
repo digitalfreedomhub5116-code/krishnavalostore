@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate, Navigate } from 'react-router-dom';
 import { Account, UPI_ID, BookingStatus, Booking, PaymentConfig } from '../types';
-import { Copy, ArrowRight, Timer, CalendarClock, Smartphone, ShieldCheck, Zap, Send, Ticket, CheckCircle, XCircle, Loader2, AlertCircle, MessageCircle, CreditCard, QrCode, Lock, Check } from 'lucide-react';
+import { Copy, ArrowRight, Timer, CalendarClock, Smartphone, ShieldCheck, Zap, Ticket, CheckCircle, XCircle, Loader2, AlertCircle, MessageCircle, CreditCard, Lock, Check, Eye, EyeOff } from 'lucide-react';
 import { StorageService, SITE_LOGO_URL } from '../services/storage';
 
 interface CheckoutState {
@@ -23,10 +23,22 @@ const Checkout: React.FC = () => {
   
   const [orderId, setOrderId] = useState(state?.orderId || '');
   const [timer, setTimer] = useState(600); // 10 minutes for payment
-  const [utr, setUtr] = useState('');
   const [error, setError] = useState('');
   const [isProcessingRazorpay, setIsProcessingRazorpay] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'razorpay' | 'upi'>('razorpay');
+
+  // Instant Delivered Credentials State
+  const [deliveredCredentials, setDeliveredCredentials] = useState<{
+    accountName: string;
+    rank: string;
+    username: string;
+    password: string;
+    orderId: string;
+    endTime: string;
+    durationLabel: string;
+    whatsappUrl: string;
+  } | null>(null);
+  const [isPasswordRevealed, setIsPasswordRevealed] = useState(false);
+  const [copiedField, setCopiedField] = useState<'username' | 'password' | null>(null);
   
   // Dynamic Payment Settings
   const [paymentConfig, setPaymentConfig] = useState<PaymentConfig>({
@@ -105,15 +117,7 @@ const Checkout: React.FC = () => {
     finalPrice = basePrice - discountAmount;
   }
 
-  const activeUpiId = paymentConfig.upiId || UPI_ID;
   const activeCompanyName = paymentConfig.companyName || 'Krishna Valo Store';
-
-  // Construct UPI URI with amount and order ID
-  // tn (Transaction Note) is critical here - it puts the Order ID in the bank statement for the admin
-  const upiString = `upi://pay?pa=${activeUpiId}&pn=${encodeURIComponent(activeCompanyName)}&am=${finalPrice.toFixed(2)}&cu=INR&tn=${orderId}`;
-  const qrCodeUrl = paymentConfig.qrCodeUrl?.trim()
-    ? paymentConfig.qrCodeUrl
-    : `https://api.qrserver.com/v1/create-qr-code/?size=250x250&margin=10&data=${encodeURIComponent(upiString)}`;
 
   // --- Coupon Handlers ---
   const handleApplyCoupon = async () => {
@@ -169,61 +173,56 @@ const Checkout: React.FC = () => {
     });
   };
 
-  const completeOrderWithPayment = async (paymentRef: string, gateway: 'Razorpay' | 'Manual UPI' = 'Razorpay') => {
+  const completeOrderWithPayment = async (paymentRef: string) => {
     // Increment Coupon usage if applied
     if (appliedCoupon) {
        await StorageService.incrementCouponUsage(appliedCoupon.code);
     }
 
+    // Fetch fresh authoritative credentials from Supabase
+    const accountRecord = await StorageService.getAccountById(state.account.id);
+    const username = accountRecord?.username || state.account.username || 'Contact Support';
+    const password = accountRecord?.password || state.account.password || 'Contact Support';
+
+    // Mark booking as ACTIVE immediately (Instant Automated Unlock)
+    const booking: Booking = {
+      orderId,
+      accountId: state.account.id,
+      accountName: state.account.name,
+      durationLabel: state.durationLabel,
+      hours: state.hours,
+      totalPrice: finalPrice,
+      startTime: startDateTime.toISOString(),
+      endTime: endDateTime.toISOString(),
+      status: BookingStatus.ACTIVE, 
+      createdAt: new Date().toISOString(),
+      utr: paymentRef,
+      customerId: currentUser?.id,
+      customerName: currentUser?.name,
+      couponCode: appliedCoupon ? appliedCoupon.code : undefined,
+      discountApplied: appliedCoupon ? discountAmount : undefined
+    };
+
     if (state.orderId) {
-       // Update existing PENDING booking
-       const booking: Booking = {
-         orderId,
-         accountId: state.account.id,
-         accountName: state.account.name,
-         durationLabel: state.durationLabel,
-         hours: state.hours,
-         totalPrice: finalPrice, // Use discounted price
-         startTime: startDateTime.toISOString(),
-         endTime: endDateTime.toISOString(),
-         status: BookingStatus.PENDING, 
-         createdAt: new Date().toISOString(),
-         utr: paymentRef,
-         customerId: currentUser?.id,
-         customerName: currentUser?.name,
-         couponCode: appliedCoupon ? appliedCoupon.code : undefined,
-         discountApplied: appliedCoupon ? discountAmount : undefined
-       };
-       await StorageService.updateBooking(booking);
+      await StorageService.updateBooking(booking);
     } else {
-       // Legacy Fallback: Create new booking
-       const newBooking: Booking = {
-        orderId,
-        accountId: state.account.id,
-        accountName: state.account.name,
-        durationLabel: state.durationLabel,
-        hours: state.hours,
-        totalPrice: finalPrice, // Use discounted price
-        startTime: startDateTime.toISOString(),
-        endTime: endDateTime.toISOString(),
-        status: BookingStatus.PENDING,
-        createdAt: new Date().toISOString(),
-        utr: paymentRef,
-        customerId: currentUser?.id, // Link to logged in user
-        customerName: currentUser?.name,
-        couponCode: appliedCoupon ? appliedCoupon.code : undefined,
-        discountApplied: appliedCoupon ? discountAmount : undefined
-      };
-      await StorageService.createBooking(newBooking);
+      await StorageService.createBooking(booking);
     }
 
-    // 2. Construct WhatsApp Message
+    // Update account booked state in Supabase
+    if (accountRecord) {
+      accountRecord.isBooked = true;
+      accountRecord.bookedUntil = endDateTime.toISOString();
+      await StorageService.saveAccount(accountRecord);
+    }
+
+    // Construct WhatsApp message
     const timeString = state.startMode === 'later' 
       ? startDateTime.toLocaleString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
       : "Immediate";
 
     let message = `
-*PAYMENT COMPLETED (${gateway.toUpperCase()})*
+*PAYMENT COMPLETED (RAZORPAY)*
 ---------------------
 *Order ID:* ${orderId}
 *Valorant ID:* ${state.account.name}
@@ -235,18 +234,24 @@ const Checkout: React.FC = () => {
     }
 
     message += `\n*Start Time:* ${timeString}
-*Payment ID / Ref:* ${paymentRef}
-*Gateway:* ${gateway}
+*Razorpay Payment ID:* ${paymentRef}
 ---------------------
-Payment confirmed via ${gateway}. Please verify & deploy agent credentials.
+Credentials automatically issued on screen.
     `.trim();
 
-    // 3. Redirect to WhatsApp (Open in new tab to avoid iframe/preview blocks)
     const whatsappUrl = `https://wa.me/919860185116?text=${encodeURIComponent(message)}`;
-    window.open(whatsappUrl, '_blank');
-    
-    // 4. Redirect user to Dashboard to track status
-    navigate('/dashboard');
+
+    // Deliver credentials instantly directly on the screen
+    setDeliveredCredentials({
+      accountName: state.account.name,
+      rank: state.account.rank,
+      username,
+      password,
+      orderId,
+      endTime: endDateTime.toISOString(),
+      durationLabel: state.durationLabel,
+      whatsappUrl
+    });
   };
 
   const handleRazorpayPayment = async () => {
@@ -255,7 +260,7 @@ Payment confirmed via ${gateway}. Please verify & deploy agent credentials.
 
     const loaded = await loadRazorpayScript();
     if (!loaded) {
-      setError('Unable to load Razorpay payment SDK. Please check your internet connection or switch to manual UPI below.');
+      setError('Unable to load Razorpay payment SDK. Please check your internet connection and retry.');
       setIsProcessingRazorpay(false);
       return;
     }
@@ -285,7 +290,7 @@ Payment confirmed via ${gateway}. Please verify & deploy agent credentials.
       handler: async function(response: any) {
         if (response && response.razorpay_payment_id) {
           try {
-            await completeOrderWithPayment(response.razorpay_payment_id, 'Razorpay');
+            await completeOrderWithPayment(response.razorpay_payment_id);
           } catch (err: any) {
             setError(err.message || 'Error recording order after payment.');
           }
@@ -309,22 +314,169 @@ Payment confirmed via ${gateway}. Please verify & deploy agent credentials.
     }
   };
 
-  const handleSubmitPayment = async () => {
-    if (!utr) {
-      setError('Please enter the Transaction ID / UTR number.');
-      return;
-    }
-    
-    // Relaxed validation: Allow alphanumeric and check for reasonable length (e.g., 6+ chars)
-    if (utr.length < 6) {
-      setError('Invalid UTR. Please enter a valid reference ID.');
-      return;
-    }
-
-    await completeOrderWithPayment(utr, 'Manual UPI');
+  const handleCopy = (text: string, field: 'username' | 'password') => {
+    navigator.clipboard.writeText(text);
+    setCopiedField(field);
+    setTimeout(() => setCopiedField(null), 2000);
   };
 
   const isUserListed = !!state.account.listedBy && state.account.listedBy !== currentUser?.id;
+
+  // --- RENDER: INSTANT CREDENTIAL DELIVERY SCREEN ---
+  if (deliveredCredentials) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-8 animate-in fade-in zoom-in-95 duration-300">
+        <div className="bg-brand-surface border border-green-500/40 rounded-2xl p-6 sm:p-8 relative overflow-hidden shadow-[0_0_50px_rgba(34,197,94,0.15)]">
+          <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-green-500 via-brand-cyan to-green-500 animate-pulse"></div>
+
+          <div className="flex flex-col items-center text-center mb-6">
+            <div className="w-16 h-16 rounded-2xl bg-green-500/20 border border-green-500/30 flex items-center justify-center text-green-400 mb-3 shadow-[0_0_25px_rgba(34,197,94,0.3)]">
+              <CheckCircle className="w-9 h-9" />
+            </div>
+            <span className="px-3 py-1 rounded-full bg-green-500/10 text-green-400 border border-green-500/20 text-[10px] font-black uppercase tracking-widest mb-2 inline-flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
+              Payment Confirmed // Order #{deliveredCredentials.orderId}
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-display font-black text-white uppercase italic tracking-wide">
+              Credentials Delivered!
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-md">
+              Your rental for <span className="text-brand-cyan font-bold">{deliveredCredentials.accountName}</span> ({deliveredCredentials.durationLabel}) is now active. Log into the Riot Games client using the credentials below:
+            </p>
+          </div>
+
+          {/* Credentials Display Box */}
+          <div className="bg-brand-dark/95 border border-white/10 rounded-xl p-5 mb-6 space-y-4 shadow-inner">
+            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-brand-cyan">
+                <Lock size={14} /> Riot Client Login Details
+              </div>
+              <span className="text-[10px] text-green-400 bg-green-500/10 px-2.5 py-0.5 rounded border border-green-500/20 font-bold uppercase tracking-wider">
+                ✓ Ready to Play
+              </span>
+            </div>
+
+            {/* Username Row */}
+            <div>
+              <label className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block mb-1.5">
+                Riot ID / Username
+              </label>
+              <div className="flex items-center justify-between bg-black/60 border border-white/10 rounded-lg px-4 py-3 group hover:border-brand-cyan/40 transition-colors">
+                <code className="text-base sm:text-lg font-mono font-bold text-white tracking-wide select-all truncate pr-2">
+                  {deliveredCredentials.username}
+                </code>
+                <button
+                  type="button"
+                  onClick={() => handleCopy(deliveredCredentials.username, 'username')}
+                  className="ml-2 px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-md text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all shrink-0"
+                >
+                  {copiedField === 'username' ? (
+                    <>
+                      <Check size={14} className="text-green-400" />
+                      <span className="text-green-400">Copied!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy size={14} />
+                      <span>Copy</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Password Row */}
+            <div>
+              <label className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block mb-1.5">
+                Riot Password
+              </label>
+              <div className="flex items-center justify-between bg-black/60 border border-white/10 rounded-lg px-4 py-3 group hover:border-brand-accent/40 transition-colors">
+                <code className="text-base sm:text-lg font-mono font-bold text-brand-accent tracking-wide select-all truncate pr-2">
+                  {isPasswordRevealed ? deliveredCredentials.password : '••••••••••••'}
+                </code>
+                <div className="flex items-center gap-2 ml-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setIsPasswordRevealed(!isPasswordRevealed)}
+                    className="p-2 bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white rounded-md transition-colors"
+                    title={isPasswordRevealed ? "Hide Password" : "Show Password"}
+                  >
+                    {isPasswordRevealed ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleCopy(deliveredCredentials.password, 'password')}
+                    className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-md text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all"
+                  >
+                    {copiedField === 'password' ? (
+                      <>
+                        <Check size={14} className="text-green-400" />
+                        <span className="text-green-400">Copied!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy size={14} />
+                        <span>Copy</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Session Expiry Info */}
+          <div className="flex items-center justify-between p-3.5 bg-white/5 rounded-xl border border-white/5 mb-6 text-xs">
+            <span className="text-slate-400 font-medium">Session Valid Until:</span>
+            <span className="text-white font-mono font-bold">
+              {new Date(deliveredCredentials.endTime).toLocaleString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+            </span>
+          </div>
+
+          {/* Account Protection Policy */}
+          <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4 mb-6 text-xs text-yellow-300/90 leading-relaxed flex gap-3 items-start">
+            <AlertCircle className="w-5 h-5 text-yellow-400 shrink-0 mt-0.5" />
+            <div>
+              <span className="font-bold uppercase tracking-wider block text-yellow-400 mb-1">
+                Security & Anti-Ban Notice
+              </span>
+              Do not change the Riot password, registered email, or display name. Any tampering triggers immediate Vanguard blacklisting and loss of account access.
+            </div>
+          </div>
+
+          {/* Action Navigation */}
+          <div className="space-y-3">
+            <button
+              type="button"
+              onClick={() => navigate('/dashboard')}
+              className="w-full py-4 bg-gradient-to-r from-brand-accent to-red-600 hover:from-red-600 hover:to-brand-accent text-white font-black text-sm uppercase tracking-[0.2em] rounded-xl transition-all shadow-[0_0_30px_rgba(255,70,85,0.4)] hover:shadow-[0_0_40px_rgba(255,70,85,0.6)] flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <span>Go to Renter Dashboard</span>
+              <ArrowRight size={18} />
+            </button>
+
+            <a
+              href={deliveredCredentials.whatsappUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full py-3 bg-green-600/10 hover:bg-green-600/20 border border-green-500/30 text-green-400 font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 no-underline"
+            >
+              <MessageCircle size={16} />
+              <span>Save / Backup to WhatsApp</span>
+            </a>
+
+            <button
+              type="button"
+              onClick={() => navigate('/browse')}
+              className="w-full py-2.5 text-xs text-slate-400 hover:text-white font-bold uppercase tracking-wider transition-colors cursor-pointer"
+            >
+              ← Back to Inventory
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">
@@ -482,236 +634,102 @@ Payment confirmed via ${gateway}. Please verify & deploy agent credentials.
             </div>
          </div>
 
-         {/* SECTION 2: PAYMENT & VERIFICATION */}
+         {/* SECTION 2: AUTOMATED RAZORPAY PAYMENT (100% Instant Delivery) */}
          <div className="bg-brand-surface border border-white/10 rounded-xl p-6 relative overflow-hidden">
-             {/* Background Glow */}
              <div className="absolute top-0 right-0 w-64 h-64 bg-brand-accent/5 blur-3xl rounded-full pointer-events-none"></div>
 
              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                 <h2 className="text-xl font-bold flex items-center gap-2">
                   <span className="w-8 h-8 rounded-full bg-brand-accent flex items-center justify-center text-sm text-white shadow-[0_0_15px_rgba(255,70,85,0.4)]">2</span>
-                  Select Payment Option
+                  Instant Payment Checkout
                 </h2>
 
-                {paymentConfig.razorpayEnabled !== false && (
-                  <div className="flex p-1 bg-brand-dark rounded-xl border border-white/10">
-                    <button
-                      type="button"
-                      onClick={() => setPaymentMethod('razorpay')}
-                      className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
-                        paymentMethod === 'razorpay'
-                          ? 'bg-brand-accent text-white shadow-md shadow-brand-accent/20'
-                          : 'text-slate-400 hover:text-white'
-                      }`}
-                    >
-                      <Zap size={13} className="text-yellow-400" /> Razorpay Instant
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setPaymentMethod('upi')}
-                      className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
-                        paymentMethod === 'upi'
-                          ? 'bg-brand-accent text-white shadow-md shadow-brand-accent/20'
-                          : 'text-slate-400 hover:text-white'
-                      }`}
-                    >
-                      <QrCode size={13} /> Manual UPI QR
-                    </button>
-                  </div>
-                )}
+                <span className="px-3 py-1 rounded-full bg-green-500/10 text-green-400 border border-green-500/20 text-[10px] font-bold uppercase tracking-widest inline-flex items-center gap-1.5">
+                   <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span> Instant Credential Delivery
+                </span>
              </div>
 
-             {/* Tab 1: Razorpay Instant 1-Click Gateway */}
-             {paymentMethod === 'razorpay' && paymentConfig.razorpayEnabled !== false ? (
-                <div className="space-y-6 animate-in fade-in duration-300">
-                   <div className="p-6 rounded-2xl bg-gradient-to-br from-brand-accent/10 via-brand-surface to-brand-cyan/10 border border-brand-accent/30 shadow-2xl relative overflow-hidden">
-                      <div className="flex items-start justify-between gap-4 mb-4">
-                         <div>
-                            <span className="px-2.5 py-0.5 rounded-full bg-green-500/20 text-green-400 border border-green-500/30 text-[10px] font-bold uppercase tracking-widest inline-flex items-center gap-1.5 mb-2">
-                               <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span> Instant Automated Gateway
-                            </span>
-                            <h3 className="text-xl font-display font-black text-white uppercase italic tracking-wide">
-                               Pay via Razorpay Gateway
-                            </h3>
-                            <p className="text-xs text-slate-300 mt-1">
-                               Instant payment verification & delivery for <span className="text-brand-cyan font-bold">{activeCompanyName}</span>
-                            </p>
-                         </div>
-                         <div className="w-12 h-12 rounded-xl bg-black/40 border border-white/10 flex items-center justify-center shrink-0">
-                            <ShieldCheck className="text-brand-cyan" size={26} />
-                         </div>
+             <div className="space-y-6">
+                <div className="p-6 rounded-2xl bg-gradient-to-br from-brand-accent/10 via-brand-surface to-brand-cyan/10 border border-brand-accent/30 shadow-2xl relative overflow-hidden">
+                   <div className="flex items-start justify-between gap-4 mb-4">
+                      <div>
+                         <span className="px-2.5 py-0.5 rounded-full bg-green-500/20 text-green-400 border border-green-500/30 text-[10px] font-bold uppercase tracking-widest inline-flex items-center gap-1.5 mb-2">
+                            <Zap size={11} className="text-yellow-400 fill-yellow-400" /> Automated Instant Gateway
+                         </span>
+                         <h3 className="text-xl font-display font-black text-white uppercase italic tracking-wide">
+                            Pay via Razorpay
+                         </h3>
+                         <p className="text-xs text-slate-300 mt-1">
+                            Instant automated verification & immediate credential delivery for <span className="text-brand-cyan font-bold">{activeCompanyName}</span>
+                         </p>
                       </div>
-
-                      {/* Supported Badges */}
-                      <div className="space-y-2 py-4 border-y border-white/10">
-                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Supported Payment Methods:</span>
-                         <div className="flex flex-wrap gap-2 text-xs font-medium text-slate-200">
-                            <span className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 flex items-center gap-1.5">
-                               <Smartphone size={13} className="text-green-400" /> Google Pay / PhonePe / Paytm
-                            </span>
-                            <span className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 flex items-center gap-1.5">
-                               <CreditCard size={13} className="text-brand-cyan" /> Credit / Debit Cards
-                            </span>
-                            <span className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10">
-                               NetBanking (All Banks)
-                            </span>
-                            <span className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10">
-                               Wallets & Cred
-                            </span>
-                         </div>
+                      <div className="w-12 h-12 rounded-xl bg-black/40 border border-white/10 flex items-center justify-center shrink-0">
+                         <ShieldCheck className="text-brand-cyan" size={26} />
                       </div>
+                   </div>
 
-                      <div className="flex justify-between items-center py-4">
-                         <div>
-                            <span className="text-[10px] text-slate-400 uppercase font-mono tracking-widest block">Total Payable</span>
-                            <span className="text-3xl font-display font-black text-white">₹{finalPrice}</span>
-                         </div>
-                         <div className="text-right text-[11px] text-slate-400 font-mono">
-                            <div>Zero Convenience Fee</div>
-                            <div className="text-green-400 font-bold">✓ 256-bit Encrypted</div>
-                         </div>
+                   {/* Supported Badges */}
+                   <div className="space-y-2 py-4 border-y border-white/10">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Supported Payment Modes:</span>
+                      <div className="flex flex-wrap gap-2 text-xs font-medium text-slate-200">
+                         <span className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 flex items-center gap-1.5">
+                            <Smartphone size={13} className="text-green-400" /> Google Pay / PhonePe / Paytm / UPI
+                         </span>
+                         <span className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 flex items-center gap-1.5">
+                            <CreditCard size={13} className="text-brand-cyan" /> Credit / Debit Cards
+                         </span>
+                         <span className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10">
+                            NetBanking (All Banks)
+                         </span>
+                         <span className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10">
+                            Wallets & Cred
+                         </span>
                       </div>
+                   </div>
 
-                      {error && (
-                         <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex items-center gap-2 font-medium">
-                            <AlertCircle size={14} className="shrink-0" />
-                            {error}
-                         </div>
+                   <div className="flex justify-between items-center py-4">
+                      <div>
+                         <span className="text-[10px] text-slate-400 uppercase font-mono tracking-widest block">Total Payable</span>
+                         <span className="text-3xl font-display font-black text-white">₹{finalPrice}</span>
+                      </div>
+                      <div className="text-right text-[11px] text-slate-400 font-mono">
+                         <div>Zero Convenience Fee</div>
+                         <div className="text-green-400 font-bold">✓ 256-bit Encrypted</div>
+                      </div>
+                   </div>
+
+                   {error && (
+                      <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex items-center gap-2 font-medium">
+                         <AlertCircle size={14} className="shrink-0" />
+                         {error}
+                      </div>
+                   )}
+
+                   <button
+                      type="button"
+                      onClick={handleRazorpayPayment}
+                      disabled={isProcessingRazorpay}
+                      className="w-full py-5 bg-gradient-to-r from-brand-accent to-red-600 hover:from-red-600 hover:to-brand-accent text-white font-black text-sm uppercase tracking-[0.2em] rounded-xl transition-all shadow-[0_0_30px_rgba(255,70,85,0.4)] hover:shadow-[0_0_40px_rgba(255,70,85,0.6)] hover:scale-[1.01] active:scale-95 flex items-center justify-center gap-3 disabled:opacity-50 cursor-pointer"
+                   >
+                      {isProcessingRazorpay ? (
+                         <>
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                            <span>Connecting to Razorpay...</span>
+                         </>
+                      ) : (
+                         <>
+                            <Zap size={18} className="text-yellow-400 fill-yellow-400" />
+                            <span>PAY ₹{finalPrice} VIA RAZORPAY</span>
+                            <ArrowRight size={18} />
+                         </>
                       )}
+                   </button>
 
-                      <button
-                         type="button"
-                         onClick={handleRazorpayPayment}
-                         disabled={isProcessingRazorpay}
-                         className="w-full py-5 bg-gradient-to-r from-brand-accent to-red-600 hover:from-red-600 hover:to-brand-accent text-white font-black text-sm uppercase tracking-[0.2em] rounded-xl transition-all shadow-[0_0_30px_rgba(255,70,85,0.4)] hover:shadow-[0_0_40px_rgba(255,70,85,0.6)] hover:scale-[1.01] active:scale-95 flex items-center justify-center gap-3 disabled:opacity-50"
-                      >
-                         {isProcessingRazorpay ? (
-                            <>
-                               <Loader2 className="w-5 h-5 animate-spin" />
-                               <span>Connecting to Razorpay...</span>
-                            </>
-                         ) : (
-                            <>
-                               <Zap size={18} className="text-yellow-400 fill-yellow-400" />
-                               <span>PAY ₹{finalPrice} VIA RAZORPAY</span>
-                               <ArrowRight size={18} />
-                            </>
-                         )}
-                      </button>
-
-                      <p className="text-[10px] text-center text-slate-500 mt-3 font-mono uppercase tracking-wider">
-                         Secure 256-bit SSL // Instant verification upon completion
-                      </p>
-                   </div>
-
-                   {/* Fallback to Manual UPI */}
-                   <div className="text-center pt-2">
-                      <button
-                         type="button"
-                         onClick={() => setPaymentMethod('upi')}
-                         className="text-xs text-slate-400 hover:text-brand-cyan transition-colors underline underline-offset-4"
-                      >
-                         Prefer manual UPI transfer? Click here to scan QR or enter UTR
-                      </button>
-                   </div>
+                   <p className="text-[11px] text-center text-slate-400 mt-3 font-mono uppercase tracking-wider flex items-center justify-center gap-1.5">
+                      <Lock size={12} className="text-green-400" /> Riot ID & Password will be delivered instantly on this screen
+                   </p>
                 </div>
-             ) : (
-                /* Tab 2: Manual UPI QR & UTR */
-                <div className="space-y-6 animate-in fade-in duration-300">
-                    <div className="grid md:grid-cols-2 gap-8">
-                        {/* QR Code Column */}
-                        <div className="flex flex-col items-center">
-                           {/* Mobile Pay Button */}
-                           <div className="md:hidden w-full mb-6">
-                             <a 
-                               href={upiString}
-                               className="w-full bg-white text-brand-darker font-bold py-4 rounded-xl shadow-lg flex items-center justify-center gap-2 hover:bg-slate-100 transition-colors animate-pulse no-underline"
-                             >
-                               <Smartphone className="w-6 h-6" />
-                               Tap to Pay via UPI
-                             </a>
-                             <div className="flex items-center gap-2 justify-center mt-2 text-slate-500 text-xs">
-                                 <span className="w-12 h-px bg-white/10"></span> OR <span className="w-12 h-px bg-white/10"></span>
-                             </div>
-                           </div>
-
-                           <div className="bg-white p-4 rounded-xl shadow-inner relative group mx-auto flex items-center justify-center min-w-[200px] min-h-[200px]">
-                             <img 
-                               src={qrCodeUrl} 
-                               alt="UPI QR Code" 
-                               className="w-48 h-48 object-contain"
-                             />
-                             {/* Scan Overlay */}
-                             <div className="absolute top-0 left-0 w-full h-1 bg-brand-accent/50 animate-[scan_2s_infinite_linear] pointer-events-none" />
-                           </div>
-                           <div className="text-center mt-4">
-                               <p className="text-slate-400 text-sm mb-1">Scan to pay <span className="text-white font-bold">{activeCompanyName}</span></p>
-                               <p className="text-2xl font-black text-white">₹{finalPrice}</p>
-                           </div>
-                        </div>
-
-                        {/* UTR Column */}
-                        <div className="flex flex-col justify-center space-y-6">
-                           <div className="bg-brand-dark p-4 rounded-lg border border-white/10">
-                              <div className="text-xs text-slate-400 uppercase font-bold mb-2">Merchant UPI ID ({activeCompanyName})</div>
-                              <div className="flex items-center justify-between">
-                                 <span className="font-mono text-white text-lg">{activeUpiId}</span>
-                                 <button 
-                                    onClick={() => {
-                                      navigator.clipboard.writeText(activeUpiId);
-                                    }}
-                                    className="text-brand-accent hover:text-white transition-colors"
-                                    title="Copy UPI ID"
-                                 >
-                                   <Copy className="w-5 h-5" />
-                                 </button>
-                              </div>
-                           </div>
-
-                           <div className="border-t border-white/10 pt-6">
-                               <label className="block text-sm font-bold text-white mb-2">
-                                  Enter Payment Reference ID (UTR)
-                                </label>
-                               <input 
-                                 type="text" 
-                                 value={utr}
-                                 onChange={(e) => {
-                                   setUtr(e.target.value);
-                                   setError('');
-                                 }}
-                                 placeholder="12-digit UTR (e.g. 3245xxxxxxxx)"
-                                 className="w-full bg-brand-dark border border-white/10 rounded-lg px-4 py-4 text-white focus:border-brand-accent focus:outline-none mb-2 font-mono text-lg tracking-widest placeholder:tracking-normal"
-                                 maxLength={12}
-                               />
-                               {error && <p className="text-red-500 text-xs mb-3 font-bold flex items-center gap-1"><AlertCircle size={12}/> {error}</p>}
-
-                               <button 
-                                 onClick={handleSubmitPayment}
-                                 className="w-full bg-brand-accent hover:bg-red-600 text-white font-bold py-4 rounded-lg flex items-center justify-center gap-2 transition-all shadow-lg shadow-brand-accent/20 mt-2"
-                               >
-                                 <Send className="w-5 h-5" />
-                                 VERIFY & BOOK SLOT
-                               </button>
-                               <p className="text-[10px] text-center mt-3 text-slate-500">
-                                  Instant verification via WhatsApp protocol.
-                               </p>
-                           </div>
-                        </div>
-                    </div>
-
-                    {paymentConfig.razorpayEnabled !== false && (
-                       <div className="text-center pt-2">
-                          <button
-                             type="button"
-                             onClick={() => setPaymentMethod('razorpay')}
-                             className="text-xs text-brand-accent hover:text-white transition-colors font-bold uppercase tracking-wider"
-                          >
-                             ← Or switch back to Instant Razorpay Gateway
-                          </button>
-                       </div>
-                    )}
-                </div>
-             )}
+             </div>
          </div>
       </div>
     </div>

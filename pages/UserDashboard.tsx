@@ -228,7 +228,7 @@ const UserDashboard: React.FC = () => {
                    Current Sessions
                 </h3>
                 {activeBookings.map(booking => (
-                  <RentalCard key={booking.orderId} booking={booking} />
+                  <RentalCard key={booking.orderId} booking={booking} showCredentials={true} />
                 ))}
               </div>
             ) : (
