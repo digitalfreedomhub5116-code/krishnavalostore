@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef, memo } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { ChevronRight, Gamepad2, Clock, QrCode, MessageCircle, Play, Star, Zap, Shield, TrendingUp, CheckCircle2, Loader2, ArrowRight, Award, Gift, Gem, PlusCircle } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { ChevronRight, Gamepad2, Clock, QrCode, MessageCircle, Play, Star, Zap, Shield, TrendingUp, CheckCircle2, Loader2, ArrowRight, Award, Gift, Gem } from 'lucide-react';
 import CustomVideoPlayer from '../components/CustomVideoPlayer';
 import { StorageService, DEFAULT_HOME_CONFIG } from '../services/storage';
 import { HomeConfig, Review, StepItem } from '../types';
@@ -87,7 +87,6 @@ const ProcedureSection = memo(({ config }: { config: HomeConfig }) => {
 });
 
 const Home: React.FC = () => {
-  const navigate = useNavigate();
   const [config, setConfig] = useState<HomeConfig>(DEFAULT_HOME_CONFIG);
   const [loading, setLoading] = useState(true);
   const [selectedVideo, setSelectedVideo] = useState<Review | null>(null);
@@ -163,14 +162,6 @@ const Home: React.FC = () => {
     return () => clearInterval(interval);
   }, [config.reviews]);
 
-  const handleListId = () => {
-    const user = StorageService.getCurrentUser();
-    if (user) {
-      navigate('/list-account');
-    } else {
-      navigate('/login', { state: { returnTo: '/list-account' } });
-    }
-  };
 
   if (loading) {
     return (
@@ -194,14 +185,6 @@ const Home: React.FC = () => {
   return (
     <div className="flex flex-col overflow-hidden">
       
-      {/* FLOATING CTA: RENT MY ID */}
-      <button 
-        onClick={handleListId}
-        className="fixed z-[999] bottom-24 right-4 md:bottom-8 md:right-8 bg-brand-accent text-white px-6 py-3 rounded-full font-bold shadow-lg shadow-brand-accent/30 backdrop-blur-md border border-white/10 flex items-center gap-2 transition-all hover:scale-105 active:scale-95 group animate-in slide-in-from-bottom-10 duration-700"
-      >
-        <PlusCircle className="w-5 h-5 group-hover:rotate-90 transition-transform" />
-        <span className="uppercase tracking-wide text-xs md:text-sm">Rent My ID</span>
-      </button>
 
       <section className="relative h-[720px] md:h-[800px] lg:h-[950px] flex items-center justify-center overflow-hidden bg-black transform-gpu">
         <div className="absolute inset-0 z-0 opacity-20 hero-grid animate-grid-pan pointer-events-none"></div>
