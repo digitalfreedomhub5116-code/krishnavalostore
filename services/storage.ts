@@ -83,7 +83,7 @@ export const DEFAULT_HOME_CONFIG: HomeConfig = {
       id: 1,
       type: 'video',
       name: 'Aditya Rao',
-      rank: 'Immortal',
+      rank: 'Ascendant',
       quote: 'The best rental service I\'ve used. Instant delivery via WhatsApp is a game changer.',
       thumbnail: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=1000&auto=format&fit=crop',
       videoUrl: 'https://go.screenpal.com/watch/cTlqlMnYGuh'
@@ -92,7 +92,7 @@ export const DEFAULT_HOME_CONFIG: HomeConfig = {
       id: 2,
       type: 'video',
       name: 'Rahul Verma',
-      rank: 'Ascendant',
+      rank: 'Immortal',
       quote: 'Finally a legit store! The account quality is top notch. Will rent again.',
       thumbnail: 'https://images.unsplash.com/photo-1552820728-8b83bb6b773f?q=80&w=1000&auto=format&fit=crop',
       videoUrl: 'https://go.screenpal.com/watch/cTlql6nYGqu'
@@ -101,7 +101,7 @@ export const DEFAULT_HOME_CONFIG: HomeConfig = {
       id: 3,
       type: 'video',
       name: 'Vikram Singh',
-      rank: 'Radiant',
+      rank: 'Ascendant 2',
       quote: 'Insane skins. The reaver vandal aimbot feels real lol. 10/10.',
       thumbnail: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=1000&auto=format&fit=crop',
       videoUrl: 'https://go.screenpal.com/watch/cTlqlMnYGuh'
@@ -110,7 +110,7 @@ export const DEFAULT_HOME_CONFIG: HomeConfig = {
       id: 4,
       type: 'video',
       name: 'Karthik N',
-      rank: 'Diamond',
+      rank: 'Immortal',
       quote: 'Cheap and reliable. The support is also very quick.',
       thumbnail: 'https://images.unsplash.com/photo-1538481199705-c710c4e965fc?q=80&w=1000&auto=format&fit=crop',
       videoUrl: 'https://go.screenpal.com/watch/cTlql6nYGqu'
