@@ -5,7 +5,6 @@ import { Account, UPI_ID, BookingStatus, Booking, PaymentConfig } from '../types
 import { Copy, ArrowRight, Timer, CalendarClock, Smartphone, ShieldCheck, Zap, Ticket, CheckCircle, XCircle, Loader2, AlertCircle, MessageCircle, CreditCard, Lock, Check, Eye, EyeOff } from 'lucide-react';
 import { StorageService, SITE_LOGO_URL } from '../services/storage';
 import { AnalyticsService } from '../services/analytics';
-import TrustVideoSection from '../components/TrustVideoSection';
 
 interface CheckoutState {
   orderId?: string; // Optional because legacy flow might not have it, but new flow will
@@ -616,8 +615,6 @@ Credentials automatically issued on screen.
             </div>
          </div>
 
-         {/* SOCIAL PROOF: VIDEO REVIEWS */}
-         <TrustVideoSection />
 
          {/* SECTION 2: PAY VIA RAZORPAY */}
          <div className="bg-brand-surface border border-white/10 rounded-xl p-5 sm:p-6 relative overflow-hidden">
