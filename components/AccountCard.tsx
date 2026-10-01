@@ -77,7 +77,7 @@ const AccountCard: React.FC<AccountCardProps> = ({ account }) => {
           <div className="grid grid-cols-4 gap-2 mb-5">
             <div className="bg-brand-dark/50 p-2 border border-white/5 text-center flex flex-col justify-center transition-colors">
               <div className="text-[10px] text-slate-500 uppercase">1 Hour</div>
-              <div className="text-sm font-bold text-white">₹{account.pricing.hours1 || 29}</div>
+              <div className="text-sm font-bold text-white">₹{account.pricing.hours1 || 80}</div>
             </div>
             <div className="bg-brand-dark/50 p-2 border border-white/5 text-center flex flex-col justify-center transition-colors">
               <div className="text-[10px] text-slate-500 uppercase">3 Hours</div>

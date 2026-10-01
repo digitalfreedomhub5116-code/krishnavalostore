@@ -76,7 +76,8 @@ const ProductDetails: React.FC = () => {
     if (!account) return 0;
     const price = account.pricing[duration];
     if (duration === 'hours24') return Math.floor((account.pricing.hours24 || 0) * 0.9);
-    return price || Math.floor((account.pricing.hours3 || 0) * (duration === 'hours1' ? 0.6 : 1)) || 0;
+    if (duration === 'hours1') return price || 80;
+    return price || account.pricing.hours3 || 0;
   };
 
   const handleInitiateRental = async () => {

@@ -27,7 +27,7 @@ const AdminDashboard: React.FC = () => {
     name: '', 
     rank: Rank.IRON, 
     skins: [], 
-    pricing: { hours1: 29, hours3: 49, hours12: 149, hours24: 249 }, // Added default hours1
+    pricing: { hours1: 80, hours3: 49, hours12: 149, hours24: 249 }, // Default hours1: 80
     imageUrl: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=1000&auto=format&fit=crop',
     username: '',
     password: '',
@@ -53,6 +53,29 @@ const AdminDashboard: React.FC = () => {
     usageType: 'UNLIMITED',
     maxUses: 1
   });
+
+  const [bulkRate, setBulkRate] = useState<number>(80);
+  const [isBulkUpdating, setIsBulkUpdating] = useState(false);
+
+  const handleBulkUpdateHours1 = async () => {
+    if (isNaN(bulkRate) || bulkRate <= 0) {
+      alert("Please enter a valid rate greater than 0");
+      return;
+    }
+    if (!window.confirm(`Are you sure you want to set the 1-hour rate for ALL accounts to ₹${bulkRate}/hr?`)) {
+      return;
+    }
+    setIsBulkUpdating(true);
+    try {
+      await StorageService.bulkUpdateHours1Rate(bulkRate);
+      await refreshData();
+      alert(`Successfully updated 1-hour rate to ₹${bulkRate}/hr for all accounts!`);
+    } catch (err: any) {
+      alert(`Bulk update failed: ${err.message || err}`);
+    } finally {
+      setIsBulkUpdating(false);
+    }
+  };
 
   const refreshData = async () => {
     try {
@@ -120,7 +143,7 @@ const AdminDashboard: React.FC = () => {
       await StorageService.saveAccount(accountToSave);
       setShowAddModal(false);
       setNewAccount({
-        name: '', rank: Rank.IRON, skins: [], pricing: { hours1: 29, hours3: 49, hours12: 149, hours24: 249 },
+        name: '', rank: Rank.IRON, skins: [], pricing: { hours1: 80, hours3: 49, hours12: 149, hours24: 249 },
         imageUrl: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=1000&auto=format&fit=crop',
         username: '', password: '', description: 'Premium Valorant Account.', initialSkinsCount: 10
       });
@@ -337,28 +360,58 @@ const AdminDashboard: React.FC = () => {
       {activeTab === 'bookings' && <BookingTable bookings={enhancedBookings} onUpdateStatus={async (id: string, s: BookingStatus) => { try { await StorageService.updateBookingStatus(id, s); refreshData(); } catch(e: any) { alert(e.message); } }} onDelete={async (id: string) => { await StorageService.deleteBooking(id); refreshData(); }} />}
       
       {activeTab === 'accounts' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <button 
-            onClick={() => setShowAddModal(true)} 
-            className="border-2 border-dashed border-white/10 rounded-xl flex flex-col items-center justify-center min-h-[250px] cursor-pointer hover:border-brand-accent hover:bg-white/5 transition-all group w-full text-left"
-          >
-            <Plus className="w-10 h-10 mb-2 text-slate-600 group-hover:text-brand-accent group-hover:scale-110 transition-all" /> 
-            <span className="font-bold text-slate-500 group-hover:text-white tracking-widest uppercase text-xs">Deploy New Agent</span>
-          </button>
-          {accounts.filter(a => !a.listedBy).map(acc => (
-            <div key={acc.id} className="bg-brand-surface border border-white/10 rounded-xl p-5 flex justify-between items-center group hover:border-brand-accent/50 transition-all shadow-lg">
-              <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-lg bg-black overflow-hidden border border-white/5">
-                      <img src={acc.imageUrl} className="w-full h-full object-cover" alt="" />
-                  </div>
-                  <div>
-                      <div className="font-bold text-white text-sm uppercase tracking-tight">{acc.name}</div>
-                      <div className="text-[10px] text-slate-500 font-mono">{acc.rank} // {acc.id}</div>
-                  </div>
+        <div className="space-y-6">
+          {/* Bulk Pricing Management Card */}
+          <div className="bg-brand-surface border border-white/10 rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg">
+            <div>
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4 text-brand-cyan" />
+                <h4 className="text-sm font-bold text-white uppercase tracking-wider">Bulk 1-Hour Rate Management</h4>
               </div>
-              <Link to={`/admin/edit/${acc.id}`} className="p-2.5 bg-brand-surface border border-white/10 text-slate-400 rounded-lg hover:bg-brand-cyan hover:text-brand-dark hover:border-brand-cyan transition-all"><Edit2 size={16} /></Link>
+              <p className="text-xs text-slate-400 mt-0.5">Quickly set the 1-hour rate across all inventory accounts simultaneously</p>
             </div>
-          ))}
+            <div className="flex items-center gap-3 w-full sm:w-auto">
+              <span className="text-xs font-mono text-slate-400 whitespace-nowrap">1h Rate: ₹</span>
+              <input
+                type="number"
+                value={bulkRate}
+                onChange={(e) => setBulkRate(Number(e.target.value))}
+                className="w-24 bg-brand-dark border border-white/10 rounded-lg px-3 py-1.5 text-white font-mono text-sm focus:border-brand-accent outline-none"
+              />
+              <button
+                disabled={isBulkUpdating}
+                onClick={handleBulkUpdateHours1}
+                className="px-4 py-2 bg-brand-accent hover:bg-red-600 disabled:opacity-50 text-white font-bold text-xs uppercase tracking-wider rounded-lg transition-all shadow-md shadow-brand-accent/20 flex items-center gap-1.5 whitespace-nowrap"
+              >
+                {isBulkUpdating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                Set All IDs
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <button 
+              onClick={() => setShowAddModal(true)} 
+              className="border-2 border-dashed border-white/10 rounded-xl flex flex-col items-center justify-center min-h-[250px] cursor-pointer hover:border-brand-accent hover:bg-white/5 transition-all group w-full text-left"
+            >
+              <Plus className="w-10 h-10 mb-2 text-slate-600 group-hover:text-brand-accent group-hover:scale-110 transition-all" /> 
+              <span className="font-bold text-slate-500 group-hover:text-white tracking-widest uppercase text-xs">Deploy New Agent</span>
+            </button>
+            {accounts.filter(a => !a.listedBy).map(acc => (
+              <div key={acc.id} className="bg-brand-surface border border-white/10 rounded-xl p-5 flex justify-between items-center group hover:border-brand-accent/50 transition-all shadow-lg">
+                <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-lg bg-black overflow-hidden border border-white/5">
+                        <img src={acc.imageUrl} className="w-full h-full object-cover" alt="" />
+                    </div>
+                    <div>
+                        <div className="font-bold text-white text-sm uppercase tracking-tight">{acc.name}</div>
+                        <div className="text-[10px] text-slate-500 font-mono">{acc.rank} // {acc.id}</div>
+                    </div>
+                </div>
+                <Link to={`/admin/edit/${acc.id}`} className="p-2.5 bg-brand-surface border border-white/10 text-slate-400 rounded-lg hover:bg-brand-cyan hover:text-brand-dark hover:border-brand-cyan transition-all"><Edit2 size={16} /></Link>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

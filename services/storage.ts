@@ -289,6 +289,19 @@ export const StorageService = {
     notifyStorageChange();
   },
 
+  bulkUpdateHours1Rate: async (newRate: number = 80) => {
+    const { data, error } = await getSupabase().from('accounts').select('*');
+    if (error || !data) return;
+    for (const row of data) {
+      const acc = row.data as Account;
+      if (acc) {
+        acc.pricing = { ...(acc.pricing || {}), hours1: newRate };
+        await getSupabase().from('accounts').upsert({ id: row.id, data: acc });
+      }
+    }
+    notifyStorageChange();
+  },
+
   updateAccountPassword: async (accountId: string, newPassword: string) => {
     const account = await StorageService.getAccountById(accountId);
     if (account) {

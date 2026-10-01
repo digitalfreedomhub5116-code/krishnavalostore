@@ -17,7 +17,7 @@ const ListAccount: React.FC = () => {
   const [imageUrl, setImageUrl] = useState('');
   
   const [pricing, setPricing] = useState({
-    hours1: 29,
+    hours1: 80,
     hours3: 49,
     hours12: 149,
     hours24: 249
