@@ -483,7 +483,8 @@ export const StorageService = {
           razorpayKeyId: config.payment.razorpayKeyId || DEFAULT_HOME_CONFIG.payment?.razorpayKeyId,
           razorpayKeySecret: config.payment.razorpayKeySecret || DEFAULT_HOME_CONFIG.payment?.razorpayKeySecret
         } : DEFAULT_HOME_CONFIG.payment,
-        cta: config.cta || DEFAULT_HOME_CONFIG.cta
+        cta: config.cta || DEFAULT_HOME_CONFIG.cta,
+        statsBaselineTimestamp: config.statsBaselineTimestamp ?? null
       };
     } catch {
       return DEFAULT_HOME_CONFIG;

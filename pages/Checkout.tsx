@@ -194,11 +194,8 @@ const Checkout: React.FC = () => {
       discountApplied: appliedCoupon ? discountAmount : undefined
     };
 
-    if (state.orderId) {
-      await StorageService.updateBooking(booking);
-    } else {
-      await StorageService.createBooking(booking);
-    }
+    // Upsert confirmed booking directly into Supabase
+    await StorageService.createBooking(booking);
 
     // Update account booked state in Supabase
     if (accountRecord) {

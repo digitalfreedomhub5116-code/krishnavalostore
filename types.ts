@@ -159,6 +159,7 @@ export interface HomeConfig {
   reviews: Review[];
   coupons?: Coupon[]; // Added for dynamic coupon management
   payment?: PaymentConfig; // Added for custom business payment configuration
+  statsBaselineTimestamp?: number | null; // Database-persisted stats reset baseline timestamp
   cta: {
     titleLine1: string;
     titleLine2: string; 

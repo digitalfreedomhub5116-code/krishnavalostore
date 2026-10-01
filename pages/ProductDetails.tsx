@@ -128,8 +128,7 @@ const ProductDetails: React.FC = () => {
         customerName: activeUser.name
       };
 
-      await StorageService.createBooking(booking);
-
+      // Only save to database once Razorpay payment is actually confirmed
       const state = {
         orderId,
         account,

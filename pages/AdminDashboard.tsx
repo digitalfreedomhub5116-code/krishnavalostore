@@ -111,24 +111,41 @@ const AdminDashboard: React.FC = () => {
     }
   }, [isAuthenticated]);
 
-  // Timeframe and baseline states
+  // Timeframe state
   const [timeframe, setTimeframe] = useState<'all' | 'weekly' | 'monthly'>('all');
-  const [baselineDate, setBaselineDate] = useState<number | null>(() => {
-    const saved = localStorage.getItem('admin_stats_baseline_timestamp');
-    return saved ? Number(saved) : null;
-  });
+  
+  // Database-synced baseline from Supabase home_config
+  const baselineDate = homeConfig.statsBaselineTimestamp ?? null;
 
-  const handleResetBaseline = () => {
-    if (window.confirm("Reset earnings, bookings, and user counters to ZERO starting from now?\n\n(Existing past bookings will remain safely in your database, but the Mission Control counters will start fresh from ₹0)")) {
+  const handleResetBaseline = async () => {
+    if (window.confirm("Reset earnings, bookings, and user counters to ZERO starting from now?\n\nThis will sync with your Supabase database across all devices. Existing booking records will stay safely in the database, but counters will start from ₹0.")) {
       const nowTimestamp = Date.now();
-      localStorage.setItem('admin_stats_baseline_timestamp', nowTimestamp.toString());
-      setBaselineDate(nowTimestamp);
+      const updatedConfig: HomeConfig = {
+        ...homeConfig,
+        statsBaselineTimestamp: nowTimestamp
+      };
+      setHomeConfig(updatedConfig);
+      try {
+        await StorageService.saveHomeConfig(updatedConfig);
+        await refreshData();
+      } catch (err: any) {
+        alert("Failed to sync reset with database: " + (err.message || err));
+      }
     }
   };
 
-  const handleRestoreBaseline = () => {
-    localStorage.removeItem('admin_stats_baseline_timestamp');
-    setBaselineDate(null);
+  const handleRestoreBaseline = async () => {
+    const updatedConfig: HomeConfig = {
+      ...homeConfig,
+      statsBaselineTimestamp: null
+    };
+    setHomeConfig(updatedConfig);
+    try {
+      await StorageService.saveHomeConfig(updatedConfig);
+      await refreshData();
+    } catch (err: any) {
+      alert("Failed to restore history in database: " + (err.message || err));
+    }
   };
 
   const stats = useMemo(() => {
