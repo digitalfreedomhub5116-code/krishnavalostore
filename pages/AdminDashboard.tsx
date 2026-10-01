@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { StorageService, DEFAULT_HOME_CONFIG } from '../services/storage';
 import { AIService } from '../services/ai';
 import { Account, Booking, BookingStatus, Rank, User, HomeConfig, Review, Skin, HeroSlide, TrustItem, StepItem, Coupon, PaymentConfig } from '../types';
-import { Plus, Trash2, Check, X, Edit2, Loader2, LogOut, Square, CheckSquare, BarChart3, Activity, IndianRupee, Users, Gamepad2, Home, Save, Zap, Shield, Star, MessageSquare, AlertCircle, Cpu, Search, Video, FileText, Play, Copy, Terminal, Layout, Image as ImageIcon, ShieldCheck, Lock, Ban, Type as TypeIcon, Clock, Ticket, CalendarDays, Repeat, Building, CreditCard, QrCode, Upload } from 'lucide-react';
+import { Plus, Trash2, Check, X, Edit2, Loader2, LogOut, Square, CheckSquare, BarChart3, Activity, IndianRupee, Users, Gamepad2, Home, Save, Zap, Shield, Star, MessageSquare, AlertCircle, Cpu, Search, Video, FileText, Play, Copy, Terminal, Layout, Image as ImageIcon, ShieldCheck, Lock, Ban, Type as TypeIcon, Clock, Ticket, CalendarDays, Repeat, Building, CreditCard, QrCode, Upload, RotateCcw, Calendar } from 'lucide-react';
 import AdminAnalyticsTab from '../components/AdminAnalyticsTab';
 
 const AdminDashboard: React.FC = () => {
@@ -111,12 +111,106 @@ const AdminDashboard: React.FC = () => {
     }
   }, [isAuthenticated]);
 
-  const stats = useMemo(() => ({
-    totalBookings: bookings.length,
-    monthlyRevenue: bookings.filter(b => (b.status === BookingStatus.ACTIVE || b.status === BookingStatus.COMPLETED)).reduce((sum, b) => sum + b.totalPrice, 0),
-    activeRentals: accounts.filter(a => a.isBooked).length,
-    totalUsers: users.length
-  }), [bookings, accounts, users]);
+  // Timeframe and baseline states
+  const [timeframe, setTimeframe] = useState<'all' | 'weekly' | 'monthly'>('all');
+  const [baselineDate, setBaselineDate] = useState<number | null>(() => {
+    const saved = localStorage.getItem('admin_stats_baseline_timestamp');
+    return saved ? Number(saved) : null;
+  });
+
+  const handleResetBaseline = () => {
+    if (window.confirm("Reset earnings, bookings, and user counters to ZERO starting from now?\n\n(Existing past bookings will remain safely in your database, but the Mission Control counters will start fresh from ₹0)")) {
+      const nowTimestamp = Date.now();
+      localStorage.setItem('admin_stats_baseline_timestamp', nowTimestamp.toString());
+      setBaselineDate(nowTimestamp);
+    }
+  };
+
+  const handleRestoreBaseline = () => {
+    localStorage.removeItem('admin_stats_baseline_timestamp');
+    setBaselineDate(null);
+  };
+
+  const stats = useMemo(() => {
+    const now = Date.now();
+    const sevenDaysAgoMs = now - (7 * 24 * 60 * 60 * 1000);
+    const thirtyDaysAgoMs = now - (30 * 24 * 60 * 60 * 1000);
+
+    // Filter by baseline if admin reset counter
+    const validBookings = baselineDate 
+      ? bookings.filter(b => new Date(b.createdAt || b.startTime).getTime() >= baselineDate)
+      : bookings;
+
+    const paidBookings = validBookings.filter(b => 
+      b.status === BookingStatus.ACTIVE || 
+      b.status === BookingStatus.COMPLETED || 
+      b.status === BookingStatus.PRE_BOOKED
+    );
+
+    // Earnings
+    const allTimeRevenue = paidBookings.reduce((sum, b) => sum + (b.totalPrice || 0), 0);
+    const monthlyRevenue = paidBookings
+      .filter(b => new Date(b.createdAt || b.startTime).getTime() >= thirtyDaysAgoMs)
+      .reduce((sum, b) => sum + (b.totalPrice || 0), 0);
+    const weeklyRevenue = paidBookings
+      .filter(b => new Date(b.createdAt || b.startTime).getTime() >= sevenDaysAgoMs)
+      .reduce((sum, b) => sum + (b.totalPrice || 0), 0);
+
+    // Bookings
+    const allTimeBookings = validBookings.length;
+    const monthlyBookings = validBookings
+      .filter(b => new Date(b.createdAt || b.startTime).getTime() >= thirtyDaysAgoMs).length;
+    const weeklyBookings = validBookings
+      .filter(b => new Date(b.createdAt || b.startTime).getTime() >= sevenDaysAgoMs).length;
+
+    // Users
+    const validUsers = baselineDate
+      ? users.filter(u => new Date(u.createdAt).getTime() >= baselineDate)
+      : users;
+    const totalUsers = validUsers.length;
+    const monthlyUsers = validUsers
+      .filter(u => new Date(u.createdAt).getTime() >= thirtyDaysAgoMs).length;
+    const weeklyUsers = validUsers
+      .filter(u => new Date(u.createdAt).getTime() >= sevenDaysAgoMs).length;
+
+    // Active Fleet
+    const activeRentals = accounts.filter(a => a.isBooked).length;
+    const preBookedRentals = validBookings.filter(b => b.status === BookingStatus.PRE_BOOKED).length;
+
+    return {
+      allTimeRevenue,
+      monthlyRevenue,
+      weeklyRevenue,
+      allTimeBookings,
+      monthlyBookings,
+      weeklyBookings,
+      totalUsers,
+      monthlyUsers,
+      weeklyUsers,
+      activeRentals,
+      preBookedRentals
+    };
+  }, [bookings, accounts, users, baselineDate]);
+
+  const currentRevenue = 
+    timeframe === 'weekly' ? stats.weeklyRevenue :
+    timeframe === 'monthly' ? stats.monthlyRevenue :
+    stats.allTimeRevenue;
+
+  const currentBookings = 
+    timeframe === 'weekly' ? stats.weeklyBookings :
+    timeframe === 'monthly' ? stats.monthlyBookings :
+    stats.allTimeBookings;
+
+  const currentUsers = 
+    timeframe === 'weekly' ? stats.weeklyUsers :
+    timeframe === 'monthly' ? stats.monthlyUsers :
+    stats.totalUsers;
+
+  const timeframeLabel = 
+    timeframe === 'weekly' ? 'Weekly' :
+    timeframe === 'monthly' ? 'Monthly' :
+    'All-Time';
 
   const handleDeployAccount = async () => {
     if (!newAccount.name || !newAccount.username || !newAccount.password) {
@@ -329,11 +423,139 @@ const AdminDashboard: React.FC = () => {
         </div>
       </div>
 
+      {/* Tracking Window & Reset Toolbar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 bg-brand-surface border border-white/10 rounded-xl p-3 shadow-lg">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-[11px] font-mono uppercase text-slate-400 font-bold tracking-wider flex items-center gap-1.5 mr-1">
+            <Calendar size={13} className="text-brand-cyan" />
+            <span>Tracking Window:</span>
+          </span>
+
+          {/* Reset Button */}
+          <button
+            onClick={() => setTimeframe('all')}
+            title="Reset timeframe filter to All-Time"
+            className={`px-3 py-1.5 rounded-lg border text-xs font-mono font-bold flex items-center gap-1.5 transition-all ${
+              timeframe !== 'all'
+                ? 'bg-red-500/10 text-red-400 border-red-500/30 hover:bg-red-500/20 cursor-pointer shadow-sm'
+                : 'bg-white/5 text-slate-400 border-white/10 opacity-70 hover:opacity-100 cursor-pointer'
+            }`}
+          >
+            <RotateCcw size={12} />
+            <span>Reset</span>
+          </button>
+
+          {/* Filter Pills */}
+          <div className="flex items-center bg-brand-darker border border-white/10 rounded-lg p-0.5">
+            <button
+              onClick={() => setTimeframe('weekly')}
+              className={`px-3.5 py-1.5 rounded-md text-xs font-bold transition-all ${
+                timeframe === 'weekly'
+                  ? 'bg-brand-accent text-white shadow-md'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Weekly (7d)
+            </button>
+            <button
+              onClick={() => setTimeframe('monthly')}
+              className={`px-3.5 py-1.5 rounded-md text-xs font-bold transition-all ${
+                timeframe === 'monthly'
+                  ? 'bg-brand-accent text-white shadow-md'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Monthly (30d)
+            </button>
+            <button
+              onClick={() => setTimeframe('all')}
+              className={`px-3.5 py-1.5 rounded-md text-xs font-bold transition-all ${
+                timeframe === 'all'
+                  ? 'bg-brand-accent text-white shadow-md'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              All Time
+            </button>
+          </div>
+        </div>
+
+        {/* Counter Baseline Controls */}
+        <div className="flex items-center gap-2">
+          {baselineDate ? (
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-mono text-yellow-400 bg-yellow-400/10 border border-yellow-400/20 px-2.5 py-1 rounded">
+                Counter Reset Active ({new Date(baselineDate).toLocaleDateString()})
+              </span>
+              <button
+                onClick={handleRestoreBaseline}
+                className="text-[10px] font-mono text-slate-400 hover:text-white underline cursor-pointer"
+              >
+                Restore History
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={handleResetBaseline}
+              className="text-[10px] font-mono text-slate-500 hover:text-red-400 flex items-center gap-1.5 transition-colors px-2.5 py-1.5 rounded border border-white/5 hover:border-red-500/20 hover:bg-red-500/5 cursor-pointer"
+              title="Reset earnings and bookings counter to ₹0 starting fresh from now"
+            >
+              <RotateCcw size={11} />
+              <span>Reset Counter to ₹0</span>
+            </button>
+          )}
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatCard label="Total Revenue" value={`₹${stats.monthlyRevenue}`} icon={IndianRupee} color="text-green-400" />
-        <StatCard label="Bookings" value={stats.totalBookings.toString()} icon={BarChart3} color="text-blue-400" />
-        <StatCard label="Active" value={stats.activeRentals.toString()} icon={Gamepad2} color="text-brand-accent" />
-        <StatCard label="Users" value={stats.totalUsers.toString()} icon={Users} color="text-purple-400" />
+        <StatCard 
+          label={timeframe === 'all' ? 'Total Earnings' : `${timeframeLabel} Earnings`} 
+          value={`₹${currentRevenue.toLocaleString('en-IN')}`} 
+          icon={IndianRupee} 
+          color="text-emerald-400" 
+          badge={timeframeLabel}
+          breakdowns={[
+            { label: 'Weekly', value: `₹${stats.weeklyRevenue.toLocaleString('en-IN')}`, color: 'text-emerald-400' },
+            { label: 'Monthly', value: `₹${stats.monthlyRevenue.toLocaleString('en-IN')}`, color: 'text-emerald-400' },
+            { label: 'All-Time', value: `₹${stats.allTimeRevenue.toLocaleString('en-IN')}`, color: 'text-white' }
+          ]}
+        />
+        <StatCard 
+          label={timeframe === 'all' ? 'Total Bookings' : `${timeframeLabel} Bookings`} 
+          value={currentBookings.toString()} 
+          icon={BarChart3} 
+          color="text-blue-400" 
+          badge={timeframeLabel}
+          breakdowns={[
+            { label: 'Weekly', value: stats.weeklyBookings.toString(), color: 'text-blue-400' },
+            { label: 'Monthly', value: stats.monthlyBookings.toString(), color: 'text-blue-400' },
+            { label: 'All-Time', value: stats.allTimeBookings.toString(), color: 'text-white' }
+          ]}
+        />
+        <StatCard 
+          label="Active Rentals" 
+          value={stats.activeRentals.toString()} 
+          icon={Gamepad2} 
+          color="text-brand-accent" 
+          badge="Live"
+          breakdowns={[
+            { label: 'Live Playing', value: `${stats.activeRentals} IDs`, color: 'text-brand-accent' },
+            { label: 'Queued', value: `${stats.preBookedRentals} Pre`, color: 'text-purple-400' },
+            { label: 'Total Fleet', value: `${accounts.length} IDs`, color: 'text-slate-300' }
+          ]}
+        />
+        <StatCard 
+          label={timeframe === 'all' ? 'Total Users' : `${timeframeLabel} Users`} 
+          value={currentUsers.toString()} 
+          icon={Users} 
+          color="text-purple-400" 
+          badge={timeframeLabel}
+          breakdowns={[
+            { label: 'Weekly', value: `+${stats.weeklyUsers}`, color: 'text-purple-400' },
+            { label: 'Monthly', value: `+${stats.monthlyUsers}`, color: 'text-purple-400' },
+            { label: 'All-Time', value: stats.totalUsers.toString(), color: 'text-white' }
+          ]}
+        />
       </div>
 
       {/* Mobile Responsive Tabs - Scrollable */}
@@ -1020,11 +1242,54 @@ const AdminDashboard: React.FC = () => {
   );
 };
 
-const StatCard = ({ label, value, icon: Icon, color }: any) => (
-  <div className="bg-brand-surface border border-white/10 rounded-xl p-6 flex items-center justify-between shadow-2xl relative overflow-hidden group">
-    <div className="absolute top-0 right-0 w-16 h-16 bg-white/5 rounded-full -mr-8 -mt-8 group-hover:bg-white/10 transition-all"></div>
-    <div className="relative z-10"><p className="text-slate-500 text-[10px] uppercase font-bold tracking-widest mb-2">{label}</p><h3 className={`text-3xl font-display font-black tracking-tight ${color}`}>{value}</h3></div>
-    <div className="w-12 h-12 rounded-xl bg-brand-darker flex items-center justify-center border border-white/5 relative z-10"><Icon className={`w-6 h-6 ${color}`} /></div>
+interface StatBreakdown {
+  label: string;
+  value: string;
+  color?: string;
+}
+
+interface StatCardProps {
+  label: string;
+  value: string;
+  icon: any;
+  color: string;
+  badge?: string;
+  breakdowns?: StatBreakdown[];
+}
+
+const StatCard = ({ label, value, icon: Icon, color, badge, breakdowns }: StatCardProps) => (
+  <div className="bg-brand-surface border border-white/10 rounded-xl p-5 flex flex-col justify-between shadow-2xl relative overflow-hidden group hover:border-white/20 transition-all">
+    <div className="absolute top-0 right-0 w-24 h-24 bg-white/[0.02] rounded-full -mr-10 -mt-10 group-hover:bg-white/[0.05] transition-all pointer-events-none" />
+    
+    <div className="flex items-start justify-between gap-3 relative z-10 mb-3">
+      <div>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <p className="text-slate-500 text-[10px] uppercase font-bold tracking-widest">{label}</p>
+          {badge && (
+            <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-white/5 border border-white/10 text-slate-300 uppercase">
+              {badge}
+            </span>
+          )}
+        </div>
+        <h3 className={`text-2xl sm:text-3xl font-display font-black tracking-tight mt-1 ${color}`}>
+          {value}
+        </h3>
+      </div>
+      <div className="w-11 h-11 rounded-xl bg-brand-darker flex items-center justify-center border border-white/5 shrink-0 shadow-inner">
+        <Icon className={`w-5 h-5 ${color}`} />
+      </div>
+    </div>
+
+    {breakdowns && breakdowns.length > 0 && (
+      <div className="pt-3 border-t border-white/5 grid grid-cols-3 gap-1 relative z-10 text-[10px] font-mono">
+        {breakdowns.map((item, idx) => (
+          <div key={idx} className="flex flex-col">
+            <span className="text-slate-500 text-[9px] uppercase tracking-wider">{item.label}</span>
+            <span className={`font-bold truncate ${item.color || 'text-slate-200'}`}>{item.value}</span>
+          </div>
+        ))}
+      </div>
+    )}
   </div>
 );
 
@@ -1123,24 +1388,20 @@ const BookingTable = ({ bookings, onUpdateStatus, onDelete }: any) => {
               <td className="p-5 text-right">
                 <div className="flex justify-end gap-2">
                   {b.status === 'PENDING' && (
-                    <>
-                      <button 
-                        onClick={() => handleAuthorize(b)} 
-                        className="px-4 py-2 bg-brand-cyan text-brand-dark text-[10px] rounded font-black uppercase tracking-widest hover:bg-cyan-400 transition-all shadow-lg"
-                      >
-                        AUTHORIZE
-                      </button>
+                    <div className="flex items-center justify-end gap-2">
+                      <span className="text-[10px] font-mono text-slate-500 italic">Unpaid</span>
                       <button 
                         onClick={() => {
-                          if (window.confirm("Are you sure you want to remove this booking request?")) {
+                          if (window.confirm("Are you sure you want to remove this unpaid booking request?")) {
                             onDelete(b.orderId);
                           }
                         }}
-                        className="px-4 py-2 bg-red-500/10 text-red-500 border border-red-500/20 text-[10px] rounded font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all shadow-lg flex items-center gap-1.5"
+                        className="px-3.5 py-1.5 bg-red-500/10 text-red-400 border border-red-500/20 text-[10px] rounded font-bold uppercase tracking-wider hover:bg-red-500 hover:text-white transition-all shadow-lg flex items-center gap-1.5 cursor-pointer"
+                        title="Remove unpaid booking from database"
                       >
                         <Trash2 size={12} /> REMOVE
                       </button>
-                    </>
+                    </div>
                   )}
                   {(b.status === 'ACTIVE' || b.status === 'PRE_BOOKED') && (
                     <button 
