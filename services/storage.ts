@@ -76,7 +76,7 @@ export const DEFAULT_HOME_CONFIG: HomeConfig = {
     { title: "SELECT AGENT", desc: "Browse our premium inventory." },
     { title: "CHOOSE TIME", desc: "Pick 3h, 12h, or 24h plans." },
     { title: "SECURE PAY", desc: "Scan QR and enter UTR ID." },
-    { title: "PLAY NOW", desc: "Get details on WhatsApp." }
+    { title: "PLAY NOW", desc: "Get details instantly on site itself." }
   ],
   reviews: [
     {
