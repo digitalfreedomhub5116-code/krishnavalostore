@@ -5,6 +5,7 @@ import { UserCog, Home, Gamepad2, User as UserIcon, LogOut, LayoutDashboard, Zap
 import { StorageService, DEFAULT_HOME_CONFIG, SITE_LOGO_URL } from '../services/storage';
 import { User, HomeConfig } from '../types';
 import SkinSearchFloatingBar from './SkinSearchFloatingBar';
+import LiveSocialProofTicker from './LiveSocialProofTicker';
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const location = useLocation();
@@ -290,6 +291,9 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
            })}
         </div>
       </div>
+
+      {/* DYNAMIC LIVE SOCIAL PROOF TICKER */}
+      <LiveSocialProofTicker />
 
     </div>
   );
