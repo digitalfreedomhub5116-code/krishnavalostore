@@ -633,6 +633,22 @@ Credentials automatically issued on screen.
                 </div>
              )}
 
+             {/* 10-Minute Replacement Guarantee Badge */}
+             <div className="mb-4 p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-start gap-3">
+                <div className="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center shrink-0 mt-0.5">
+                   <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                </div>
+                <div className="space-y-0.5">
+                   <div className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5 flex-wrap">
+                      <span>10-Minute Replacement Guarantee</span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-mono font-bold">100% RISK-FREE</span>
+                   </div>
+                   <p className="text-[11px] text-slate-300 leading-relaxed">
+                      Password not working or face any login issue? Get an instant replacement account or full refund within 10 minutes.
+                   </p>
+                </div>
+             </div>
+
              <button
                 type="button"
                 onClick={handleRazorpayPayment}

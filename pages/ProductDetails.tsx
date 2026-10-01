@@ -286,6 +286,15 @@ const ProductDetails: React.FC = () => {
               </div>
             )}
 
+            {/* 10-Minute Replacement Guarantee Badge */}
+            <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center gap-2.5">
+               <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+               <div className="text-[11px] text-slate-300 leading-snug">
+                  <span className="font-bold text-emerald-400 mr-1.5 uppercase font-mono text-[10px] tracking-wider">10-Min Guarantee:</span>
+                  Instant replacement or 100% refund if you face any login issue.
+               </div>
+            </div>
+
             <button 
               type="button"
               onClick={handleInitiateRental}

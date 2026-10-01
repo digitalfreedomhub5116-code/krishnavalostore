@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Account } from '../types';
-import { Trophy, Eye, Gamepad2 } from 'lucide-react';
+import { Trophy, Eye, Gamepad2, ShieldCheck } from 'lucide-react';
 
 interface AccountCardProps {
   account: Account;
@@ -67,6 +67,12 @@ const AccountCard: React.FC<AccountCardProps> = ({ account }) => {
             <Trophy className={`w-3.5 h-3.5 ${getRankColor(account.rank)}`} />
             <span className={`text-[11px] font-bold tracking-wider font-display uppercase ${getRankColor(account.rank)}`}>{account.rank}</span>
           </div>
+
+          {/* 10-Min Guarantee Micro-Badge - Top Right Corner */}
+          <div className="absolute top-3 right-3 z-20 flex items-center gap-1 bg-black/75 backdrop-blur-md px-2 py-0.5 rounded border border-emerald-500/30">
+            <ShieldCheck className="w-3 h-3 text-emerald-400" />
+            <span className="text-[9px] font-mono font-bold tracking-wider uppercase text-emerald-400">10m Covered</span>
+          </div>
         </div>
 
         {/* Content */}
@@ -74,7 +80,7 @@ const AccountCard: React.FC<AccountCardProps> = ({ account }) => {
           <h3 className="text-xl font-display font-bold text-white mb-4 truncate group-hover:text-brand-accent transition-colors">{account.name}</h3>
           
           {/* Pricing Grid */}
-          <div className="grid grid-cols-4 gap-2 mb-5">
+          <div className="grid grid-cols-4 gap-2 mb-3">
             <div className="bg-brand-dark/50 p-2 border border-white/5 text-center flex flex-col justify-center transition-colors">
               <div className="text-[10px] text-slate-500 uppercase">1 Hour</div>
               <div className="text-sm font-bold text-white">₹{account.pricing.hours1 || 80}</div>
@@ -96,6 +102,12 @@ const AccountCard: React.FC<AccountCardProps> = ({ account }) => {
                  ₹{Math.floor(account.pricing.hours24 * 0.9)}
               </div>
             </div>
+          </div>
+
+          {/* Guarantee Subtext */}
+          <div className="flex items-center justify-center gap-1.5 text-[10px] text-emerald-400/90 font-mono mb-4">
+            <ShieldCheck className="w-3 h-3 text-emerald-400 shrink-0" />
+            <span>10-Minute Replacement Guaranteed</span>
           </div>
 
           {/* Action Button */}

@@ -44,8 +44,9 @@ export const DEFAULT_HOME_CONFIG: HomeConfig = {
   marqueeText: [
     "⚡ NEW RADIANT BUNDLES ADDED TO INVENTORY",
     "🔥 GET 10% OFF ON ALL 24-HOUR RENTALS",
-    "🛡️ VANGUARD BYPASS SECURED - 0% BAN RATE",
-    "⚡ INSTANT CREDENTIAL DELIVERY VIA WHATSAPP",
+    "⚡ 10-MINUTE REPLACEMENT GUARANTEE: INSTANT REPLACEMENT OR FULL REFUND",
+    "⚡ VANGUARD BYPASS SECURED - 0% BAN RATE",
+    "⚡ INSTANT CREDENTIAL DELIVERY ON SITE",
     "🏆 TRUSTED BY 5000+ PREMIUM AGENTS"
   ],
   heroSlides: [
@@ -69,7 +70,7 @@ export const DEFAULT_HOME_CONFIG: HomeConfig = {
   trustItems: [
     { label: "Instant", sub: "Auto-Delivery" },
     { label: "Secure", sub: "Anti-Ban Tech" },
-    { label: "Cheap", sub: "Starts ₹49" },
+    { label: "10-Min", sub: "Replacement Policy" },
     { label: "Elite", sub: "Verified MMR" }
   ],
   stepItems: [
