@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { StorageService } from '../services/storage';
+import { AnalyticsService } from '../services/analytics';
 import { Account, Pricing, BookingStatus, Booking, Skin } from '../types';
 import TrustVideoSection from '../components/TrustVideoSection';
 import { ArrowLeft, Gem, Clock, Calendar, ChevronRight, MessageCircle, X, ArrowRight, Lock, Maximize2, ChevronDown, ChevronUp, Sparkles, Loader2, AlertCircle, ShieldCheck, PlayCircle, CalendarClock, Eye } from 'lucide-react';
@@ -31,6 +32,9 @@ const ProductDetails: React.FC = () => {
         if (id) {
           const acc = await StorageService.getAccountById(id);
           setAccount(acc);
+          if (acc) {
+            AnalyticsService.trackPageView(window.location.pathname, acc.id);
+          }
         }
       } finally {
         setLoading(false);
@@ -84,6 +88,7 @@ const ProductDetails: React.FC = () => {
     if (!account) return;
     setInitiateError('');
     setIsInitiating(true);
+    AnalyticsService.trackInitiateRental(account.id);
 
     try {
       const now = new Date();

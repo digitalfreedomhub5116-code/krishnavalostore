@@ -5,13 +5,14 @@ import { createPortal } from 'react-dom';
 import { StorageService, DEFAULT_HOME_CONFIG } from '../services/storage';
 import { AIService } from '../services/ai';
 import { Account, Booking, BookingStatus, Rank, User, HomeConfig, Review, Skin, HeroSlide, TrustItem, StepItem, Coupon, PaymentConfig } from '../types';
-import { Plus, Trash2, Check, X, Edit2, Loader2, LogOut, Square, CheckSquare, BarChart3, IndianRupee, Users, Gamepad2, Home, Save, Zap, Shield, Star, MessageSquare, AlertCircle, Cpu, Search, Video, FileText, Play, Copy, Terminal, Layout, Image as ImageIcon, ShieldCheck, Lock, Ban, Type as TypeIcon, Clock, Ticket, CalendarDays, Repeat, Building, CreditCard, QrCode, Upload } from 'lucide-react';
+import { Plus, Trash2, Check, X, Edit2, Loader2, LogOut, Square, CheckSquare, BarChart3, Activity, IndianRupee, Users, Gamepad2, Home, Save, Zap, Shield, Star, MessageSquare, AlertCircle, Cpu, Search, Video, FileText, Play, Copy, Terminal, Layout, Image as ImageIcon, ShieldCheck, Lock, Ban, Type as TypeIcon, Clock, Ticket, CalendarDays, Repeat, Building, CreditCard, QrCode, Upload } from 'lucide-react';
+import AdminAnalyticsTab from '../components/AdminAnalyticsTab';
 
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
   const isAuthenticated = localStorage.getItem('isAdmin') === 'true' || sessionStorage.getItem('isAdmin') === 'true';
   
-  const [activeTab, setActiveTab] = useState<'bookings' | 'accounts' | 'user_listings' | 'users' | 'edithome' | 'coupons' | 'payment'>('bookings');
+  const [activeTab, setActiveTab] = useState<'bookings' | 'analytics' | 'accounts' | 'user_listings' | 'users' | 'edithome' | 'coupons' | 'payment'>('bookings');
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [users, setUsers] = useState<User[]>([]);
@@ -339,6 +340,7 @@ const AdminDashboard: React.FC = () => {
       <div className="flex bg-brand-dark p-1 rounded-lg border border-white/10 w-full md:w-fit mb-8 overflow-x-auto shadow-2xl no-scrollbar">
         {[
           { id: 'bookings', icon: BarChart3, label: 'Bookings' },
+          { id: 'analytics', icon: Activity, label: 'Intelligence & Traffic' },
           { id: 'accounts', icon: Gamepad2, label: 'Platform IDs' },
           { id: 'user_listings', icon: Users, label: 'User IDs' },
           { id: 'users', icon: Users, label: 'Users' },
@@ -359,6 +361,8 @@ const AdminDashboard: React.FC = () => {
 
       {activeTab === 'bookings' && <BookingTable bookings={enhancedBookings} onUpdateStatus={async (id: string, s: BookingStatus) => { try { await StorageService.updateBookingStatus(id, s); refreshData(); } catch(e: any) { alert(e.message); } }} onDelete={async (id: string) => { await StorageService.deleteBooking(id); refreshData(); }} />}
       
+      {activeTab === 'analytics' && <AdminAnalyticsTab accounts={accounts} bookings={bookings} />}
+
       {activeTab === 'accounts' && (
         <div className="space-y-6">
           {/* Bulk Pricing Management Card */}

@@ -4,6 +4,7 @@ import { useLocation, useNavigate, Navigate } from 'react-router-dom';
 import { Account, UPI_ID, BookingStatus, Booking, PaymentConfig } from '../types';
 import { Copy, ArrowRight, Timer, CalendarClock, Smartphone, ShieldCheck, Zap, Ticket, CheckCircle, XCircle, Loader2, AlertCircle, MessageCircle, CreditCard, Lock, Check, Eye, EyeOff } from 'lucide-react';
 import { StorageService, SITE_LOGO_URL } from '../services/storage';
+import { AnalyticsService } from '../services/analytics';
 import TrustVideoSection from '../components/TrustVideoSection';
 
 interface CheckoutState {
@@ -51,6 +52,7 @@ const Checkout: React.FC = () => {
   });
 
   useEffect(() => {
+    AnalyticsService.trackCheckoutView();
     StorageService.getHomeConfig().then(cfg => {
       if (cfg.payment) {
         setPaymentConfig(cfg.payment);
@@ -242,6 +244,9 @@ Credentials automatically issued on screen.
       durationLabel: state.durationLabel,
       whatsappUrl
     });
+
+    // Track completed booking in analytics
+    AnalyticsService.trackBookingCompleted(state.account.id);
   };
 
   const handleRazorpayPayment = async () => {

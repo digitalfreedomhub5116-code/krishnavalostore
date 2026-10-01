@@ -6,6 +6,7 @@ import { StorageService, DEFAULT_HOME_CONFIG, SITE_LOGO_URL } from '../services/
 import { User, HomeConfig } from '../types';
 import SkinSearchFloatingBar from './SkinSearchFloatingBar';
 import LiveSocialProofTicker from './LiveSocialProofTicker';
+import { AnalyticsService } from '../services/analytics';
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const location = useLocation();
@@ -17,12 +18,14 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   const isHomePage = location.pathname === '/';
 
-  // SCROLL TO TOP LOGIC
+  // SCROLL TO TOP & ANALYTICS TRACKING
   useEffect(() => {
     window.scrollTo({
       top: 0,
       behavior: 'smooth'
     });
+    // Track general page view
+    AnalyticsService.trackPageView(location.pathname);
   }, [location.pathname]);
 
   // SCROLL LISTENER FOR HEADER

@@ -166,3 +166,39 @@ export interface HomeConfig {
     buttonText: string;
   };
 }
+
+export interface AccountAnalytics {
+  views: number;
+  initiates: number;
+  bookings: number;
+  lastViewedAt?: string;
+}
+
+export interface FunnelStats {
+  siteVisits: number;
+  accountViews: number;
+  initiateClicks: number;
+  checkoutViews: number;
+  completedBookings: number;
+}
+
+export interface DailyAnalytics {
+  date: string;
+  uniqueVisitors: number;
+  pageViews: number;
+  totalTimeSeconds: number;
+  sessions: number;
+  deviceMobile: number;
+  deviceDesktop: number;
+}
+
+export interface AnalyticsSummary {
+  totalPageViews: number;
+  totalVisitors: number;
+  totalTimeSpentSeconds: number;
+  totalSessions: number;
+  funnel: FunnelStats;
+  accountStats: Record<string, AccountAnalytics>;
+  dailyStats: Record<string, DailyAnalytics>;
+  updatedAt?: string;
+}
