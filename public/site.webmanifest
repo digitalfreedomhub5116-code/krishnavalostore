@@ -1,0 +1,19 @@
+{
+  "name": "Krishna Valo Store",
+  "short_name": "KrishnaValo",
+  "icons": [
+    {
+      "src": "/favicon-48x48.png",
+      "sizes": "48x48",
+      "type": "image/png"
+    },
+    {
+      "src": "/favicon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ],
+  "theme_color": "#020617",
+  "background_color": "#020617",
+  "display": "standalone"
+}

@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#020617"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="redGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff4655"/>
+      <stop offset="100%" stop-color="#cc2433"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="12" flood-color="#ff4655" flood-opacity="0.45"/>
+    </filter>
+  </defs>
+
+  <!-- Background rounded squircle for maximum pop on light Google search background -->
+  <rect width="512" height="512" rx="112" fill="url(#bgGrad)"/>
+  <rect width="504" height="504" x="4" y="4" rx="108" fill="none" stroke="#ff4655" stroke-width="8" stroke-opacity="0.4"/>
+
+  <!-- Iconic Valorant-style angular "K" and "V" Emblem -->
+  <g filter="url(#glow)">
+    <!-- Letter K (Left side) -->
+    <!-- Vertical bar -->
+    <path d="M110 130 H160 V382 H110 Z" fill="#ffffff"/>
+    <!-- Upper slant -->
+    <path d="M160 270 L260 145 H325 L210 285 Z" fill="#ffffff"/>
+    <!-- Lower slant with Valorant Red -->
+    <path d="M190 262 L320 382 H255 L155 290 Z" fill="url(#redGrad)"/>
+
+    <!-- Letter V (Right side) -->
+    <!-- Left slash of V -->
+    <path d="M330 145 L395 382 H350 L295 180 Z" fill="#ffffff" opacity="0.95"/>
+    <!-- Right slash of V (Signature Valorant Wedge) -->
+    <path d="M435 145 L375 382 H425 L475 195 Z" fill="url(#redGrad)"/>
+  </g>
+
+  <!-- Accent Tech Dot -->
+  <circle cx="256" cy="425" r="8" fill="#00f0ff"/>
+</svg>
