@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { 
   Users, Eye, Clock, TrendingUp, Smartphone, Monitor, 
   AlertTriangle, CheckCircle2, Zap, RefreshCw, RotateCcw, 
-  ArrowDownRight, BarChart3, Flame, HelpCircle
+  ArrowDownRight, BarChart3, Flame, HelpCircle, IndianRupee
 } from 'lucide-react';
-import { Account, Booking, AnalyticsSummary, DailyAnalytics } from '../types';
+import { Account, Booking, BookingStatus, AnalyticsSummary, DailyAnalytics, AccountAnalytics } from '../types';
 import { AnalyticsService, DEFAULT_ANALYTICS_SUMMARY } from '../services/analytics';
 
 interface AdminAnalyticsTabProps {
@@ -16,7 +16,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ accounts, 
   const [analytics, setAnalytics] = useState<AnalyticsSummary>(DEFAULT_ANALYTICS_SUMMARY);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [sortBy, setSortBy] = useState<'views' | 'initiates' | 'conversion' | 'name'>('views');
+  const [sortBy, setSortBy] = useState<'earnings' | 'views' | 'initiates' | 'conversion' | 'name'>('earnings');
 
   const fetchAnalytics = async () => {
     setIsRefreshing(true);
@@ -71,7 +71,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ accounts, 
 
   const totalSessions = Math.max(1, analytics.totalSessions || 1);
   const avgSessionTime = Math.round((analytics.totalTimeSpentSeconds || 0) / totalSessions);
-  const totalAccountViews = Object.values(analytics.accountStats || {}).reduce((sum, a) => sum + (a.views || 0), 0);
+  const totalAccountViews = (Object.values(analytics.accountStats || {}) as AccountAnalytics[]).reduce((sum: number, a: AccountAnalytics) => sum + (a.views || 0), 0);
 
   // Funnel numbers
   const funnel = analytics.funnel || {
@@ -87,19 +87,25 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ accounts, 
   // Merge account data with analytics stats
   const accountRows = accounts.map(acc => {
     const stats = analytics.accountStats?.[acc.id] || { views: 0, initiates: 0, bookings: 0 };
-    // Also cross-reference actual completed bookings
-    const realBookingsCount = bookings.filter(b => b.accountId === acc.id).length;
+    
+    // Cross-reference completed/active bookings to compute exact revenue
+    const accountBookings = bookings.filter(b => 
+      (b.accountId === acc.id || b.accountName?.toLowerCase() === acc.name.toLowerCase()) && 
+      (b.status === BookingStatus.COMPLETED || b.status === BookingStatus.ACTIVE || b.status === BookingStatus.PRE_BOOKED)
+    );
+    const realBookingsCount = accountBookings.length;
     const effectiveBookings = Math.max(stats.bookings || 0, realBookingsCount);
+    const totalEarnings = accountBookings.reduce((sum, b) => sum + (b.totalPrice || 0), 0);
     const conversionRate = stats.views > 0 ? ((stats.initiates / stats.views) * 100) : 0;
     const finalConversion = stats.views > 0 ? ((effectiveBookings / stats.views) * 100) : 0;
 
     // Diagnostic categorization
     let diagnosis: 'top' | 'hesitant' | 'quiet' | 'normal' = 'normal';
-    if (stats.views >= 10 && conversionRate >= 20) {
+    if (totalEarnings >= 200 || (stats.views >= 10 && conversionRate >= 20)) {
       diagnosis = 'top';
     } else if (stats.views >= 15 && conversionRate < 8) {
       diagnosis = 'hesitant'; // People look at it, but don't rent! (Price/skin issue)
-    } else if (stats.views < 5) {
+    } else if (stats.views < 5 && totalEarnings === 0) {
       diagnosis = 'quiet'; // Not getting enough views
     }
 
@@ -108,6 +114,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ accounts, 
       views: stats.views,
       initiates: stats.initiates,
       bookings: effectiveBookings,
+      totalEarnings,
       conversionRate,
       finalConversion,
       diagnosis,
@@ -117,6 +124,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ accounts, 
 
   // Sort account rows
   accountRows.sort((a, b) => {
+    if (sortBy === 'earnings') return b.totalEarnings - a.totalEarnings;
     if (sortBy === 'views') return b.views - a.views;
     if (sortBy === 'initiates') return b.initiates - a.initiates;
     if (sortBy === 'conversion') return b.conversionRate - a.conversionRate;
@@ -400,6 +408,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ accounts, 
               onChange={(e) => setSortBy(e.target.value as any)}
               className="bg-brand-dark border border-white/10 rounded-lg px-3 py-1.5 text-white font-mono text-xs focus:border-brand-accent outline-none"
             >
+              <option value="earnings">Highest Total Earnings</option>
               <option value="views">Most Views</option>
               <option value="initiates">Most Initiates</option>
               <option value="conversion">Highest Conversion</option>
@@ -415,7 +424,7 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ accounts, 
               <tr className="border-b border-white/10 text-slate-400 uppercase font-mono text-[10px] tracking-wider">
                 <th className="py-3 px-3">Account Name</th>
                 <th className="py-3 px-3">Rank</th>
-                <th className="py-3 px-3">1h Rate</th>
+                <th className="py-3 px-3 text-emerald-400 font-bold">Total Earnings</th>
                 <th className="py-3 px-3 text-center">Views</th>
                 <th className="py-3 px-3 text-center">Initiates</th>
                 <th className="py-3 px-3 text-center">Paid Rentals</th>
@@ -445,9 +454,11 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ accounts, 
                     {row.account.rank}
                   </td>
 
-                  {/* 1h Rate */}
-                  <td className="py-3 px-3 font-mono font-bold text-white">
-                    ₹{row.account.pricing.hours1 || 80}/hr
+                  {/* Total Earnings */}
+                  <td className="py-3 px-3 font-mono font-bold text-emerald-400">
+                    <span className="px-2.5 py-1 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-mono text-xs font-bold inline-flex items-center gap-1">
+                      ₹{row.totalEarnings.toLocaleString('en-IN')}
+                    </span>
                   </td>
 
                   {/* Views */}
@@ -562,10 +573,10 @@ export const AdminAnalyticsTab: React.FC<AdminAnalyticsTabProps> = ({ accounts, 
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
-                {Object.values(analytics.dailyStats || {})
+                {(Object.values(analytics.dailyStats || {}) as DailyAnalytics[])
                   .slice(-7)
                   .reverse()
-                  .map(day => (
+                  .map((day: DailyAnalytics) => (
                     <tr key={day.date} className="hover:bg-white/[0.02]">
                       <td className="py-2.5 px-3 font-mono font-bold text-white">{day.date}</td>
                       <td className="py-2.5 px-3 text-center font-mono text-brand-cyan font-bold">{day.uniqueVisitors}</td>
