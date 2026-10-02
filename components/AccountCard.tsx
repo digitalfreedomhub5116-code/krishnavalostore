@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Account } from '../types';
-import { Trophy, Eye, Gamepad2, ShieldCheck } from 'lucide-react';
+import { Trophy, Eye, Gamepad2, ShieldCheck, Flame } from 'lucide-react';
 
 interface AccountCardProps {
   account: Account;
@@ -43,14 +43,20 @@ const AccountCard: React.FC<AccountCardProps> = ({ account }) => {
   };
 
   return (
-    <div className={`group relative rounded-none overflow-hidden border transition-all duration-300 ${isEffectivelyAvailable ? 'border-white/10 bg-brand-surface hover:border-brand-accent/50 hover:shadow-[0_0_30px_rgba(255,70,85,0.15)] hover:-translate-y-2' : 'border-white/5 bg-brand-dark opacity-90'}`}>
+    <div className={`group relative rounded-none overflow-hidden border transition-all duration-300 ${
+      account.isTrending 
+        ? 'border-amber-500/50 bg-brand-surface shadow-[0_0_25px_rgba(245,158,11,0.12)] hover:border-amber-400 hover:shadow-[0_0_35px_rgba(245,158,11,0.25)] hover:-translate-y-2'
+        : isEffectivelyAvailable 
+          ? 'border-white/10 bg-brand-surface hover:border-brand-accent/50 hover:shadow-[0_0_30px_rgba(255,70,85,0.15)] hover:-translate-y-2' 
+          : 'border-white/5 bg-brand-dark opacity-90'
+    }`}>
       
       <Link to={`/account/${account.id}`} className="block h-full">
         {/* Corner Accents (Cyberpunk Style) */}
-        <div className="absolute top-0 left-0 w-2 h-2 border-l border-t border-white/20 group-hover:border-brand-accent transition-colors z-20"></div>
-        <div className="absolute top-0 right-0 w-2 h-2 border-r border-t border-white/20 group-hover:border-brand-accent transition-colors z-20"></div>
-        <div className="absolute bottom-0 left-0 w-2 h-2 border-l border-b border-white/20 group-hover:border-brand-accent transition-colors z-20"></div>
-        <div className="absolute bottom-0 right-0 w-2 h-2 border-r border-b border-white/20 group-hover:border-brand-accent transition-colors z-20"></div>
+        <div className={`absolute top-0 left-0 w-2 h-2 border-l border-t transition-colors z-20 ${account.isTrending ? 'border-amber-400' : 'border-white/20 group-hover:border-brand-accent'}`}></div>
+        <div className={`absolute top-0 right-0 w-2 h-2 border-r border-t transition-colors z-20 ${account.isTrending ? 'border-amber-400' : 'border-white/20 group-hover:border-brand-accent'}`}></div>
+        <div className={`absolute bottom-0 left-0 w-2 h-2 border-l border-b transition-colors z-20 ${account.isTrending ? 'border-amber-400' : 'border-white/20 group-hover:border-brand-accent'}`}></div>
+        <div className={`absolute bottom-0 right-0 w-2 h-2 border-r border-b transition-colors z-20 ${account.isTrending ? 'border-amber-400' : 'border-white/20 group-hover:border-brand-accent'}`}></div>
 
         {/* Image Overlay */}
         <div className="relative h-48 w-full overflow-hidden">
@@ -62,7 +68,15 @@ const AccountCard: React.FC<AccountCardProps> = ({ account }) => {
           />
           <div className="absolute inset-0 bg-gradient-to-t from-brand-surface via-transparent to-transparent opacity-90" />
           
-          {/* Rank Badge - Top Left Corner (Reduced Size) */}
+          {/* Trending Tag Badge (Centered Top) */}
+          {account.isTrending && (
+            <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 text-black font-black text-[10px] uppercase px-3 py-1 rounded-full shadow-[0_0_20px_rgba(245,158,11,0.7)] animate-pulse tracking-widest border border-amber-300">
+              <Flame className="w-3.5 h-3.5 fill-black text-black" />
+              <span>TRENDING</span>
+            </div>
+          )}
+
+          {/* Rank Badge - Top Left Corner */}
           <div className="absolute top-3 left-3 z-20 flex items-center gap-1.5 bg-black/70 backdrop-blur-md px-2.5 py-1 border-l-2 border-brand-accent">
             <Trophy className={`w-3.5 h-3.5 ${getRankColor(account.rank)}`} />
             <span className={`text-[11px] font-bold tracking-wider font-display uppercase ${getRankColor(account.rank)}`}>{account.rank}</span>

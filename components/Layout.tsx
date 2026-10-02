@@ -95,10 +95,11 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       {/* TOP MARQUEE (As requested in image) */}
       <div className="bg-black/40 border-b border-white/5 backdrop-blur-sm relative z-[60] overflow-hidden h-8 flex items-center">
          <div className="animate-marquee whitespace-nowrap flex items-center gap-8 text-[10px] font-bold tracking-[0.2em] text-slate-400 uppercase w-full">
+            <span className="flex items-center gap-2 text-emerald-400 font-bold">🔥 COMPLETED 570+ SUCCESSFUL RENTALS & INCREASING</span>
             <span className="flex items-center gap-2"><Zap size={10} className="text-yellow-400" /> NEW RADIANT BUNDLES ADDED TO INVENTORY</span>
             <span className="flex items-center gap-2 text-brand-accent">⚡ GET 10% OFF ON ALL 24-HOUR RENTALS</span>
             <span className="flex items-center gap-2"><Shield size={10} className="text-green-400" /> VANGUARD BYPASS SECURED - 0% BAN RATE</span>
-            <span className="flex items-center gap-2"><Zap size={10} className="text-yellow-400" /> NEW RADIANT BUNDLES ADDED TO INVENTORY</span>
+            <span className="flex items-center gap-2 text-emerald-400 font-bold">🔥 COMPLETED 570+ SUCCESSFUL RENTALS & INCREASING</span>
          </div>
       </div>
 

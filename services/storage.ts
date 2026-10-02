@@ -333,6 +333,20 @@ export const StorageService = {
     return bookings.filter(b => b.customerId === userId);
   },
 
+  getSuccessfulRentalsCount: async (): Promise<number> => {
+    try {
+      const bookings = await StorageService.getBookings();
+      const realCount = bookings.filter(b => 
+        b.status === BookingStatus.COMPLETED || 
+        b.status === BookingStatus.ACTIVE || 
+        b.status === BookingStatus.PRE_BOOKED
+      ).length;
+      return 570 + realCount;
+    } catch {
+      return 570;
+    }
+  },
+
   // Check if a time slot is available for an account
   checkAvailability: async (accountId: string, startTime: string, endTime: string): Promise<boolean> => {
     const bookings = await StorageService.getBookings(accountId);

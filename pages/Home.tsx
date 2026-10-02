@@ -5,6 +5,7 @@ import { ChevronRight, Gamepad2, Clock, QrCode, MessageCircle, Play, Star, Zap, 
 import CustomVideoPlayer from '../components/CustomVideoPlayer';
 import { StorageService, DEFAULT_HOME_CONFIG } from '../services/storage';
 import { HomeConfig, Review, StepItem } from '../types';
+import LiveRentalCounter from '../components/LiveRentalCounter';
 
 const STEP_ICONS = [Gamepad2, Clock, QrCode, MessageCircle];
 
@@ -221,6 +222,11 @@ const Home: React.FC = () => {
             </Link>
           </div>
 
+          {/* Dynamic Trust Counter: 570+ Successful Rentals and Increasing */}
+          <div className="mt-8 flex justify-center animate-reveal-up" style={{ animationDelay: '0.6s' }}>
+            <LiveRentalCounter variant="hero" />
+          </div>
+
           <div className="mt-16 md:mt-24 flex items-center justify-center gap-4 animate-reveal-up" style={{ animationDelay: '0.7s' }}>
             {(config.heroSlides || []).map((slide, idx) => (
               <button 
@@ -356,6 +362,9 @@ const Home: React.FC = () => {
       </section>
 
       <section className="bg-brand-darker border-y border-white/5 py-16 md:py-24 relative transform-gpu">
+        <div className="max-w-7xl mx-auto px-4 relative z-10 mb-10 flex justify-center animate-on-scroll reveal-up">
+          <LiveRentalCounter variant="hero" />
+        </div>
         <div className="max-w-7xl mx-auto px-4 grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 relative z-10">
           {(config.trustItems || []).map((item, i) => {
             const Icon = trustIcons[i % trustIcons.length] || Star;

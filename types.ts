@@ -42,6 +42,7 @@ export interface Account {
   listedByName?: string; // Added: Name of the user for display
   region?: string;   // Added region support
   level?: number;    // Added account level
+  isTrending?: boolean; // Highlighted as Trending Account
 }
 
 export type UserRole = 'customer' | 'admin';

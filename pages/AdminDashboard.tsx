@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { StorageService, DEFAULT_HOME_CONFIG } from '../services/storage';
 import { AIService } from '../services/ai';
 import { Account, Booking, BookingStatus, Rank, User, HomeConfig, Review, Skin, HeroSlide, TrustItem, StepItem, Coupon, PaymentConfig } from '../types';
-import { Plus, Trash2, Check, X, Edit2, Loader2, LogOut, Square, CheckSquare, BarChart3, Activity, IndianRupee, Users, Gamepad2, Home, Save, Zap, Shield, Star, MessageSquare, AlertCircle, Cpu, Search, Video, FileText, Play, Copy, Terminal, Layout, Image as ImageIcon, ShieldCheck, Lock, Ban, Type as TypeIcon, Clock, Ticket, CalendarDays, Repeat, Building, CreditCard, QrCode, Upload, RotateCcw, Calendar } from 'lucide-react';
+import { Plus, Trash2, Check, X, Edit2, Loader2, LogOut, Square, CheckSquare, BarChart3, Activity, IndianRupee, Users, Gamepad2, Home, Save, Zap, Shield, Star, MessageSquare, AlertCircle, Cpu, Search, Video, FileText, Play, Copy, Terminal, Layout, Image as ImageIcon, ShieldCheck, Lock, Ban, Type as TypeIcon, Clock, Ticket, CalendarDays, Repeat, Building, CreditCard, QrCode, Upload, RotateCcw, Calendar, Flame } from 'lucide-react';
 import AdminAnalyticsTab from '../components/AdminAnalyticsTab';
 
 const AdminDashboard: React.FC = () => {
@@ -75,6 +75,24 @@ const AdminDashboard: React.FC = () => {
       alert(`Bulk update failed: ${err.message || err}`);
     } finally {
       setIsBulkUpdating(false);
+    }
+  };
+
+  const [updatingTrendingId, setUpdatingTrendingId] = useState<string | null>(null);
+
+  const handleToggleTrending = async (acc: Account) => {
+    setUpdatingTrendingId(acc.id);
+    try {
+      const updatedAccount: Account = {
+        ...acc,
+        isTrending: !acc.isTrending
+      };
+      await StorageService.saveAccount(updatedAccount);
+      setAccounts(prev => prev.map(a => a.id === acc.id ? updatedAccount : a));
+    } catch (err: any) {
+      alert("Failed to update trending status: " + (err?.message || 'Error'));
+    } finally {
+      setUpdatingTrendingId(null);
     }
   };
 
@@ -643,15 +661,46 @@ const AdminDashboard: React.FC = () => {
             {accounts.filter(a => !a.listedBy).map(acc => (
               <div key={acc.id} className="bg-brand-surface border border-white/10 rounded-xl p-5 flex justify-between items-center group hover:border-brand-accent/50 transition-all shadow-lg">
                 <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-lg bg-black overflow-hidden border border-white/5">
+                    <div className="w-12 h-12 rounded-lg bg-black overflow-hidden border border-white/5 relative">
                         <img src={acc.imageUrl} className="w-full h-full object-cover" alt="" />
+                        {acc.isTrending && (
+                          <div className="absolute top-0.5 right-0.5 bg-amber-500 rounded-full p-0.5 shadow-[0_0_8px_rgba(245,158,11,0.8)]">
+                            <Flame size={10} className="fill-black text-black" />
+                          </div>
+                        )}
                     </div>
                     <div>
-                        <div className="font-bold text-white text-sm uppercase tracking-tight">{acc.name}</div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-white text-sm uppercase tracking-tight">{acc.name}</span>
+                          {acc.isTrending && (
+                            <span className="px-1.5 py-0.5 rounded bg-amber-500/20 border border-amber-500/40 text-amber-400 text-[9px] font-bold font-mono uppercase flex items-center gap-1 shadow-[0_0_10px_rgba(245,158,11,0.2)]">
+                              <Flame size={10} className="fill-amber-400 text-amber-400" /> Trending
+                            </span>
+                          )}
+                        </div>
                         <div className="text-[10px] text-slate-500 font-mono">{acc.rank} // {acc.id}</div>
                     </div>
                 </div>
-                <Link to={`/admin/edit/${acc.id}`} className="p-2.5 bg-brand-surface border border-white/10 text-slate-400 rounded-lg hover:bg-brand-cyan hover:text-brand-dark hover:border-brand-cyan transition-all"><Edit2 size={16} /></Link>
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={() => handleToggleTrending(acc)}
+                    disabled={updatingTrendingId === acc.id}
+                    className={`p-2.5 rounded-lg border transition-all flex items-center gap-1.5 text-xs font-bold ${
+                      acc.isTrending 
+                        ? 'bg-amber-500/20 border-amber-500/50 text-amber-400 hover:bg-amber-500/30 shadow-[0_0_12px_rgba(245,158,11,0.25)]' 
+                        : 'bg-brand-surface border-white/10 text-slate-400 hover:text-amber-400 hover:border-amber-500/40 hover:bg-amber-500/10'
+                    }`}
+                    title={acc.isTrending ? "Click to remove Trending tag" : "Click to tag as Trending (Pins to top)"}
+                  >
+                    {updatingTrendingId === acc.id ? (
+                      <Loader2 size={15} className="animate-spin text-amber-400" />
+                    ) : (
+                      <Flame size={15} className={acc.isTrending ? "fill-amber-400 text-amber-400" : ""} />
+                    )}
+                    <span className="hidden sm:inline">{acc.isTrending ? "Trending" : "Tag Trending"}</span>
+                  </button>
+                  <Link to={`/admin/edit/${acc.id}`} className="p-2.5 bg-brand-surface border border-white/10 text-slate-400 rounded-lg hover:bg-brand-cyan hover:text-brand-dark hover:border-brand-cyan transition-all"><Edit2 size={16} /></Link>
+                </div>
               </div>
             ))}
           </div>
@@ -666,11 +715,23 @@ const AdminDashboard: React.FC = () => {
                      Listed by: {acc.listedByName || 'Unknown'}
                   </div>
                   <div className="flex items-center gap-4 mb-4">
-                     <div className="w-12 h-12 rounded-lg bg-black overflow-hidden border border-white/5">
+                     <div className="w-12 h-12 rounded-lg bg-black overflow-hidden border border-white/5 relative">
                         <img src={acc.imageUrl} className="w-full h-full object-cover" alt="" />
+                        {acc.isTrending && (
+                          <div className="absolute top-0.5 right-0.5 bg-amber-500 rounded-full p-0.5 shadow-[0_0_8px_rgba(245,158,11,0.8)]">
+                            <Flame size={10} className="fill-black text-black" />
+                          </div>
+                        )}
                      </div>
                      <div>
-                        <div className="font-bold text-white text-sm uppercase tracking-tight truncate w-32">{acc.name}</div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-white text-sm uppercase tracking-tight truncate w-32">{acc.name}</span>
+                          {acc.isTrending && (
+                            <span className="px-1.5 py-0.5 rounded bg-amber-500/20 border border-amber-500/40 text-amber-400 text-[9px] font-bold font-mono uppercase flex items-center gap-1 shadow-[0_0_10px_rgba(245,158,11,0.2)]">
+                              <Flame size={10} className="fill-amber-400 text-amber-400" /> Trending
+                            </span>
+                          )}
+                        </div>
                         <div className="text-[10px] text-slate-500 font-mono">{acc.rank}</div>
                      </div>
                   </div>
@@ -678,9 +739,28 @@ const AdminDashboard: React.FC = () => {
                      <div className={`text-[10px] font-bold uppercase ${acc.isBooked ? 'text-red-400' : 'text-green-400'}`}>
                         {acc.isBooked ? 'Occupied' : 'Active'}
                      </div>
-                     <Link to={`/admin/edit/${acc.id}`} className="p-2 bg-brand-surface border border-white/10 text-slate-400 rounded-lg hover:bg-brand-cyan hover:text-brand-dark transition-all">
-                        <Edit2 size={14} />
-                     </Link>
+                     <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleToggleTrending(acc)}
+                          disabled={updatingTrendingId === acc.id}
+                          className={`p-2 rounded-lg border transition-all flex items-center gap-1 text-[11px] font-bold ${
+                            acc.isTrending 
+                              ? 'bg-amber-500/20 border-amber-500/50 text-amber-400 hover:bg-amber-500/30 shadow-[0_0_10px_rgba(245,158,11,0.25)]' 
+                              : 'bg-brand-surface border-white/10 text-slate-400 hover:text-amber-400 hover:border-amber-500/40'
+                          }`}
+                          title={acc.isTrending ? "Click to remove Trending tag" : "Click to tag as Trending"}
+                        >
+                          {updatingTrendingId === acc.id ? (
+                            <Loader2 size={13} className="animate-spin text-amber-400" />
+                          ) : (
+                            <Flame size={13} className={acc.isTrending ? "fill-amber-400 text-amber-400" : ""} />
+                          )}
+                          <span className="hidden sm:inline">{acc.isTrending ? "Trending" : "Tag"}</span>
+                        </button>
+                        <Link to={`/admin/edit/${acc.id}`} className="p-2 bg-brand-surface border border-white/10 text-slate-400 rounded-lg hover:bg-brand-cyan hover:text-brand-dark transition-all">
+                           <Edit2 size={14} />
+                        </Link>
+                     </div>
                   </div>
                </div>
             ))}
@@ -1247,7 +1327,7 @@ const AdminDashboard: React.FC = () => {
            <div className="bg-brand-surface border border-white/10 rounded-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh] shadow-[0_0_100px_rgba(0,0,0,0.8)]">
               <div className="p-6 border-b border-white/5 bg-brand-dark flex justify-between items-center"><div className="flex items-center gap-3"><ShieldCheck className="text-brand-cyan" size={24} /><h2 className="text-xl font-bold text-white uppercase tracking-tighter italic">Vanguard Agent Deployment</h2></div><button onClick={() => setShowAddModal(false)} className="text-slate-500 hover:text-white transition-colors"><X size={24}/></button></div>
               <div className="flex-1 overflow-y-auto p-8 space-y-8">
-                 <section className="space-y-4"><h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.4em] mb-4">Identity & Visuals</h3><div className="grid grid-cols-1 md:grid-cols-2 gap-6"><div><label className="block text-xs font-bold text-slate-400 uppercase mb-2">Display Name</label><input type="text" value={newAccount.name} onChange={e => setNewAccount({...newAccount, name: e.target.value})} className="w-full bg-brand-dark border border-white/10 rounded-lg px-4 py-3 text-white focus:border-brand-accent outline-none" placeholder="e.g. Radiant Beast #IND" /></div><div><label className="block text-xs font-bold text-slate-400 uppercase mb-2">Rank</label><select value={newAccount.rank} onChange={e => setNewAccount({...newAccount, rank: e.target.value as Rank})} className="w-full bg-brand-dark border border-white/10 rounded-lg px-4 py-3 text-white focus:border-brand-accent outline-none cursor-pointer">{Object.values(Rank).map(r => <option key={r} value={r}>{r}</option>)}</select></div></div><div><label className="block text-xs font-bold text-slate-400 uppercase mb-2">Hero Intelligence URL (Image)</label><input type="text" value={newAccount.imageUrl} onChange={e => setNewAccount({...newAccount, imageUrl: e.target.value})} className="w-full bg-brand-dark border border-white/10 rounded-lg px-4 py-3 text-brand-cyan font-mono text-xs focus:border-brand-cyan outline-none" /></div></section>
+                  <section className="space-y-4"><h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.4em] mb-4">Identity & Visuals</h3><div className="grid grid-cols-1 md:grid-cols-2 gap-6"><div><label className="block text-xs font-bold text-slate-400 uppercase mb-2">Display Name</label><input type="text" value={newAccount.name} onChange={e => setNewAccount({...newAccount, name: e.target.value})} className="w-full bg-brand-dark border border-white/10 rounded-lg px-4 py-3 text-white focus:border-brand-accent outline-none" placeholder="e.g. Radiant Beast #IND" /></div><div><label className="block text-xs font-bold text-slate-400 uppercase mb-2">Rank</label><select value={newAccount.rank} onChange={e => setNewAccount({...newAccount, rank: e.target.value as Rank})} className="w-full bg-brand-dark border border-white/10 rounded-lg px-4 py-3 text-white focus:border-brand-accent outline-none cursor-pointer">{Object.values(Rank).map(r => <option key={r} value={r}>{r}</option>)}</select></div></div><div><label className="block text-xs font-bold text-slate-400 uppercase mb-2">Hero Intelligence URL (Image)</label><input type="text" value={newAccount.imageUrl} onChange={e => setNewAccount({...newAccount, imageUrl: e.target.value})} className="w-full bg-brand-dark border border-white/10 rounded-lg px-4 py-3 text-brand-cyan font-mono text-xs focus:border-brand-cyan outline-none" /></div><div className="pt-2"><label className="flex items-center gap-3 cursor-pointer select-none bg-brand-dark p-3 rounded-lg border border-white/10 hover:border-amber-500/40 transition-colors"><input type="checkbox" checked={!!newAccount.isTrending} onChange={e => setNewAccount({...newAccount, isTrending: e.target.checked})} className="w-4 h-4 rounded text-brand-accent focus:ring-0 bg-brand-surface border-white/20 cursor-pointer" /><span className="text-xs font-bold text-amber-400 uppercase flex items-center gap-1.5"><Flame size={14} className="fill-amber-400" /> Tag as Trending Account (Feature above others on site)</span></label></div></section>
                  <section className="space-y-4 bg-brand-accent/5 p-6 rounded-xl border border-brand-accent/20"><h3 className="text-[10px] font-bold text-brand-accent uppercase tracking-[0.4em] mb-4 flex items-center gap-2"><Lock size={14} /> Secure Credentials</h3><div className="grid grid-cols-1 md:grid-cols-2 gap-6"><div><label className="block text-xs font-bold text-slate-400 uppercase mb-2">Riot Username</label><input type="text" value={newAccount.username} onChange={e => setNewAccount({...newAccount, username: e.target.value})} className="w-full bg-brand-dark border border-white/10 rounded-lg px-4 py-3 text-white focus:border-brand-accent outline-none font-mono" /></div><div><label className="block text-xs font-bold text-slate-400 uppercase mb-2">Riot Password</label><input type="text" value={newAccount.password} onChange={e => setNewAccount({...newAccount, password: e.target.value})} className="w-full bg-brand-dark border border-white/10 rounded-lg px-4 py-3 text-white focus:border-brand-accent outline-none font-mono" /></div></div></section>
               </div>
               <div className="p-6 border-t border-white/5 bg-brand-dark flex gap-4"><button onClick={() => setShowAddModal(false)} className="flex-1 py-4 border border-white/10 text-slate-400 hover:text-white hover:bg-white/5 font-bold rounded-xl transition-all uppercase tracking-widest text-xs">Abort Deployment</button><button onClick={handleDeployAccount} className="flex-[2] py-4 bg-brand-accent hover:bg-red-600 text-white font-bold rounded-xl transition-all shadow-xl shadow-brand-accent/30 uppercase tracking-widest text-xs flex items-center justify-center gap-2"><Plus size={18} /> Deploy to Database</button></div>

@@ -4,7 +4,8 @@ import { useSearchParams } from 'react-router-dom';
 import { StorageService } from '../services/storage';
 import { Account, Rank } from '../types';
 import AccountCard from '../components/AccountCard';
-import { Search, X, Filter, ChevronDown, Loader2 } from 'lucide-react';
+import LiveRentalCounter from '../components/LiveRentalCounter';
+import { Search, X, Filter, ChevronDown, Loader2, Flame } from 'lucide-react';
 
 const Browse: React.FC = () => {
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -54,6 +55,15 @@ const Browse: React.FC = () => {
       );
   });
 
+  // Sort accounts so trending accounts appear above others
+  const sortedAccounts = [...filteredAccounts].sort((a, b) => {
+    if (a.isTrending && !b.isTrending) return -1;
+    if (!a.isTrending && b.isTrending) return 1;
+    return 0;
+  });
+
+  const trendingAccounts = filteredAccounts.filter(a => a.isTrending);
+
   const clearSearch = () => {
     setSearchParams({});
   };
@@ -87,8 +97,10 @@ const Browse: React.FC = () => {
              </div>
            ) : (
              <>
-               <h1 className="text-3xl font-display font-bold text-white mb-2">Available Accounts</h1>
-               <p className="text-slate-400">Choose your weapon. Rent instantly.</p>
+               <h1 className="text-3xl font-display font-bold text-white mb-1">Available Accounts</h1>
+               <p className="text-slate-400 text-sm mb-2.5">Choose your weapon. Rent instantly.</p>
+               {/* Live Rental Counter */}
+               <LiveRentalCounter variant="badge" />
              </>
            )}
         </div>
@@ -131,8 +143,31 @@ const Browse: React.FC = () => {
         </div>
       ) : (
         <>
+            {/* Highlighted Trending Section Above All IDs */}
+            {trendingAccounts.length > 0 && selectedRank === 'All' && !searchQuery && (
+              <div className="mb-12 animate-in fade-in slide-in-from-top-4 duration-500">
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="flex items-center gap-2 px-3 py-1 bg-amber-500/15 border border-amber-500/40 rounded-lg text-amber-400 font-mono text-xs font-bold uppercase tracking-wider shadow-[0_0_15px_rgba(245,158,11,0.2)]">
+                    <Flame className="w-4 h-4 fill-amber-400 animate-pulse" />
+                    <span>Trending Now // High Demand</span>
+                  </div>
+                  <span className="text-slate-400 text-xs font-mono hidden sm:inline">Most requested accounts right now</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {trendingAccounts.map(account => (
+                    <AccountCard 
+                      key={`trending-shelf-${account.id}`} 
+                      account={account} 
+                    />
+                  ))}
+                </div>
+                <div className="mt-10 border-b border-white/10" />
+              </div>
+            )}
+
+            {/* Main Account Grid (Trending accounts sorted above) */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredAccounts.map(account => (
+                {sortedAccounts.map(account => (
                 <AccountCard 
                     key={account.id} 
                     account={account} 

@@ -4,7 +4,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { StorageService } from '../services/storage';
 import { AIService, MarketingContent } from '../services/ai';
 import { Account, Rank, Pricing, Skin } from '../types';
-import { ArrowLeft, Save, Trash2, Plus, X, Loader2, Image as ImageIcon, Gem, Shield, Clock, Star, List, Sparkles, Copy } from 'lucide-react';
+import { ArrowLeft, Save, Trash2, Plus, X, Loader2, Image as ImageIcon, Gem, Shield, Clock, Star, List, Sparkles, Copy, Flame } from 'lucide-react';
 
 const AdminEditAccount: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -178,6 +178,40 @@ const AdminEditAccount: React.FC = () => {
                   className="w-full bg-brand-dark border border-white/10 rounded-lg px-4 py-3 text-white focus:border-brand-accent transition-colors outline-none resize-none"
                   placeholder="Tell customers about this account..."
                 />
+              </div>
+
+              {/* Trending Status Toggle */}
+              <div className="flex items-center justify-between p-4 bg-brand-dark border border-white/10 rounded-xl">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                    <Flame size={20} className={account.isTrending ? "fill-amber-400" : ""} />
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                      <span>Trending Status</span>
+                      {account.isTrending && (
+                        <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 text-[9px] font-mono font-bold uppercase">
+                          Active
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-[11px] text-slate-400 mt-0.5">
+                      Highlight with glowing "TRENDING" badge and display above other IDs on browse page.
+                    </div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleUpdateField('isTrending', !account.isTrending)}
+                  className={`px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-2 ${
+                    account.isTrending 
+                      ? 'bg-amber-500 text-black font-extrabold shadow-[0_0_15px_rgba(245,158,11,0.4)]' 
+                      : 'bg-brand-surface border border-white/10 text-slate-400 hover:text-white hover:border-white/20'
+                  }`}
+                >
+                  <Flame size={14} className={account.isTrending ? "fill-black text-black" : ""} />
+                  {account.isTrending ? 'Trending: ON' : 'Trending: OFF'}
+                </button>
               </div>
             </div>
           </div>
