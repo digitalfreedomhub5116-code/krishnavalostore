@@ -1390,7 +1390,34 @@ const StatCard = ({ label, value, icon: Icon, color, badge, breakdowns }: StatCa
   </div>
 );
 
-// New Component to handle countdown logic efficiently
+// Helper function to format rental exact start date and time
+const formatRentalDateTime = (isoDateStr?: string) => {
+  if (!isoDateStr) return { date: 'N/A', time: '', isFuture: false };
+  try {
+    const d = new Date(isoDateStr);
+    if (isNaN(d.getTime())) return { date: 'N/A', time: '', isFuture: false };
+    
+    const date = d.toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    });
+    
+    const time = d.toLocaleTimeString('en-IN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    }).toUpperCase();
+
+    const isFuture = d.getTime() > Date.now();
+
+    return { date, time, isFuture };
+  } catch {
+    return { date: 'N/A', time: '', isFuture: false };
+  }
+};
+
+// Component to handle countdown logic and rental timings efficiently
 const BookingTimer: React.FC<{ booking: Booking }> = ({ booking }) => {
   const [displayText, setDisplayText] = useState('');
 
@@ -1421,15 +1448,31 @@ const BookingTimer: React.FC<{ booking: Booking }> = ({ booking }) => {
     return () => clearInterval(interval);
   }, [booking]);
 
-  if (booking.status === BookingStatus.CANCELLED) return <span className="text-slate-500">Terminated</span>;
-  if (booking.status === BookingStatus.COMPLETED) return <span className="text-slate-500">Finished</span>;
-  if (booking.status === BookingStatus.PENDING) return <span className="text-yellow-500">Pending Action</span>;
+  if (booking.status === BookingStatus.CANCELLED) return <span className="text-slate-500 font-mono text-xs">Terminated</span>;
+  if (booking.status === BookingStatus.COMPLETED) {
+    const endInfo = formatRentalDateTime(booking.endTime);
+    return (
+      <div className="font-mono text-xs">
+        <span className="text-slate-400 font-bold">Finished</span>
+        {endInfo.time && (
+          <div className="text-[10px] text-slate-500 mt-0.5">Ended: {endInfo.time}</div>
+        )}
+      </div>
+    );
+  }
+  if (booking.status === BookingStatus.PENDING) return <span className="text-yellow-500 font-mono text-xs font-semibold">Pending Action</span>;
 
   const isFuture = new Date(booking.startTime).getTime() > Date.now();
+  const endInfo = formatRentalDateTime(booking.endTime);
   
   return (
-    <div className={`flex items-center gap-1.5 text-xs font-bold font-mono ${isFuture ? 'text-purple-400' : 'text-green-400'}`}>
-       <Clock size={12} /> {displayText}
+    <div>
+      <div className={`flex items-center gap-1.5 text-xs font-bold font-mono ${isFuture ? 'text-purple-400' : 'text-green-400'}`}>
+         <Clock size={12} /> {displayText}
+      </div>
+      {!isFuture && endInfo.time && (
+        <div className="text-[10px] text-slate-400 font-mono mt-0.5">Until {endInfo.time}</div>
+      )}
     </div>
   );
 };
@@ -1444,12 +1487,13 @@ const BookingTable = ({ bookings, onUpdateStatus, onDelete }: any) => {
 
   return (
     <div className="bg-brand-surface border border-white/10 rounded-xl overflow-hidden overflow-x-auto shadow-2xl">
-      <table className="w-full text-left text-sm min-w-[800px]">
+      <table className="w-full text-left text-sm min-w-[920px]">
         <thead>
            <tr className="bg-brand-darker text-slate-500 border-b border-white/10 uppercase font-bold tracking-widest text-[10px]">
               <th className="p-5">Order ID</th>
               <th className="p-5">Source</th>
               <th className="p-5">Agent</th>
+              <th className="p-5">Rental Started</th>
               <th className="p-5">Status</th>
               <th className="p-5">Timer</th>
               <th className="p-5 text-right">Operation</th>
@@ -1468,6 +1512,41 @@ const BookingTable = ({ bookings, onUpdateStatus, onDelete }: any) => {
                  )}
               </td>
               <td className="p-5"><div className="text-white font-bold">{b.accountName}</div><div className="text-[10px] text-slate-500 font-mono">UTR: {b.utr}</div></td>
+              <td className="p-5 whitespace-nowrap">
+                {(() => {
+                  const startRaw = b.startTime || b.createdAt;
+                  const { date, time, isFuture } = formatRentalDateTime(startRaw);
+
+                  if (date === 'N/A') {
+                    return <span className="text-slate-500 text-xs font-mono">N/A</span>;
+                  }
+
+                  return (
+                    <div>
+                      <div className="flex items-center gap-1.5 text-white font-mono text-xs font-bold">
+                        <Calendar size={13} className="text-brand-cyan" />
+                        <span>{date}</span>
+                        {isFuture && (
+                          <span className="text-[9px] px-1.5 py-0.2 rounded bg-purple-500/20 border border-purple-500/30 text-purple-300 font-bold uppercase tracking-wider">
+                            Pre-Booked
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 text-[11px] text-slate-300 font-mono mt-1">
+                        <span className="flex items-center gap-1 text-amber-400 font-semibold">
+                          <Clock size={11} />
+                          <span>{time}</span>
+                        </span>
+                        {b.durationLabel && (
+                          <span className="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-[9px] text-slate-300 uppercase font-semibold">
+                            {b.durationLabel}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
+              </td>
               <td className="p-5">
                 <span className={`px-3 py-1 rounded text-[10px] font-black uppercase tracking-tighter ${
                   b.status === 'ACTIVE' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 
