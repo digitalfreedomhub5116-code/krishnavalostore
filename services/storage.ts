@@ -604,5 +604,84 @@ export const StorageService = {
     }
     notifyStorageChange();
     return user;
+  },
+
+  getSecurityBalance: (userId?: string): number => {
+    try {
+      const user = StorageService.getCurrentUser();
+      if (user && typeof user.securityBalance === 'number') {
+        return user.securityBalance;
+      }
+      const local = localStorage.getItem(`kv_sec_balance_${userId || user?.id || 'guest'}`);
+      return local ? parseFloat(local) || 0 : 0;
+    } catch {
+      return 0;
+    }
+  },
+
+  addSecurityDeposit: async (amount: number, paymentId: string, orderId?: string): Promise<number> => {
+    try {
+      const user = StorageService.getCurrentUser();
+      const currentBalance = StorageService.getSecurityBalance(user?.id);
+      const newBalance = currentBalance + amount;
+
+      if (user) {
+        user.securityBalance = newBalance;
+        localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
+        
+        if (!user.isGuest) {
+          try {
+            await getSupabase().from('users').update({ data: user }).eq('id', user.id);
+          } catch (e) {
+            console.error('Failed to update user security balance in Supabase', e);
+          }
+        }
+      }
+
+      localStorage.setItem(`kv_sec_balance_${user?.id || 'guest'}`, newBalance.toString());
+
+      if (orderId) {
+        try {
+          const { data: row } = await getSupabase().from('bookings').select('data').eq('order_id', orderId).single();
+          if (row?.data) {
+            const booking = row.data as Booking;
+            booking.securityDepositPaid = true;
+            booking.securityDepositAmount = amount;
+            booking.securityDepositPaymentId = paymentId;
+            await StorageService.updateBooking(booking);
+          }
+        } catch (e) {
+          console.error('Failed to update booking security deposit in Supabase', e);
+        }
+      }
+
+      notifyStorageChange();
+      return newBalance;
+    } catch (e) {
+      console.error('Error adding security deposit:', e);
+      return amount;
+    }
+  },
+
+  withdrawSecurityDeposit: async (amount: number, upiId: string, userId?: string): Promise<boolean> => {
+    try {
+      const user = StorageService.getCurrentUser();
+      const currentBalance = StorageService.getSecurityBalance(user?.id);
+      if (currentBalance < amount) return false;
+
+      const newBalance = Math.max(0, currentBalance - amount);
+      if (user) {
+        user.securityBalance = newBalance;
+        localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
+        if (!user.isGuest) {
+          await getSupabase().from('users').update({ data: user }).eq('id', user.id);
+        }
+      }
+      localStorage.setItem(`kv_sec_balance_${user?.id || 'guest'}`, newBalance.toString());
+      notifyStorageChange();
+      return true;
+    } catch {
+      return false;
+    }
   }
 };

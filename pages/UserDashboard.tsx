@@ -8,7 +8,7 @@ import {
   User as UserIcon, Clock, History, LifeBuoy, LogOut, 
   Gamepad2, Copy, Eye, EyeOff, ShieldCheck, 
   AlertTriangle, ChevronRight, MessageCircle, Lock, ListPlus, Edit2, Trash2,
-  Inbox, CheckCircle2, XCircle, Key, Send, Hash, ArrowLeft
+  Inbox, CheckCircle2, XCircle, Key, Send, Hash, ArrowLeft, Wallet, Check, Loader2, X
 } from 'lucide-react';
 
 const UserDashboard: React.FC = () => {
@@ -32,12 +32,20 @@ const UserDashboard: React.FC = () => {
   const [editingPasswordId, setEditingPasswordId] = useState<string | null>(null);
   const [newPassword, setNewPassword] = useState('');
 
+  // Security Funds State
+  const [securityBalance, setSecurityBalance] = useState<number>(0);
+  const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+  const [withdrawUpi, setWithdrawUpi] = useState('');
+  const [isWithdrawing, setIsWithdrawing] = useState(false);
+  const [withdrawSuccess, setWithdrawSuccess] = useState<string | null>(null);
+
   // Load user data
   useEffect(() => {
     const loadData = async () => {
       const currentUser = StorageService.getCurrentUser();
       if (currentUser) {
         setUser(currentUser);
+        setSecurityBalance(StorageService.getSecurityBalance(currentUser.id));
         
         // Fetch My Rentals
         const userBookings = await StorageService.getUserBookings(currentUser.id);
@@ -172,6 +180,38 @@ const UserDashboard: React.FC = () => {
      }
   };
 
+  const handleWithdrawSecurity = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!withdrawUpi.trim()) {
+      alert("Please enter a valid UPI ID (e.g. username@okhdfcbank or yourphone@fam)");
+      return;
+    }
+    if (securityBalance <= 0) {
+      alert("You have ₹0 refundable security balance available to withdraw.");
+      return;
+    }
+    setIsWithdrawing(true);
+    try {
+      const ok = await StorageService.withdrawSecurityDeposit(securityBalance, withdrawUpi.trim(), user?.id);
+      if (ok) {
+        const amt = securityBalance;
+        setSecurityBalance(0);
+        setWithdrawSuccess(`₹${amt} withdrawal requested to ${withdrawUpi.trim()}. Processing instant refund!`);
+        setTimeout(() => {
+          setShowWithdrawModal(false);
+          setWithdrawSuccess(null);
+          setWithdrawUpi('');
+        }, 2500);
+      } else {
+        alert("Unable to process withdrawal request. Please contact support via WhatsApp.");
+      }
+    } catch (err: any) {
+      alert(err.message || "Failed to submit withdrawal request.");
+    } finally {
+      setIsWithdrawing(false);
+    }
+  };
+
   const openChat = (chat: {userId: string, userName: string, accountId: string, accountName: string}) => {
       setActiveChat(chat);
       // Mobile view handling: CSS classes will hide list
@@ -210,7 +250,7 @@ const UserDashboard: React.FC = () => {
         return (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="bg-brand-surface border border-white/10 rounded-xl p-4 flex flex-col justify-center items-center text-center">
                 <div className="text-3xl font-bold text-white mb-1">{activeBookings.length}</div>
                 <div className="text-xs text-slate-400 uppercase tracking-widest">Active/Upcoming</div>
@@ -218,6 +258,33 @@ const UserDashboard: React.FC = () => {
               <div className="bg-brand-surface border border-white/10 rounded-xl p-4 flex flex-col justify-center items-center text-center">
                 <div className="text-3xl font-bold text-brand-accent mb-1">{pastBookings.length}</div>
                 <div className="text-xs text-slate-400 uppercase tracking-widest">History</div>
+              </div>
+              <div className="bg-brand-surface border border-emerald-500/30 bg-emerald-950/15 rounded-xl p-4 flex flex-col justify-between items-center text-center relative overflow-hidden shadow-[0_0_20px_rgba(16,185,129,0.08)]">
+                <div className="w-full flex items-center justify-between text-[10px] text-slate-400 uppercase tracking-wider mb-1">
+                  <span className="flex items-center gap-1 text-emerald-400 font-bold">
+                    <ShieldCheck size={13} /> Security Fund
+                  </span>
+                  <span className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold ${
+                    securityBalance > 0 ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-white/5 text-slate-500'
+                  }`}>
+                    {securityBalance > 0 ? '✓ Active' : '₹0.00'}
+                  </span>
+                </div>
+                <div className="text-3xl font-bold font-mono text-emerald-400 my-1">
+                  ₹{securityBalance}.00
+                </div>
+                {securityBalance > 0 ? (
+                  <button
+                    onClick={() => setShowWithdrawModal(true)}
+                    className="w-full mt-2 py-1.5 px-3 bg-emerald-500 hover:bg-emerald-400 text-black font-black text-[10px] uppercase tracking-wider rounded-lg transition-all shadow-md flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <Wallet size={12} /> Withdraw Funds
+                  </button>
+                ) : (
+                  <span className="text-[10px] text-slate-500 font-mono mt-1">
+                    Withdrawable anytime
+                  </span>
+                )}
               </div>
             </div>
 
@@ -678,6 +745,98 @@ const UserDashboard: React.FC = () => {
                   <button onClick={() => setEditingPasswordId(null)} className="flex-1 py-3 border border-white/10 rounded-lg text-slate-400 hover:text-white font-bold text-xs uppercase">Cancel</button>
                   <button onClick={handleSavePassword} className="flex-1 py-3 bg-brand-accent hover:bg-red-600 rounded-lg text-white font-bold text-xs uppercase shadow-lg">Save</button>
                </div>
+            </div>
+         </div>,
+         document.body
+      )}
+
+      {/* Security Deposit Withdrawal Modal */}
+      {showWithdrawModal && createPortal(
+         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
+            <div className="bg-brand-surface border border-emerald-500/30 rounded-2xl p-6 sm:p-7 w-full max-w-md shadow-[0_0_50px_rgba(16,185,129,0.2)] relative overflow-hidden">
+               <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-500"></div>
+
+               <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2.5">
+                     <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center">
+                        <Wallet size={20} />
+                     </div>
+                     <div>
+                        <h3 className="text-lg font-bold text-white">Withdraw Security Fund</h3>
+                        <span className="text-[10px] font-mono text-emerald-400 font-bold uppercase tracking-wider">100% Zero Deduction Guarantee</span>
+                     </div>
+                  </div>
+                  <button 
+                     onClick={() => { if (!isWithdrawing) { setShowWithdrawModal(false); setWithdrawSuccess(null); } }} 
+                     className="text-slate-400 hover:text-white transition-colors p-1"
+                  >
+                     <X size={20} />
+                  </button>
+               </div>
+
+               <div className="bg-brand-dark/80 border border-white/10 rounded-xl p-4 mb-5 flex items-center justify-between">
+                  <span className="text-xs text-slate-400 uppercase tracking-wider font-bold">Withdrawable Amount</span>
+                  <span className="text-2xl font-mono font-bold text-emerald-400">₹{securityBalance}.00</span>
+               </div>
+
+               {withdrawSuccess ? (
+                  <div className="p-4 bg-emerald-500/20 border border-emerald-500/40 rounded-xl text-emerald-300 text-xs font-bold flex items-center gap-2 animate-in fade-in">
+                     <Check size={18} className="text-emerald-400 shrink-0" />
+                     <span>{withdrawSuccess}</span>
+                  </div>
+               ) : (
+                  <form onSubmit={handleWithdrawSecurity} className="space-y-4">
+                     <div>
+                        <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                           Your UPI ID / VPA
+                        </label>
+                        <input 
+                           type="text" 
+                           value={withdrawUpi} 
+                           onChange={(e) => setWithdrawUpi(e.target.value)} 
+                           placeholder="e.g. 8530085116@fam or name@okaxis"
+                           required
+                           className="w-full bg-brand-dark border border-white/10 rounded-xl p-3 text-white text-sm focus:border-emerald-500 outline-none font-mono"
+                        />
+                        <p className="text-[10px] text-slate-400 mt-1.5 leading-relaxed">
+                           Funds are released directly into your linked bank account via instant UPI.
+                        </p>
+                     </div>
+
+                     <div className="p-3 bg-white/5 rounded-xl border border-white/5 space-y-1 text-[11px] text-slate-400">
+                        <div className="flex items-center gap-1.5 text-slate-300 font-bold">
+                           <ShieldCheck size={14} className="text-emerald-400" />
+                           <span>Safe & Instant Processing</span>
+                        </div>
+                        <p>If you face any issues, our team is available 24/7 on WhatsApp for 1-minute assistance.</p>
+                     </div>
+
+                     <div className="flex gap-3 pt-2">
+                        <button 
+                           type="button" 
+                           onClick={() => setShowWithdrawModal(false)} 
+                           disabled={isWithdrawing}
+                           className="flex-1 py-3 border border-white/10 rounded-xl text-slate-400 hover:text-white font-bold text-xs uppercase tracking-wider transition-colors"
+                        >
+                           Cancel
+                        </button>
+                        <button 
+                           type="submit" 
+                           disabled={isWithdrawing || !withdrawUpi.trim()}
+                           className="flex-[1.5] py-3 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-black font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-lg shadow-emerald-500/20 disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+                        >
+                           {isWithdrawing ? (
+                              <>
+                                 <Loader2 size={16} className="animate-spin text-black" />
+                                 <span>Processing...</span>
+                              </>
+                           ) : (
+                              <span>Confirm Refund ₹{securityBalance}</span>
+                           )}
+                        </button>
+                     </div>
+                  </form>
+               )}
             </div>
          </div>,
          document.body

@@ -1511,7 +1511,17 @@ const BookingTable = ({ bookings, onUpdateStatus, onDelete }: any) => {
                     <div className="text-[9px] text-slate-500 mt-1">Owner: {b.listerName}</div>
                  )}
               </td>
-              <td className="p-5"><div className="text-white font-bold">{b.accountName}</div><div className="text-[10px] text-slate-500 font-mono">UTR: {b.utr}</div></td>
+              <td className="p-5">
+                <div className="text-white font-bold">{b.accountName}</div>
+                <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                  <span className="text-[10px] text-slate-500 font-mono">UTR: {b.utr}</span>
+                  {b.securityDepositPaid && (
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold font-mono uppercase">
+                      Sec: ₹{b.securityDepositAmount || 29} ✓
+                    </span>
+                  )}
+                </div>
+              </td>
               <td className="p-5 whitespace-nowrap">
                 {(() => {
                   const startRaw = b.startTime || b.createdAt;

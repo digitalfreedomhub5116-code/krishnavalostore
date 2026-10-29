@@ -61,6 +61,7 @@ export interface User {
   createdAt: string;  
   lastLogin: string;
   isGuest?: boolean;
+  securityBalance?: number; // User's refundable security funds balance
 }
 
 export interface Message {
@@ -98,6 +99,9 @@ export interface Booking {
   utr?: string;
   couponCode?: string; // New: Track which coupon was used
   discountApplied?: number; // New: Track amount saved
+  securityDepositPaid?: boolean; // Track if security deposit is paid
+  securityDepositAmount?: number; // Usually 29
+  securityDepositPaymentId?: string; // Razorpay payment ID for security deposit
 }
 
 export const UPI_ID = "8530085116@fam";

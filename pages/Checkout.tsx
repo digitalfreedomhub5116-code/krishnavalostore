@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate, Navigate } from 'react-router-dom';
 import { Account, UPI_ID, BookingStatus, Booking, PaymentConfig } from '../types';
-import { Copy, ArrowRight, Timer, CalendarClock, Smartphone, ShieldCheck, Zap, Ticket, CheckCircle, XCircle, Loader2, AlertCircle, MessageCircle, CreditCard, Lock, Check, Eye, EyeOff } from 'lucide-react';
+import { Copy, ArrowRight, Timer, CalendarClock, Smartphone, ShieldCheck, Zap, Ticket, CheckCircle, XCircle, Loader2, AlertCircle, MessageCircle, CreditCard, Lock, Check, Eye, EyeOff, Wallet } from 'lucide-react';
 import { StorageService, SITE_LOGO_URL } from '../services/storage';
 import { AnalyticsService } from '../services/analytics';
 
@@ -27,6 +27,21 @@ const Checkout: React.FC = () => {
   const [error, setError] = useState('');
   const [isProcessingRazorpay, setIsProcessingRazorpay] = useState(false);
 
+  // Multi-step Checkout Flow: 'checkout' -> 'payment_completed' -> 'security_funds' -> 'credentials_delivered'
+  const [checkoutStep, setCheckoutStep] = useState<'checkout' | 'payment_completed' | 'security_funds' | 'credentials_delivered'>('checkout');
+
+  // Pending credentials to be delivered after security fund clearance
+  const [pendingCredentials, setPendingCredentials] = useState<{
+    accountName: string;
+    rank: string;
+    username: string;
+    password: string;
+    orderId: string;
+    endTime: string;
+    durationLabel: string;
+    whatsappUrl: string;
+  } | null>(null);
+
   // Instant Delivered Credentials State
   const [deliveredCredentials, setDeliveredCredentials] = useState<{
     accountName: string;
@@ -40,6 +55,13 @@ const Checkout: React.FC = () => {
   } | null>(null);
   const [isPasswordRevealed, setIsPasswordRevealed] = useState(false);
   const [copiedField, setCopiedField] = useState<'username' | 'password' | null>(null);
+
+  // Security Funds State
+  const [securityBalance, setSecurityBalance] = useState<number>(0);
+  const [isProcessingSecurity, setIsProcessingSecurity] = useState(false);
+  const [securityPaymentSuccess, setSecurityPaymentSuccess] = useState(false);
+  const [securityError, setSecurityError] = useState('');
+  const [autoAdvanceTimer, setAutoAdvanceTimer] = useState(3);
   
   // Dynamic Payment Settings
   const [paymentConfig, setPaymentConfig] = useState<PaymentConfig>({
@@ -85,6 +107,30 @@ const Checkout: React.FC = () => {
        setError("Session expired.");
     }
   }, [timer]);
+
+  // Load user security balance on mount / user change
+  useEffect(() => {
+    const bal = StorageService.getSecurityBalance(currentUser?.id);
+    setSecurityBalance(bal);
+  }, [currentUser?.id]);
+
+  // Auto-advance from payment_completed to security_funds
+  useEffect(() => {
+    if (checkoutStep === 'payment_completed') {
+      setAutoAdvanceTimer(3);
+      const interval = setInterval(() => {
+        setAutoAdvanceTimer(prev => {
+          if (prev <= 1) {
+            clearInterval(interval);
+            setCheckoutStep('security_funds');
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [checkoutStep]);
 
   if (!state) {
     return <Navigate to="/browse" />;
@@ -229,8 +275,7 @@ Credentials automatically issued on screen.
 
     const whatsappUrl = `https://wa.me/919860185116?text=${encodeURIComponent(message)}`;
 
-    // Deliver credentials instantly directly on the screen
-    setDeliveredCredentials({
+    const creds = {
       accountName: state.account.name,
       rank: state.account.rank,
       username,
@@ -239,10 +284,92 @@ Credentials automatically issued on screen.
       endTime: endDateTime.toISOString(),
       durationLabel: state.durationLabel,
       whatsappUrl
-    });
+    };
+
+    // Save pending credentials so they can be unlocked after security funds step
+    setPendingCredentials(creds);
 
     // Track completed booking in analytics
     AnalyticsService.trackBookingCompleted(state.account.id);
+
+    // Refresh user security balance
+    const currentSec = StorageService.getSecurityBalance(currentUser?.id);
+    setSecurityBalance(currentSec);
+
+    // Transition to Payment Completed Page
+    setAutoAdvanceTimer(3);
+    setCheckoutStep('payment_completed');
+  };
+
+  const handlePaySecurityFund = async () => {
+    setIsProcessingSecurity(true);
+    setSecurityError('');
+
+    const loaded = await loadRazorpayScript();
+    if (!loaded) {
+      setSecurityError('Unable to load Razorpay payment SDK. Please check your internet connection and retry.');
+      setIsProcessingSecurity(false);
+      return;
+    }
+
+    const razorpayKey = paymentConfig.razorpayKeyId || 'rzp_live_Td1pJL2txvaNnH';
+
+    const options = {
+      key: razorpayKey,
+      amount: 2900, // ₹29.00 in paise
+      currency: 'INR',
+      name: activeCompanyName,
+      description: `Refundable Security Fund - Order #${orderId}`,
+      image: SITE_LOGO_URL,
+      prefill: {
+        name: currentUser?.name && !currentUser.isGuest ? currentUser.name : '',
+        email: currentUser?.email && !currentUser.isGuest ? currentUser.email : '',
+        contact: currentUser?.phone || ''
+      },
+      theme: {
+        color: '#10b981'
+      },
+      modal: {
+        ondismiss: function() {
+          setIsProcessingSecurity(false);
+        }
+      },
+      handler: async function(response: any) {
+        if (response && response.razorpay_payment_id) {
+          try {
+            const newBal = await StorageService.addSecurityDeposit(29, response.razorpay_payment_id, orderId);
+            setSecurityBalance(newBal);
+            setSecurityPaymentSuccess(true);
+            setIsProcessingSecurity(false);
+
+            setTimeout(() => {
+              if (pendingCredentials) {
+                setDeliveredCredentials(pendingCredentials);
+              }
+              setCheckoutStep('credentials_delivered');
+            }, 1800);
+          } catch (err: any) {
+            setSecurityError(err.message || 'Error recording security deposit.');
+            setIsProcessingSecurity(false);
+          }
+        } else {
+          setSecurityError('Payment completed but payment ID was not received.');
+          setIsProcessingSecurity(false);
+        }
+      }
+    };
+
+    try {
+      const rzp = new (window as any).Razorpay(options);
+      rzp.on('payment.failed', function(resp: any) {
+        setSecurityError(`Payment Failed: ${resp.error?.description || 'Transaction was declined.'}`);
+        setIsProcessingSecurity(false);
+      });
+      rzp.open();
+    } catch (err: any) {
+      setSecurityError(err.message || 'Failed to initialize Razorpay checkout.');
+      setIsProcessingSecurity(false);
+    }
   };
 
   const handleRazorpayPayment = async () => {
@@ -311,12 +438,278 @@ Credentials automatically issued on screen.
     setTimeout(() => setCopiedField(null), 2000);
   };
 
-  // --- RENDER: INSTANT CREDENTIAL DELIVERY SCREEN ---
-  if (deliveredCredentials) {
+  // --- STEP 1: RENDER PAYMENT COMPLETED CONFIRMATION SCREEN ---
+  if (checkoutStep === 'payment_completed') {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-8 animate-in fade-in zoom-in-95 duration-300">
+        <div className="bg-brand-surface border border-emerald-500/40 rounded-2xl p-6 sm:p-8 text-center relative overflow-hidden shadow-[0_0_50px_rgba(16,185,129,0.15)]">
+          <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-500 animate-pulse"></div>
+          
+          <div className="w-20 h-20 rounded-2xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 mx-auto mb-4 shadow-[0_0_30px_rgba(16,185,129,0.3)] animate-bounce">
+            <CheckCircle className="w-10 h-10" />
+          </div>
+
+          <span className="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-black uppercase tracking-widest mb-3 inline-flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+            Payment Completed // Order #{orderId}
+          </span>
+
+          <h2 className="text-2xl sm:text-3xl font-display font-black text-white uppercase italic tracking-wide mb-2">
+            Rental Confirmed!
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-300 max-w-md mx-auto mb-6">
+            Your rental for <span className="text-brand-cyan font-bold">{state.account.name}</span> ({state.durationLabel}) has been reserved and registered in the system.
+          </p>
+
+          <div className="bg-brand-dark/80 border border-white/10 rounded-xl p-4 mb-6 text-left space-y-2 text-xs">
+            <div className="flex justify-between items-center text-slate-400">
+              <span>Rental Amount Paid:</span>
+              <span className="text-emerald-400 font-mono font-bold text-sm">₹{finalPrice}</span>
+            </div>
+            <div className="flex justify-between items-center text-slate-400">
+              <span>Account:</span>
+              <span className="text-white font-semibold">{state.account.name}</span>
+            </div>
+            <div className="flex justify-between items-center text-slate-400">
+              <span>Duration:</span>
+              <span className="text-white font-mono">{state.durationLabel}</span>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <button
+              onClick={() => setCheckoutStep('security_funds')}
+              className="w-full py-4 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-black font-black text-sm uppercase tracking-[0.2em] rounded-xl transition-all shadow-[0_0_30px_rgba(16,185,129,0.4)] flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <span>Continue to Final Step</span>
+              <ArrowRight size={18} />
+            </button>
+            <p className="text-[11px] text-slate-400 font-mono">
+              Auto-advancing in {autoAdvanceTimer}s...
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // --- STEP 2: RENDER SECURITY FUNDS SCREEN ("One final step....") ---
+  if (checkoutStep === 'security_funds') {
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-8 animate-in fade-in zoom-in-95 duration-300">
+        {/* Live Balance Bar Above */}
+        <div className={`mb-6 rounded-2xl p-4 sm:p-5 border transition-all duration-500 flex flex-col sm:flex-row items-center justify-between gap-4 ${
+          securityPaymentSuccess || securityBalance >= 29
+            ? 'bg-emerald-950/40 border-emerald-500/50 shadow-[0_0_30px_rgba(16,185,129,0.25)]'
+            : 'bg-brand-surface border-white/10 shadow-xl'
+        }`}>
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 border transition-all ${
+              securityPaymentSuccess || securityBalance >= 29
+                ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400'
+                : 'bg-white/5 border-white/10 text-slate-400'
+            }`}>
+              <Wallet size={24} />
+            </div>
+            <div>
+              <span className="text-[10px] font-mono uppercase tracking-widest text-slate-400 font-bold block">
+                Refundable Security Balance
+              </span>
+              <div className="flex items-baseline gap-2">
+                <span className={`text-2xl sm:text-3xl font-display font-black tracking-tight font-mono transition-all ${
+                  securityPaymentSuccess || securityBalance >= 29 ? 'text-emerald-400' : 'text-white'
+                }`}>
+                  ₹{securityBalance}.00
+                </span>
+                {securityPaymentSuccess && (
+                  <span className="text-xs font-bold text-emerald-400 font-mono animate-bounce">
+                    +₹29 Added!
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 self-stretch sm:self-auto justify-end">
+            <span className={`px-3 py-1.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider flex items-center gap-1.5 border ${
+              securityPaymentSuccess || securityBalance >= 29
+                ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+            }`}>
+              <span className={`w-2 h-2 rounded-full ${
+                securityPaymentSuccess || securityBalance >= 29 ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'
+              }`}></span>
+              {securityPaymentSuccess || securityBalance >= 29 ? '✓ Verified & Active' : 'Deposit Required'}
+            </span>
+          </div>
+        </div>
+
+        {/* Main Dramatic Card */}
+        <div className="bg-brand-surface border border-white/10 rounded-2xl p-6 sm:p-8 relative overflow-hidden shadow-2xl text-center">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-brand-accent via-amber-400 to-emerald-400"></div>
+
+          {/* Dramatic Headline */}
+          <div className="mb-4">
+            <span className="text-[10px] font-mono uppercase tracking-[0.3em] text-brand-accent font-black block mb-2">
+              // Vanguard Protocol • Account Protection Clearance
+            </span>
+            <h2 className="text-3xl sm:text-5xl font-display font-black text-white uppercase italic tracking-wide">
+              One final step<span className="text-brand-accent animate-pulse">....</span>
+            </h2>
+          </div>
+
+          {/* Dramatic Copy requested by user */}
+          <p className="text-slate-300 text-sm sm:text-base leading-relaxed max-w-xl mx-auto mb-6">
+            Pay a small fee of <strong className="text-emerald-400 font-extrabold text-lg">₹29</strong> as security funds. They can be withdrawn anytime, but they are necessary if any damage is done from the user's side.
+          </p>
+
+          {/* Green Trust Symbols Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-left mb-6 max-w-xl mx-auto">
+            <div className="p-3.5 bg-black/40 border border-emerald-500/25 rounded-xl flex items-start gap-3">
+              <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400 shrink-0">
+                <ShieldCheck size={20} />
+              </div>
+              <div>
+                <div className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                  <span>100% Withdrawable Anytime</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+                </div>
+                <p className="text-[11px] text-slate-400 mt-0.5 leading-tight">
+                  Zero deduction guarantee. Withdraw back to your UPI ID whenever you want.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3.5 bg-black/40 border border-emerald-500/25 rounded-xl flex items-start gap-3">
+              <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400 shrink-0">
+                <Zap size={20} />
+              </div>
+              <div>
+                <div className="text-xs font-bold text-white uppercase tracking-wider">
+                  Instant Credential Release
+                </div>
+                <p className="text-[11px] text-slate-400 mt-0.5 leading-tight">
+                  Riot login username & password revealed on your screen in under 3 seconds.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3.5 bg-black/40 border border-emerald-500/25 rounded-xl flex items-start gap-3">
+              <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400 shrink-0">
+                <Lock size={20} />
+              </div>
+              <div>
+                <div className="text-xs font-bold text-white uppercase tracking-wider">
+                  Anti-Grief Protection
+                </div>
+                <p className="text-[11px] text-slate-400 mt-0.5 leading-tight">
+                  Safeguards the ID against AFK penalties, queue cooldowns, and griefing.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3.5 bg-black/40 border border-emerald-500/25 rounded-xl flex items-start gap-3">
+              <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400 shrink-0">
+                <CheckCircle size={20} />
+              </div>
+              <div>
+                <div className="text-xs font-bold text-white uppercase tracking-wider">
+                  NPCI & RBI Regulated UPI
+                </div>
+                <p className="text-[11px] text-slate-400 mt-0.5 leading-tight">
+                  Bank-grade 256-bit encryption processed through certified Razorpay gateway.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {securityError && (
+            <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-xs flex items-center justify-center gap-2">
+              <AlertCircle size={16} />
+              <span>{securityError}</span>
+            </div>
+          )}
+
+          {/* Action Button */}
+          {securityPaymentSuccess ? (
+            <div className="p-4 bg-emerald-500/20 border border-emerald-500/40 rounded-xl text-emerald-300 text-sm font-bold flex items-center justify-center gap-2 animate-in fade-in">
+              <CheckCircle size={20} className="text-emerald-400" />
+              <span>✓ Security Funds Added! Balance Updated to ₹{securityBalance}.00 • Unlocking Credentials...</span>
+            </div>
+          ) : securityBalance >= 29 ? (
+            <div className="space-y-3">
+              <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400 text-xs font-bold">
+                ✓ Security Funds already active in your balance (₹{securityBalance}.00)
+              </div>
+              <button
+                onClick={() => {
+                  if (pendingCredentials) setDeliveredCredentials(pendingCredentials);
+                  setCheckoutStep('credentials_delivered');
+                }}
+                className="w-full sm:w-auto px-10 py-4 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-black font-black text-sm uppercase tracking-[0.2em] rounded-xl transition-all shadow-[0_0_35px_rgba(16,185,129,0.4)] flex items-center justify-center gap-3 cursor-pointer mx-auto"
+              >
+                <span>Unlock Credentials Now (0 Due)</span>
+                <ArrowRight size={18} />
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <button
+                onClick={handlePaySecurityFund}
+                disabled={isProcessingSecurity}
+                className="w-full sm:w-auto px-10 py-4 bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-500 hover:from-emerald-400 hover:to-teal-300 text-black font-black text-sm uppercase tracking-[0.2em] rounded-xl transition-all shadow-[0_0_35px_rgba(16,185,129,0.4)] hover:shadow-[0_0_50px_rgba(16,185,129,0.7)] hover:scale-105 active:scale-95 flex items-center justify-center gap-3 cursor-pointer mx-auto"
+              >
+                {isProcessingSecurity ? (
+                  <>
+                    <Loader2 size={20} className="animate-spin text-black" />
+                    <span>Connecting Razorpay...</span>
+                  </>
+                ) : (
+                  <>
+                    <ShieldCheck size={20} className="text-black" />
+                    <span>PAY ₹29 WITH RAZORPAY</span>
+                    <ArrowRight size={18} />
+                  </>
+                )}
+              </button>
+              <p className="text-[11px] text-slate-400 font-mono">
+                100% Refundable Deposit • Immediate Credential Unlock • Withdrawable Anytime
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // --- STEP 3: RENDER DELIVERED CREDENTIALS SCREEN ---
+  const activeCreds = deliveredCredentials || (checkoutStep === 'credentials_delivered' ? pendingCredentials : null);
+
+  if (activeCreds) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-8 animate-in fade-in zoom-in-95 duration-300">
         <div className="bg-brand-surface border border-green-500/40 rounded-2xl p-6 sm:p-8 relative overflow-hidden shadow-[0_0_50px_rgba(34,197,94,0.15)]">
           <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-green-500 via-brand-cyan to-green-500 animate-pulse"></div>
+
+          {/* Active Security Balance Badge */}
+          <div className="mb-6 p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-xl flex items-center justify-between text-left">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-emerald-500/20 text-emerald-400 rounded-lg shrink-0">
+                <ShieldCheck size={20} />
+              </div>
+              <div>
+                <div className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                  <span>Refundable Security Fund</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-mono font-bold">
+                    Active: ₹{securityBalance || 29}.00
+                  </span>
+                </div>
+                <div className="text-[11px] text-slate-400 mt-0.5">
+                  100% safe & refundable to your UPI ID whenever your rental ends.
+                </div>
+              </div>
+            </div>
+          </div>
 
           <div className="flex flex-col items-center text-center mb-6">
             <div className="w-16 h-16 rounded-2xl bg-green-500/20 border border-green-500/30 flex items-center justify-center text-green-400 mb-3 shadow-[0_0_25px_rgba(34,197,94,0.3)]">
@@ -324,13 +717,13 @@ Credentials automatically issued on screen.
             </div>
             <span className="px-3 py-1 rounded-full bg-green-500/10 text-green-400 border border-green-500/20 text-[10px] font-black uppercase tracking-widest mb-2 inline-flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
-              Payment Confirmed // Order #{deliveredCredentials.orderId}
+              Payment Confirmed // Order #{activeCreds.orderId}
             </span>
             <h2 className="text-2xl sm:text-3xl font-display font-black text-white uppercase italic tracking-wide">
               Credentials Delivered!
             </h2>
             <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-md">
-              Your rental for <span className="text-brand-cyan font-bold">{deliveredCredentials.accountName}</span> ({deliveredCredentials.durationLabel}) is now active. Log into the Riot Games client using the credentials below:
+              Your rental for <span className="text-brand-cyan font-bold">{activeCreds.accountName}</span> ({activeCreds.durationLabel}) is now active. Log into the Riot Games client using the credentials below:
             </p>
           </div>
 
@@ -352,11 +745,11 @@ Credentials automatically issued on screen.
               </label>
               <div className="flex items-center justify-between bg-black/60 border border-white/10 rounded-lg px-4 py-3 group hover:border-brand-cyan/40 transition-colors">
                 <code className="text-base sm:text-lg font-mono font-bold text-white tracking-wide select-all truncate pr-2">
-                  {deliveredCredentials.username}
+                  {activeCreds.username}
                 </code>
                 <button
                   type="button"
-                  onClick={() => handleCopy(deliveredCredentials.username, 'username')}
+                  onClick={() => handleCopy(activeCreds.username, 'username')}
                   className="ml-2 px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-md text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all shrink-0"
                 >
                   {copiedField === 'username' ? (
@@ -381,7 +774,7 @@ Credentials automatically issued on screen.
               </label>
               <div className="flex items-center justify-between bg-black/60 border border-white/10 rounded-lg px-4 py-3 group hover:border-brand-accent/40 transition-colors">
                 <code className="text-base sm:text-lg font-mono font-bold text-brand-accent tracking-wide select-all truncate pr-2">
-                  {isPasswordRevealed ? deliveredCredentials.password : '••••••••••••'}
+                  {isPasswordRevealed ? activeCreds.password : '••••••••••••'}
                 </code>
                 <div className="flex items-center gap-2 ml-2 shrink-0">
                   <button
@@ -394,7 +787,7 @@ Credentials automatically issued on screen.
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleCopy(deliveredCredentials.password, 'password')}
+                    onClick={() => handleCopy(activeCreds.password, 'password')}
                     className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-md text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all"
                   >
                     {copiedField === 'password' ? (
@@ -418,7 +811,7 @@ Credentials automatically issued on screen.
           <div className="flex items-center justify-between p-3.5 bg-white/5 rounded-xl border border-white/5 mb-6 text-xs">
             <span className="text-slate-400 font-medium">Session Valid Until:</span>
             <span className="text-white font-mono font-bold">
-              {new Date(deliveredCredentials.endTime).toLocaleString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+              {new Date(activeCreds.endTime).toLocaleString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
             </span>
           </div>
 
@@ -445,7 +838,7 @@ Credentials automatically issued on screen.
             </button>
 
             <a
-              href={deliveredCredentials.whatsappUrl}
+              href={activeCreds.whatsappUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="w-full py-3 bg-green-600/10 hover:bg-green-600/20 border border-green-500/30 text-green-400 font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 no-underline"
