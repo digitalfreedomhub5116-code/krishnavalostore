@@ -1,8 +1,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate, Navigate } from 'react-router-dom';
+import { createPortal } from 'react-dom';
 import { Account, UPI_ID, BookingStatus, Booking, PaymentConfig } from '../types';
-import { Copy, ArrowRight, Timer, CalendarClock, Smartphone, ShieldCheck, Zap, Ticket, CheckCircle, XCircle, Loader2, AlertCircle, MessageCircle, CreditCard, Lock, Check, Eye, EyeOff, Wallet } from 'lucide-react';
+import { Copy, ArrowRight, Timer, CalendarClock, Smartphone, ShieldCheck, Zap, Ticket, CheckCircle, XCircle, Loader2, AlertCircle, MessageCircle, CreditCard, Lock, Check, Eye, EyeOff, Wallet, AlertTriangle, X } from 'lucide-react';
 import { StorageService, SITE_LOGO_URL } from '../services/storage';
 import { AnalyticsService } from '../services/analytics';
 
@@ -63,6 +64,18 @@ const Checkout: React.FC = () => {
   const [securityError, setSecurityError] = useState('');
   const [autoAdvanceTimer, setAutoAdvanceTimer] = useState(3);
   
+  // Store Wallet Balance & Compulsory ₹12 Surge Fee
+  const [walletBalance, setWalletBalance] = useState<number>(0);
+  const [useWalletBalance, setUseWalletBalance] = useState(false);
+
+  // 15-Minute Claim Window & Issue Reporting Ticket
+  const [claimTimer, setClaimTimer] = useState<number>(15 * 60); // 15 minutes
+  const [showTicketModal, setShowTicketModal] = useState(false);
+  const [ticketHeading, setTicketHeading] = useState("Credentials didn't work / Login failed");
+  const [ticketPassage, setTicketPassage] = useState('');
+  const [isSubmittingTicket, setIsSubmittingTicket] = useState(false);
+  const [ticketSuccess, setTicketSuccess] = useState<string | null>(null);
+
   // Dynamic Payment Settings
   const [paymentConfig, setPaymentConfig] = useState<PaymentConfig>({
     companyName: 'Krishna Valo Store',
@@ -132,6 +145,27 @@ const Checkout: React.FC = () => {
     }
   }, [checkoutStep]);
 
+  useEffect(() => {
+    const bal = StorageService.getWalletBalance(currentUser?.id);
+    setWalletBalance(bal);
+  }, []);
+
+  // 15-Minute Claim countdown for delivered credentials
+  useEffect(() => {
+    if (checkoutStep === 'credentials_delivered' || deliveredCredentials) {
+      const interval = setInterval(() => {
+        setClaimTimer(prev => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [checkoutStep, deliveredCredentials]);
+
+  const formatClaimTimer = (secs: number) => {
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
+
   if (!state) {
     return <Navigate to="/browse" />;
   }
@@ -151,7 +185,7 @@ const Checkout: React.FC = () => {
 
   // --- Price Calculations ---
   const basePrice = state.price;
-  let finalPrice = basePrice;
+  let priceAfterCoupon = basePrice;
   let discountAmount = 0;
 
   if (appliedCoupon) {
@@ -162,8 +196,16 @@ const Checkout: React.FC = () => {
     }
     // Prevent negative price
     if (discountAmount > basePrice) discountAmount = basePrice;
-    finalPrice = basePrice - discountAmount;
+    priceAfterCoupon = basePrice - discountAmount;
   }
+
+  // Wallet Redemption & Compulsory ₹12 Platform Cloud & Surge Fee
+  const walletDeduction = useWalletBalance && walletBalance > 0
+    ? Math.min(walletBalance, priceAfterCoupon)
+    : 0;
+
+  const surgeFee = useWalletBalance && walletBalance > 0 ? 12 : 0;
+  const finalPrice = Math.max(0, (priceAfterCoupon - walletDeduction) + surgeFee);
 
   const activeCompanyName = paymentConfig.companyName || 'Krishna Valo Store';
 
@@ -216,6 +258,11 @@ const Checkout: React.FC = () => {
        await StorageService.incrementCouponUsage(appliedCoupon.code);
     }
 
+    // Deduct redeemed wallet balance if applied
+    if (walletDeduction > 0) {
+      await StorageService.deductWalletBalance(walletDeduction, currentUser?.id);
+    }
+
     // Fetch fresh authoritative credentials from Supabase
     const accountRecord = await StorageService.getAccountById(state.account.id);
     const username = accountRecord?.username || state.account.username || 'Contact Support';
@@ -228,7 +275,7 @@ const Checkout: React.FC = () => {
       accountName: state.account.name,
       durationLabel: state.durationLabel,
       hours: state.hours,
-      totalPrice: finalPrice,
+      totalPrice: priceAfterCoupon,
       startTime: startDateTime.toISOString(),
       endTime: endDateTime.toISOString(),
       status: BookingStatus.ACTIVE, 
@@ -237,7 +284,9 @@ const Checkout: React.FC = () => {
       customerId: currentUser?.id,
       customerName: currentUser?.name,
       couponCode: appliedCoupon ? appliedCoupon.code : undefined,
-      discountApplied: appliedCoupon ? discountAmount : undefined
+      discountApplied: appliedCoupon ? discountAmount : undefined,
+      walletAmountUsed: walletDeduction > 0 ? walletDeduction : undefined,
+      surgeFeePaid: surgeFee > 0 ? surgeFee : undefined
     };
 
     // Upsert confirmed booking directly into Supabase
@@ -436,6 +485,42 @@ Credentials automatically issued on screen.
     navigator.clipboard.writeText(text);
     setCopiedField(field);
     setTimeout(() => setCopiedField(null), 2000);
+  };
+
+  const handleSubmitTicket = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!ticketPassage.trim()) {
+      alert("Please describe what happened in the passage box.");
+      return;
+    }
+    const creds = activeCreds;
+    if (!creds) return;
+
+    setIsSubmittingTicket(true);
+    try {
+      const ticket = await StorageService.createTicket({
+        orderId: creds.orderId,
+        accountId: state.account.id,
+        accountName: state.account.name,
+        userId: currentUser.id,
+        userName: currentUser.name,
+        userEmail: currentUser.email,
+        userPhone: currentUser.phone,
+        heading: ticketHeading.trim(),
+        description: ticketPassage.trim(),
+        refundAmount: priceAfterCoupon
+      });
+
+      setTicketSuccess(`Ticket #${ticket.id} raised! Your session is terminated. Auto-approving refund within 10 minutes.`);
+      setTimeout(() => {
+        setShowTicketModal(false);
+        navigate('/dashboard', { state: { tab: 'tickets' } });
+      }, 2200);
+    } catch (err: any) {
+      alert(err.message || 'Failed to submit ticket');
+    } finally {
+      setIsSubmittingTicket(false);
+    }
   };
 
   // --- STEP 1: RENDER PAYMENT COMPLETED CONFIRMATION SCREEN ---
@@ -847,6 +932,22 @@ Credentials automatically issued on screen.
               <span>Save / Backup to WhatsApp</span>
             </a>
 
+            {/* 15-Minute "Credentials didn't work?" Claim Window Button */}
+            {claimTimer > 0 ? (
+              <button
+                type="button"
+                onClick={() => setShowTicketModal(true)}
+                className="w-full py-3.5 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/40 text-amber-400 font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg hover:shadow-amber-500/10"
+              >
+                <AlertTriangle size={16} className="text-amber-400 animate-pulse" />
+                <span>Credentials didn't work? (Report within {formatClaimTimer(claimTimer)})</span>
+              </button>
+            ) : (
+              <div className="p-3 bg-white/5 border border-white/5 rounded-xl text-center text-[10px] text-slate-500 font-mono">
+                15-min issue claim window expired • For assistance contact 24/7 WhatsApp Support
+              </div>
+            )}
+
             <button
               type="button"
               onClick={() => navigate('/browse')}
@@ -856,6 +957,126 @@ Credentials automatically issued on screen.
             </button>
           </div>
         </div>
+
+        {/* Raise a Ticket Modal */}
+        {showTicketModal && createPortal(
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
+            <div className="bg-brand-surface border border-brand-accent/40 rounded-2xl p-6 sm:p-7 w-full max-w-lg shadow-[0_0_50px_rgba(255,70,85,0.25)] relative overflow-hidden">
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-brand-accent via-amber-400 to-emerald-400"></div>
+
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-10 h-10 rounded-xl bg-brand-accent/20 border border-brand-accent/30 text-brand-accent flex items-center justify-center">
+                    <AlertTriangle size={20} />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-white">Raise Issue Ticket</h3>
+                    <span className="text-[10px] font-mono text-brand-cyan font-bold uppercase tracking-wider">
+                      Order #{activeCreds.orderId} • {activeCreds.accountName}
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => { if (!isSubmittingTicket) { setShowTicketModal(false); setTicketSuccess(null); } }}
+                  className="text-slate-400 hover:text-white transition-colors p-1"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {ticketSuccess ? (
+                <div className="p-5 bg-emerald-500/20 border border-emerald-500/40 rounded-xl text-emerald-300 text-xs font-bold flex items-center gap-3 animate-in fade-in">
+                  <CheckCircle size={22} className="text-emerald-400 shrink-0" />
+                  <span>{ticketSuccess}</span>
+                </div>
+              ) : (
+                <form onSubmit={handleSubmitTicket} className="space-y-4">
+                  {/* Warning Notice about Session Termination */}
+                  <div className="p-3.5 bg-amber-500/10 border border-amber-500/20 rounded-xl text-xs text-amber-300/90 leading-relaxed flex gap-2.5 items-start">
+                    <AlertTriangle size={18} className="text-amber-400 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="font-bold uppercase tracking-wider block text-amber-400 mb-0.5">
+                        Immediate Session Termination
+                      </span>
+                      Submitting this ticket will immediately revoke access and end this rental. Our system will review and auto-approve your refund of <strong className="text-white font-mono">₹{priceAfterCoupon}</strong> back into your Store Wallet within 10 minutes.
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                      Issue Heading / Category
+                    </label>
+                    <input
+                      type="text"
+                      value={ticketHeading}
+                      onChange={(e) => setTicketHeading(e.target.value)}
+                      placeholder="e.g. Credentials didn't work / Wrong Password"
+                      required
+                      className="w-full bg-brand-dark border border-white/10 rounded-xl p-3 text-white text-xs focus:border-brand-accent outline-none"
+                    />
+                    <div className="flex gap-1.5 flex-wrap mt-2">
+                      {[
+                        "Wrong Password",
+                        "2FA Code Requested",
+                        "Account Banned/Suspended",
+                        "Queue Cooldown Active"
+                      ].map((tag) => (
+                        <button
+                          key={tag}
+                          type="button"
+                          onClick={() => setTicketHeading(tag)}
+                          className="px-2 py-1 bg-white/5 hover:bg-white/10 border border-white/10 rounded-md text-[10px] text-slate-300 font-medium transition-colors"
+                        >
+                          {tag}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                      Explain What Happened (Passage)
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={ticketPassage}
+                      onChange={(e) => setTicketPassage(e.target.value)}
+                      placeholder="Please describe exactly what happened when you tried logging into the Riot Games client..."
+                      required
+                      className="w-full bg-brand-dark border border-white/10 rounded-xl p-3 text-white text-xs focus:border-brand-accent outline-none resize-none"
+                    />
+                  </div>
+
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowTicketModal(false)}
+                      disabled={isSubmittingTicket}
+                      className="flex-1 py-3 border border-white/10 rounded-xl text-slate-400 hover:text-white font-bold text-xs uppercase tracking-wider transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isSubmittingTicket || !ticketPassage.trim()}
+                      className="flex-[1.5] py-3 bg-gradient-to-r from-red-600 to-brand-accent hover:from-red-500 hover:to-red-600 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-lg shadow-brand-accent/20 disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      {isSubmittingTicket ? (
+                        <>
+                          <Loader2 size={16} className="animate-spin" />
+                          <span>Submitting...</span>
+                        </>
+                      ) : (
+                        <span>Submit & End Session</span>
+                      )}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          </div>,
+          document.body
+        )}
       </div>
     );
   }
@@ -923,8 +1144,20 @@ Credentials automatically issued on screen.
                         <span>-₹{discountAmount}</span>
                      </div>
                   )}
+                  {walletDeduction > 0 && (
+                     <div className="flex justify-between md:justify-end gap-8 text-emerald-400 font-bold text-sm">
+                        <span>Wallet Balance Applied</span>
+                        <span>-₹{walletDeduction}</span>
+                     </div>
+                  )}
+                  {surgeFee > 0 && (
+                     <div className="flex justify-between md:justify-end gap-8 text-amber-400 font-bold text-sm">
+                        <span>Platform Cloud & Surge Fee</span>
+                        <span>+₹{surgeFee}</span>
+                     </div>
+                  )}
                   <div className="flex justify-between md:justify-end gap-8 items-center pt-2 border-t border-white/10 mt-2">
-                    <span className="font-bold text-lg">Total Pay</span>
+                    <span className="font-bold text-lg">Total Payable</span>
                     <span className="font-bold text-2xl text-brand-accent">₹{finalPrice}</span>
                   </div>
                </div>
@@ -1003,6 +1236,34 @@ Credentials automatically issued on screen.
                      </div>
                 </div>
             </div>
+
+            {/* Wallet Balance Redemption Option */}
+            {walletBalance > 0 && (
+              <div className="mt-5 p-4 rounded-xl border transition-all bg-emerald-950/20 border-emerald-500/30">
+                <label className="flex items-start gap-3 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={useWalletBalance}
+                    onChange={(e) => setUseWalletBalance(e.target.checked)}
+                    className="mt-1 w-4 h-4 rounded text-emerald-500 focus:ring-0 bg-brand-dark border-white/20 cursor-pointer"
+                  />
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs sm:text-sm font-bold text-white flex items-center gap-1.5">
+                        <Wallet size={16} className="text-emerald-400" />
+                        Use Store Wallet Balance
+                      </span>
+                      <span className="text-xs font-mono font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                        Available: ₹{walletBalance}.00
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-300 mt-1 leading-relaxed">
+                      Apply your refunded wallet funds to this rental. A ₹12 Platform Cloud & Surge fee applies when paying with wallet.
+                    </p>
+                  </div>
+                </label>
+              </div>
+            )}
          </div>
 
 
@@ -1054,7 +1315,7 @@ Credentials automatically issued on screen.
                    </>
                 ) : (
                    <>
-                      <span>Pay ₹{finalPrice} via Razorpay</span>
+                      <span>{useWalletBalance && walletDeduction > 0 ? `Pay ₹${finalPrice} (Inc. ₹12 Surge) with Razorpay` : `Pay ₹${finalPrice} via Razorpay`}</span>
                       <ArrowRight size={18} />
                    </>
                 )}

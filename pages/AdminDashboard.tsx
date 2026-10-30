@@ -4,15 +4,16 @@ import { Navigate, useNavigate, Link } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { StorageService, DEFAULT_HOME_CONFIG } from '../services/storage';
 import { AIService } from '../services/ai';
-import { Account, Booking, BookingStatus, Rank, User, HomeConfig, Review, Skin, HeroSlide, TrustItem, StepItem, Coupon, PaymentConfig } from '../types';
-import { Plus, Trash2, Check, X, Edit2, Loader2, LogOut, Square, CheckSquare, BarChart3, Activity, IndianRupee, Users, Gamepad2, Home, Save, Zap, Shield, Star, MessageSquare, AlertCircle, Cpu, Search, Video, FileText, Play, Copy, Terminal, Layout, Image as ImageIcon, ShieldCheck, Lock, Ban, Type as TypeIcon, Clock, Ticket, CalendarDays, Repeat, Building, CreditCard, QrCode, Upload, RotateCcw, Calendar, Flame } from 'lucide-react';
+import { Account, Booking, BookingStatus, Rank, User, HomeConfig, Review, Skin, HeroSlide, TrustItem, StepItem, Coupon, PaymentConfig, SupportTicket, TicketStatus } from '../types';
+import { Plus, Trash2, Check, X, Edit2, Loader2, LogOut, Square, CheckSquare, BarChart3, Activity, IndianRupee, Users, Gamepad2, Home, Save, Zap, Shield, Star, MessageSquare, AlertCircle, AlertTriangle, Cpu, Search, Video, FileText, Play, Copy, Terminal, Layout, Image as ImageIcon, ShieldCheck, Lock, Ban, Type as TypeIcon, Clock, Ticket, CalendarDays, Repeat, Building, CreditCard, QrCode, Upload, RotateCcw, Calendar, Flame } from 'lucide-react';
 import AdminAnalyticsTab from '../components/AdminAnalyticsTab';
 
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
   const isAuthenticated = localStorage.getItem('isAdmin') === 'true' || sessionStorage.getItem('isAdmin') === 'true';
   
-  const [activeTab, setActiveTab] = useState<'bookings' | 'analytics' | 'accounts' | 'user_listings' | 'users' | 'edithome' | 'coupons' | 'payment'>('bookings');
+  const [activeTab, setActiveTab] = useState<'bookings' | 'analytics' | 'accounts' | 'user_listings' | 'users' | 'edithome' | 'coupons' | 'payment' | 'tickets'>('bookings');
+  const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [users, setUsers] = useState<User[]>([]);
@@ -98,16 +99,18 @@ const AdminDashboard: React.FC = () => {
 
   const refreshData = async () => {
     try {
-      const [b, a, u, h] = await Promise.all([
+      const [b, a, u, h, t] = await Promise.all([
         StorageService.getBookings(),
         StorageService.getAccounts(),
         StorageService.getAllUsers(),
-        StorageService.getHomeConfig()
+        StorageService.getHomeConfig(),
+        StorageService.getAllTickets()
       ]);
       setBookings(b);
       setAccounts(a);
       setUsers(u);
       setHomeConfig(h);
+      setTickets(t);
     } catch (err) {
         console.error("Failed to load admin data:", err);
     } finally {
@@ -597,6 +600,7 @@ const AdminDashboard: React.FC = () => {
       <div className="flex bg-brand-dark p-1 rounded-lg border border-white/10 w-full md:w-fit mb-8 overflow-x-auto shadow-2xl no-scrollbar">
         {[
           { id: 'bookings', icon: BarChart3, label: 'Bookings' },
+          { id: 'tickets', icon: AlertTriangle, label: 'Tickets', count: tickets.filter(t => t.status === TicketStatus.PENDING).length },
           { id: 'analytics', icon: Activity, label: 'Intelligence & Traffic' },
           { id: 'accounts', icon: Gamepad2, label: 'Platform IDs' },
           { id: 'user_listings', icon: Users, label: 'User IDs' },
@@ -611,12 +615,131 @@ const AdminDashboard: React.FC = () => {
             className={`flex-shrink-0 px-6 py-2.5 rounded-md text-xs font-bold uppercase tracking-widest flex items-center gap-2 transition-all whitespace-nowrap ${activeTab === tab.id ? 'bg-brand-accent text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}
           >
             <tab.icon size={14} />
-            {tab.label}
+            <span>{tab.label}</span>
+            {Boolean(tab.count && tab.count > 0) && (
+              <span className="bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.2 rounded-full">{tab.count}</span>
+            )}
           </button>
         ))}
       </div>
 
       {activeTab === 'bookings' && <BookingTable bookings={enhancedBookings} onUpdateStatus={async (id: string, s: BookingStatus) => { try { await StorageService.updateBookingStatus(id, s); refreshData(); } catch(e: any) { alert(e.message); } }} onDelete={async (id: string) => { await StorageService.deleteBooking(id); refreshData(); }} />}
+      
+      {activeTab === 'tickets' && (
+        <div className="space-y-6">
+          <div className="bg-brand-surface border border-white/10 rounded-xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <AlertTriangle className="text-amber-400" size={18} />
+                <span>Issue & Refund Tickets (10-Minute Auto-Guarantee)</span>
+              </h3>
+              <p className="text-xs text-slate-400 mt-1">
+                Tickets raised by users when credentials fail. Any pending ticket automatically approves and refunds the booking amount to the user's wallet after 10 minutes. You can also approve immediately.
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-mono font-bold">
+                {tickets.filter(t => t.status === TicketStatus.PENDING).length} Pending
+              </span>
+            </div>
+          </div>
+
+          <div className="bg-brand-surface border border-white/10 rounded-xl overflow-hidden shadow-2xl overflow-x-auto">
+            <table className="w-full text-left text-sm min-w-[900px]">
+              <thead>
+                <tr className="bg-brand-darker text-slate-500 border-b border-white/10 uppercase font-bold tracking-widest text-[10px]">
+                  <th className="p-5">Ticket / Order</th>
+                  <th className="p-5">Customer</th>
+                  <th className="p-5">Account</th>
+                  <th className="p-5">Issue Details</th>
+                  <th className="p-5">Refund</th>
+                  <th className="p-5">Status / Timer</th>
+                  <th className="p-5 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {tickets.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="p-10 text-center text-slate-500 italic">No tickets raised.</td>
+                  </tr>
+                ) : (
+                  tickets.map((t) => {
+                    const isPending = t.status === TicketStatus.PENDING;
+                    return (
+                      <tr key={t.id} className="hover:bg-white/5 transition-colors">
+                        <td className="p-5">
+                          <div className="font-mono font-bold text-brand-cyan text-xs">{t.id}</div>
+                          <div className="text-[10px] text-slate-500 font-mono mt-0.5">#{t.orderId}</div>
+                        </td>
+                        <td className="p-5">
+                          <div className="text-white font-bold text-xs">{t.userName || 'Guest User'}</div>
+                          <div className="text-[10px] text-slate-400 font-mono">{t.userEmail}</div>
+                          {t.userPhone && <div className="text-[10px] text-slate-500 font-mono">{t.userPhone}</div>}
+                        </td>
+                        <td className="p-5">
+                          <div className="text-white font-bold text-xs">{t.accountName}</div>
+                          <div className="text-[10px] text-slate-500 font-mono">{t.accountId}</div>
+                        </td>
+                        <td className="p-5 max-w-xs">
+                          <div className="text-xs font-bold text-amber-400 truncate">{t.heading}</div>
+                          <div className="text-[11px] text-slate-400 line-clamp-2 mt-0.5 font-sans" title={t.description}>
+                            "{t.description}"
+                          </div>
+                        </td>
+                        <td className="p-5 font-mono font-bold text-emerald-400 text-sm">
+                          ₹{t.refundAmount}
+                        </td>
+                        <td className="p-5">
+                          {isPending ? (
+                            <AdminTicketCountdown ticket={t} onAutoApproved={refreshData} />
+                          ) : t.status === TicketStatus.APPROVED ? (
+                            <span className="px-2.5 py-1 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold font-mono uppercase">
+                              ✓ Refunded
+                            </span>
+                          ) : (
+                            <span className="px-2.5 py-1 rounded bg-red-500/10 text-red-400 border border-red-500/20 text-[10px] font-bold font-mono uppercase">
+                              Rejected
+                            </span>
+                          )}
+                        </td>
+                        <td className="p-5 text-right">
+                          {isPending && (
+                            <div className="flex justify-end gap-2 items-center">
+                              <button
+                                onClick={async () => {
+                                  if (window.confirm(`Approve ticket ${t.id} immediately and credit ₹${t.refundAmount} to customer's wallet?`)) {
+                                    await StorageService.approveTicket(t.id, 'Manually approved by Admin');
+                                    refreshData();
+                                  }
+                                }}
+                                className="px-3 py-1.5 bg-emerald-500/20 hover:bg-emerald-500 text-emerald-300 hover:text-black border border-emerald-500/30 font-bold rounded-lg text-xs uppercase tracking-wider transition-all flex items-center gap-1 cursor-pointer"
+                              >
+                                <Check size={12} /> Approve
+                              </button>
+                              <button
+                                onClick={async () => {
+                                  const reason = prompt("Enter reason for rejecting this ticket:", "Credentials verified working");
+                                  if (reason) {
+                                    await StorageService.rejectTicket(t.id, reason);
+                                    refreshData();
+                                  }
+                                }}
+                                className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 font-bold rounded-lg text-xs uppercase tracking-wider transition-all cursor-pointer"
+                              >
+                                Reject
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
       
       {activeTab === 'analytics' && <AdminAnalyticsTab accounts={accounts} bookings={bookings} />}
 
@@ -1607,6 +1730,34 @@ const BookingTable = ({ bookings, onUpdateStatus, onDelete }: any) => {
           ))}
         </tbody>
       </table>
+    </div>
+  );
+};
+
+const AdminTicketCountdown: React.FC<{ ticket: SupportTicket, onAutoApproved: () => void }> = ({ ticket, onAutoApproved }) => {
+  const createdAtMs = new Date(ticket.createdAt).getTime();
+  const tenMinsMs = 10 * 60 * 1000;
+  const [secondsLeft, setSecondsLeft] = useState(() => Math.max(0, Math.floor((createdAtMs + tenMinsMs - Date.now()) / 1000)));
+
+  useEffect(() => {
+    if (ticket.status !== TicketStatus.PENDING) return;
+    const interval = setInterval(async () => {
+      const remaining = Math.max(0, Math.floor((createdAtMs + tenMinsMs - Date.now()) / 1000));
+      setSecondsLeft(remaining);
+      if (remaining === 0) {
+        await StorageService.checkAndAutoApproveTickets();
+        onAutoApproved();
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [ticket, createdAtMs]);
+
+  const m = Math.floor(secondsLeft / 60);
+  const s = secondsLeft % 60;
+  return (
+    <div className="flex items-center gap-1.5 text-xs font-mono font-bold text-amber-400">
+      <Clock size={12} className="animate-spin text-amber-400" />
+      <span>Auto-approving in {m}:{s < 10 ? '0' : ''}{s}</span>
     </div>
   );
 };

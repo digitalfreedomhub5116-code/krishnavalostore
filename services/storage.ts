@@ -1,6 +1,6 @@
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { Account, Booking, Rank, BookingStatus, User, HomeConfig, Skin, Message } from '../types';
+import { Account, Booking, Rank, BookingStatus, User, HomeConfig, Skin, Message, SupportTicket, TicketStatus } from '../types';
 
 const SUPABASE_URL = 'https://akwdzwrkhpyhrrcyvkpx.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_EjqnCcOPSh6uoT9y-g2OFw_ACj0byDo';
@@ -469,6 +469,9 @@ export const StorageService = {
       if (hasUpdates) {
         notifyStorageChange();
       }
+
+      // Check and auto-approve any pending tickets >= 10 mins
+      await StorageService.checkAndAutoApproveTickets();
     } catch (e) {
       console.error("Error checking expired bookings:", e);
     }
@@ -682,6 +685,270 @@ export const StorageService = {
       return true;
     } catch {
       return false;
+    }
+  },
+
+  // --- Store Wallet System (Auto-refunded & reusable on rentals) ---
+  getWalletBalance: (userId?: string): number => {
+    try {
+      const user = StorageService.getCurrentUser();
+      if (user && typeof user.walletBalance === 'number') {
+        return user.walletBalance;
+      }
+      const local = localStorage.getItem(`kv_wallet_balance_${userId || user?.id || 'guest'}`);
+      return local ? parseFloat(local) || 0 : 0;
+    } catch {
+      return 0;
+    }
+  },
+
+  addWalletBalance: async (amount: number, userId?: string): Promise<number> => {
+    try {
+      const user = StorageService.getCurrentUser();
+      const currentBalance = StorageService.getWalletBalance(user?.id);
+      const newBalance = currentBalance + amount;
+
+      if (user) {
+        user.walletBalance = newBalance;
+        localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
+        if (!user.isGuest) {
+          try {
+            await getSupabase().from('users').update({ data: user }).eq('id', user.id);
+          } catch (e) {
+            console.error('Failed to sync wallet balance to Supabase user', e);
+          }
+        }
+      }
+
+      localStorage.setItem(`kv_wallet_balance_${userId || user?.id || 'guest'}`, newBalance.toString());
+      notifyStorageChange();
+      return newBalance;
+    } catch (e) {
+      console.error('Error adding wallet balance:', e);
+      return amount;
+    }
+  },
+
+  deductWalletBalance: async (amount: number, userId?: string): Promise<boolean> => {
+    try {
+      const user = StorageService.getCurrentUser();
+      const currentBalance = StorageService.getWalletBalance(user?.id);
+      if (currentBalance < amount) return false;
+
+      const newBalance = Math.max(0, currentBalance - amount);
+      if (user) {
+        user.walletBalance = newBalance;
+        localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
+        if (!user.isGuest) {
+          try {
+            await getSupabase().from('users').update({ data: user }).eq('id', user.id);
+          } catch (e) {
+            console.error('Failed to sync deducted wallet balance to Supabase', e);
+          }
+        }
+      }
+
+      localStorage.setItem(`kv_wallet_balance_${userId || user?.id || 'guest'}`, newBalance.toString());
+      notifyStorageChange();
+      return true;
+    } catch {
+      return false;
+    }
+  },
+
+  // --- Support Tickets & Automated Refunds (10-Minute Auto-Approval) ---
+  getAllTickets: async (): Promise<SupportTicket[]> => {
+    try {
+      // First auto-approve any eligible tickets >= 10 minutes old
+      await StorageService.checkAndAutoApproveTickets();
+
+      let remoteTickets: SupportTicket[] = [];
+      try {
+        const { data, error } = await getSupabase().from('tickets').select('*');
+        if (!error && data) {
+          remoteTickets = data.map(r => (r.data || r) as SupportTicket);
+        }
+      } catch (err) {
+        // Fallback to local if table is pending
+      }
+
+      const localStr = localStorage.getItem('kv_support_tickets');
+      const localTickets: SupportTicket[] = localStr ? JSON.parse(localStr) : [];
+
+      // Merge by ID
+      const map = new Map<string, SupportTicket>();
+      for (const t of localTickets) map.set(t.id, t);
+      for (const t of remoteTickets) map.set(t.id, t);
+
+      const all = Array.from(map.values());
+      all.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      return all;
+    } catch (e) {
+      console.error('Error fetching tickets:', e);
+      return [];
+    }
+  },
+
+  getUserTickets: async (userId: string): Promise<SupportTicket[]> => {
+    try {
+      const all = await StorageService.getAllTickets();
+      return all.filter(t => t.userId === userId);
+    } catch {
+      return [];
+    }
+  },
+
+  createTicket: async (ticketInput: Omit<SupportTicket, 'id' | 'status' | 'createdAt'>): Promise<SupportTicket> => {
+    const ticketId = `TCK-${Date.now().toString().slice(-6)}`;
+    const newTicket: SupportTicket = {
+      ...ticketInput,
+      id: ticketId,
+      status: TicketStatus.PENDING,
+      createdAt: new Date().toISOString()
+    };
+
+    // 1. Immediately terminate the rental session for this booking
+    try {
+      const bookings = await StorageService.getBookings();
+      const targetBooking = bookings.find(b => b.orderId === ticketInput.orderId);
+      if (targetBooking) {
+        targetBooking.status = BookingStatus.CANCELLED;
+        targetBooking.hasTicket = true;
+        await StorageService.updateBooking(targetBooking);
+
+        // 2. Release account immediately so others can rent (DO NOT flag the account per user instruction)
+        const account = await StorageService.getAccountById(ticketInput.accountId);
+        if (account) {
+          account.isBooked = false;
+          account.bookedUntil = null;
+          await StorageService.saveAccount(account);
+        }
+      }
+    } catch (err) {
+      console.error('Error terminating booking session on ticket raise:', err);
+    }
+
+    // 3. Save ticket to localStorage
+    try {
+      const existingStr = localStorage.getItem('kv_support_tickets');
+      const existing: SupportTicket[] = existingStr ? JSON.parse(existingStr) : [];
+      existing.unshift(newTicket);
+      localStorage.setItem('kv_support_tickets', JSON.stringify(existing));
+    } catch (e) {
+      console.error('Error saving ticket locally:', e);
+    }
+
+    // 4. Save ticket to Supabase
+    try {
+      await getSupabase().from('tickets').upsert({ id: newTicket.id, data: newTicket });
+    } catch (e) {
+      console.warn('Could not upsert into Supabase tickets table (fallback to local):', e);
+    }
+
+    notifyStorageChange();
+    return newTicket;
+  },
+
+  approveTicket: async (ticketId: string, resolutionNote: string = 'Approved'): Promise<boolean> => {
+    try {
+      const all = await StorageService.getAllTickets();
+      const ticket = all.find(t => t.id === ticketId);
+      if (!ticket) return false;
+
+      if (ticket.status === TicketStatus.APPROVED) {
+        return true; // Already approved
+      }
+
+      ticket.status = TicketStatus.APPROVED;
+      ticket.approvedAt = new Date().toISOString();
+      ticket.resolutionNote = resolutionNote;
+
+      // Credit the exact booking price back to the user's wallet
+      await StorageService.addWalletBalance(ticket.refundAmount, ticket.userId);
+
+      // Save updated ticket to localStorage
+      try {
+        const localStr = localStorage.getItem('kv_support_tickets');
+        let localTickets: SupportTicket[] = localStr ? JSON.parse(localStr) : [];
+        localTickets = localTickets.map(t => t.id === ticketId ? ticket : t);
+        if (!localTickets.some(t => t.id === ticketId)) {
+          localTickets.unshift(ticket);
+        }
+        localStorage.setItem('kv_support_tickets', JSON.stringify(localTickets));
+      } catch (e) {
+        console.error('Error updating ticket in localStorage:', e);
+      }
+
+      // Save updated ticket to Supabase
+      try {
+        await getSupabase().from('tickets').upsert({ id: ticket.id, data: ticket });
+      } catch (e) {
+        console.warn('Error updating ticket in Supabase:', e);
+      }
+
+      notifyStorageChange();
+      return true;
+    } catch (e) {
+      console.error('Error approving ticket:', e);
+      return false;
+    }
+  },
+
+  rejectTicket: async (ticketId: string, reason: string): Promise<boolean> => {
+    try {
+      const all = await StorageService.getAllTickets();
+      const ticket = all.find(t => t.id === ticketId);
+      if (!ticket) return false;
+
+      ticket.status = TicketStatus.REJECTED;
+      ticket.resolutionNote = reason;
+
+      try {
+        const localStr = localStorage.getItem('kv_support_tickets');
+        let localTickets: SupportTicket[] = localStr ? JSON.parse(localStr) : [];
+        localTickets = localTickets.map(t => t.id === ticketId ? ticket : t);
+        localStorage.setItem('kv_support_tickets', JSON.stringify(localTickets));
+        await getSupabase().from('tickets').upsert({ id: ticket.id, data: ticket });
+      } catch (e) {
+        console.error('Error saving rejected ticket:', e);
+      }
+
+      notifyStorageChange();
+      return true;
+    } catch {
+      return false;
+    }
+  },
+
+  checkAndAutoApproveTickets: async (): Promise<void> => {
+    try {
+      const localStr = localStorage.getItem('kv_support_tickets');
+      let localTickets: SupportTicket[] = localStr ? JSON.parse(localStr) : [];
+
+      let remoteTickets: SupportTicket[] = [];
+      try {
+        const { data } = await getSupabase().from('tickets').select('*');
+        if (data) remoteTickets = data.map(r => (r.data || r) as SupportTicket);
+      } catch {}
+
+      const map = new Map<string, SupportTicket>();
+      for (const t of localTickets) map.set(t.id, t);
+      for (const t of remoteTickets) map.set(t.id, t);
+
+      const now = Date.now();
+      const tenMinutesMs = 10 * 60 * 1000;
+
+      for (const ticket of map.values()) {
+        if (ticket.status === TicketStatus.PENDING) {
+          const age = now - new Date(ticket.createdAt).getTime();
+          if (age >= tenMinutesMs) {
+            // Auto approve!
+            await StorageService.approveTicket(ticket.id, 'Auto-approved after 10-minute guarantee window');
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Error during auto-approving tickets:', e);
     }
   }
 };

@@ -62,6 +62,31 @@ export interface User {
   lastLogin: string;
   isGuest?: boolean;
   securityBalance?: number; // User's refundable security funds balance
+  walletBalance?: number; // User's store wallet credit balance (auto-refunded from tickets)
+}
+
+export enum TicketStatus {
+  PENDING = 'PENDING',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED'
+}
+
+export interface SupportTicket {
+  id: string; // TCK-XXXXX
+  orderId: string;
+  accountId: string;
+  accountName: string;
+  userId: string;
+  userName?: string;
+  userEmail?: string;
+  userPhone?: string;
+  heading: string; // Headline of the issue
+  description: string; // Passage explaining the problem
+  refundAmount: number; // Exact rental amount of booking to refund
+  status: TicketStatus;
+  createdAt: string; // ISO string for 10-minute auto-approval calculation
+  approvedAt?: string;
+  resolutionNote?: string;
 }
 
 export interface Message {
@@ -102,6 +127,9 @@ export interface Booking {
   securityDepositPaid?: boolean; // Track if security deposit is paid
   securityDepositAmount?: number; // Usually 29
   securityDepositPaymentId?: string; // Razorpay payment ID for security deposit
+  walletAmountUsed?: number; // Amount redeemed from store wallet balance
+  surgeFeePaid?: number; // Platform Cloud & Surge fee (₹12)
+  hasTicket?: boolean; // Track if an issue ticket was raised for this booking
 }
 
 export const UPI_ID = "8530085116@fam";

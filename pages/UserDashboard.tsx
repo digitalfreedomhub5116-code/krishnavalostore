@@ -3,19 +3,19 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Navigate, useNavigate, useLocation, Link } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { StorageService } from '../services/storage';
-import { User, Booking, BookingStatus, Account, Message } from '../types';
+import { User, Booking, BookingStatus, Account, Message, SupportTicket, TicketStatus } from '../types';
 import { 
   User as UserIcon, Clock, History, LifeBuoy, LogOut, 
   Gamepad2, Copy, Eye, EyeOff, ShieldCheck, 
   AlertTriangle, ChevronRight, MessageCircle, Lock, ListPlus, Edit2, Trash2,
-  Inbox, CheckCircle2, XCircle, Key, Send, Hash, ArrowLeft, Wallet, Check, Loader2, X
+  Inbox, CheckCircle2, XCircle, Key, Send, Hash, ArrowLeft, Wallet, Check, Loader2, X, Ticket
 } from 'lucide-react';
 
 const UserDashboard: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [user, setUser] = useState<User | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'rentals' | 'listings' | 'requests' | 'messages' | 'history' | 'profile' | 'support'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'rentals' | 'listings' | 'requests' | 'messages' | 'history' | 'profile' | 'support' | 'tickets'>('overview');
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [myListings, setMyListings] = useState<Account[]>([]);
   const [incomingRequests, setIncomingRequests] = useState<Booking[]>([]);
@@ -39,6 +39,17 @@ const UserDashboard: React.FC = () => {
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [withdrawSuccess, setWithdrawSuccess] = useState<string | null>(null);
 
+  // Store Wallet & Support Tickets State
+  const [walletBalance, setWalletBalance] = useState<number>(0);
+  const [tickets, setTickets] = useState<SupportTicket[]>([]);
+
+  // Issue Reporting Modal from Rentals
+  const [reportingBooking, setReportingBooking] = useState<Booking | null>(null);
+  const [ticketHeading, setTicketHeading] = useState("Credentials didn't work / Login failed");
+  const [ticketPassage, setTicketPassage] = useState('');
+  const [isSubmittingTicket, setIsSubmittingTicket] = useState(false);
+  const [ticketSuccess, setTicketSuccess] = useState<string | null>(null);
+
   // Load user data
   useEffect(() => {
     const loadData = async () => {
@@ -46,6 +57,11 @@ const UserDashboard: React.FC = () => {
       if (currentUser) {
         setUser(currentUser);
         setSecurityBalance(StorageService.getSecurityBalance(currentUser.id));
+        setWalletBalance(StorageService.getWalletBalance(currentUser.id));
+
+        // Fetch User Tickets
+        const userTickets = await StorageService.getUserTickets(currentUser.id);
+        setTickets(userTickets);
         
         // Fetch My Rentals
         const userBookings = await StorageService.getUserBookings(currentUser.id);
@@ -70,7 +86,11 @@ const UserDashboard: React.FC = () => {
     };
     loadData();
     
-    // Check for direct chat link in location state
+    // Check for direct tab links in location state
+    if (location.state && location.state.tab === 'tickets') {
+        setActiveTab('tickets');
+    }
+
     if (location.state && location.state.tab === 'messages') {
         setActiveTab('messages');
         const { chatWith, accountId } = location.state;
@@ -212,6 +232,41 @@ const UserDashboard: React.FC = () => {
     }
   };
 
+  const handleSubmitRentalTicket = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!ticketPassage.trim() || !reportingBooking || !user) {
+      alert("Please enter a description passage explaining what happened.");
+      return;
+    }
+    setIsSubmittingTicket(true);
+    try {
+      const ticket = await StorageService.createTicket({
+        orderId: reportingBooking.orderId,
+        accountId: reportingBooking.accountId,
+        accountName: reportingBooking.accountName,
+        userId: user.id,
+        userName: user.name,
+        userEmail: user.email,
+        userPhone: user.phone,
+        heading: ticketHeading.trim(),
+        description: ticketPassage.trim(),
+        refundAmount: reportingBooking.totalPrice
+      });
+
+      setTicketSuccess(`Ticket #${ticket.id} raised! Your session is terminated. Auto-approving within 10 minutes.`);
+      setTimeout(() => {
+        setReportingBooking(null);
+        setTicketSuccess(null);
+        setTicketPassage('');
+        setActiveTab('tickets');
+      }, 2000);
+    } catch (err: any) {
+      alert(err.message || 'Failed to submit ticket');
+    } finally {
+      setIsSubmittingTicket(false);
+    }
+  };
+
   const openChat = (chat: {userId: string, userName: string, accountId: string, accountName: string}) => {
       setActiveChat(chat);
       // Mobile view handling: CSS classes will hide list
@@ -250,7 +305,7 @@ const UserDashboard: React.FC = () => {
         return (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="bg-brand-surface border border-white/10 rounded-xl p-4 flex flex-col justify-center items-center text-center">
                 <div className="text-3xl font-bold text-white mb-1">{activeBookings.length}</div>
                 <div className="text-xs text-slate-400 uppercase tracking-widest">Active/Upcoming</div>
@@ -286,6 +341,25 @@ const UserDashboard: React.FC = () => {
                   </span>
                 )}
               </div>
+              <div className="bg-brand-surface border border-brand-cyan/30 bg-brand-cyan/5 rounded-xl p-4 flex flex-col justify-between items-center text-center relative overflow-hidden shadow-[0_0_20px_rgba(6,182,212,0.08)]">
+                <div className="w-full flex items-center justify-between text-[10px] text-slate-400 uppercase tracking-wider mb-1">
+                  <span className="flex items-center gap-1 text-brand-cyan font-bold">
+                    <Wallet size={13} /> Store Wallet
+                  </span>
+                  <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-brand-cyan/10 text-brand-cyan border border-brand-cyan/20">
+                    Auto-Refunds
+                  </span>
+                </div>
+                <div className="text-3xl font-bold font-mono text-brand-cyan my-1">
+                  ₹{walletBalance}.00
+                </div>
+                <button
+                  onClick={() => navigate('/browse')}
+                  className="w-full mt-2 py-1.5 px-3 bg-brand-cyan hover:bg-white text-brand-dark font-black text-[10px] uppercase tracking-wider rounded-lg transition-all shadow-md flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  Use on Next Rental
+                </button>
+              </div>
             </div>
 
             {activeBookings.length > 0 ? (
@@ -295,7 +369,7 @@ const UserDashboard: React.FC = () => {
                    Current Sessions
                 </h3>
                 {activeBookings.map(booking => (
-                  <RentalCard key={booking.orderId} booking={booking} showCredentials={true} />
+                  <RentalCard key={booking.orderId} booking={booking} showCredentials={true} onReportIssue={(b) => setReportingBooking(b)} />
                 ))}
               </div>
             ) : (
@@ -548,8 +622,113 @@ const UserDashboard: React.FC = () => {
               <p className="text-slate-500 text-center py-10">You have no active rentals.</p>
             )}
             {activeBookings.map(booking => (
-              <RentalCard key={booking.orderId} booking={booking} showCredentials={true} />
+              <RentalCard key={booking.orderId} booking={booking} showCredentials={true} onReportIssue={(b) => setReportingBooking(b)} />
             ))}
+          </div>
+        );
+
+      case 'tickets':
+        return (
+          <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+            {/* Wallet Balance Hero Card */}
+            <div className="bg-gradient-to-r from-brand-surface via-brand-dark to-brand-surface border border-brand-cyan/30 rounded-2xl p-6 shadow-xl relative overflow-hidden flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-brand-cyan/20 text-brand-cyan border border-brand-cyan/30">
+                    Store Wallet Balance
+                  </span>
+                  <span className="text-xs text-slate-400">• Automated 10-Minute Refund Guarantee</span>
+                </div>
+                <div className="text-3xl sm:text-4xl font-display font-black text-white font-mono">
+                  ₹{walletBalance}.00
+                </div>
+                <p className="text-xs text-slate-400 max-w-lg leading-relaxed">
+                  Refunds from reported credential issues are credited directly here. When you rent any account next, simply check <strong className="text-white">"Use Store Wallet"</strong> at checkout (a compulsory ₹12 platform surge fee applies).
+                </p>
+              </div>
+
+              <button
+                onClick={() => navigate('/browse')}
+                className="px-6 py-3 bg-brand-cyan hover:bg-white text-brand-dark font-black text-xs uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-brand-cyan/20 shrink-0"
+              >
+                Rent An Account
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                  <Ticket size={20} className="text-brand-accent" />
+                  <span>My Support Tickets</span>
+                </h2>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Reported credential issues with automated 10-minute approval and wallet refunds.
+                </p>
+              </div>
+            </div>
+
+            {tickets.length === 0 ? (
+              <div className="bg-brand-surface border border-dashed border-white/10 rounded-2xl p-10 text-center">
+                <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-slate-500 mx-auto mb-4">
+                  <Ticket size={28} />
+                </div>
+                <h3 className="text-base font-bold text-white mb-1">No Tickets Raised</h3>
+                <p className="text-xs text-slate-400 max-w-md mx-auto mb-5">
+                  If credentials ever fail on a new rental, click <strong className="text-amber-400">"Credentials didn't work?"</strong> on your rental within 15 minutes. Our system will automatically process your refund within 10 minutes.
+                </p>
+                <button
+                  onClick={() => setActiveTab('rentals')}
+                  className="px-5 py-2.5 bg-brand-surface border border-white/10 hover:border-white/30 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all"
+                >
+                  View Active Rentals
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {tickets.map((t) => (
+                  <div key={t.id} className="bg-brand-surface border border-white/10 rounded-2xl p-5 sm:p-6 transition-all hover:border-white/20">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-white/5">
+                      <div className="flex items-center gap-3">
+                        <span className="font-mono text-xs font-bold text-brand-cyan bg-brand-cyan/10 px-2.5 py-1 rounded border border-brand-cyan/20">
+                          {t.id}
+                        </span>
+                        <div>
+                          <div className="text-sm font-bold text-white">{t.accountName}</div>
+                          <div className="text-[11px] text-slate-500 font-mono">Order: #{t.orderId} • {new Date(t.createdAt).toLocaleString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <div className="text-right">
+                          <div className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Refund Amount</div>
+                          <div className="text-base font-mono font-bold text-brand-accent">₹{t.refundAmount}</div>
+                        </div>
+                        <TicketTimer ticket={t} onAutoApproved={async () => {
+                          const updated = await StorageService.getUserTickets(user.id);
+                          setTickets(updated);
+                          setWalletBalance(StorageService.getWalletBalance(user.id));
+                        }} />
+                      </div>
+                    </div>
+
+                    <div className="pt-4 space-y-2">
+                      <div className="text-xs font-bold text-slate-200 flex items-center gap-2">
+                        <span className="text-amber-400">Issue:</span> {t.heading}
+                      </div>
+                      <p className="text-xs text-slate-400 bg-brand-dark/50 p-3 rounded-xl border border-white/5 leading-relaxed font-sans">
+                        "{t.description}"
+                      </p>
+                      {t.resolutionNote && (
+                        <div className="text-[11px] text-emerald-400 font-mono flex items-center gap-1.5 pt-1">
+                          <CheckCircle2 size={13} />
+                          <span>Resolution: {t.resolutionNote}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         );
 
@@ -667,10 +846,11 @@ const UserDashboard: React.FC = () => {
              <nav className="p-2 space-y-1">
                {[
                  { id: 'overview', icon: Gamepad2, label: 'Dashboard' },
+                 { id: 'rentals', icon: Clock, label: 'My Rentals' },
+                 { id: 'tickets', icon: Ticket, label: 'My Tickets', count: tickets.filter(t => t.status === TicketStatus.PENDING).length },
                  { id: 'messages', icon: MessageCircle, label: 'Messages', count: conversations.reduce((acc, c) => acc + c.unreadCount, 0) },
                  { id: 'listings', icon: ListPlus, label: 'My Listed IDs' },
                  { id: 'requests', icon: Inbox, label: 'Incoming Requests', count: incomingRequests.filter(r => r.status === BookingStatus.PENDING).length },
-                 { id: 'rentals', icon: Clock, label: 'My Rentals' },
                  { id: 'history', icon: History, label: 'Booking History' },
                  { id: 'profile', icon: UserIcon, label: 'Profile' },
                  { id: 'support', icon: LifeBuoy, label: 'Support' },
@@ -745,6 +925,120 @@ const UserDashboard: React.FC = () => {
                   <button onClick={() => setEditingPasswordId(null)} className="flex-1 py-3 border border-white/10 rounded-lg text-slate-400 hover:text-white font-bold text-xs uppercase">Cancel</button>
                   <button onClick={handleSavePassword} className="flex-1 py-3 bg-brand-accent hover:bg-red-600 rounded-lg text-white font-bold text-xs uppercase shadow-lg">Save</button>
                </div>
+            </div>
+         </div>,
+         document.body
+      )}
+
+      {/* Issue Reporting Modal */}
+      {reportingBooking && createPortal(
+         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
+            <div className="bg-brand-surface border border-brand-accent/40 rounded-2xl p-6 sm:p-7 w-full max-w-lg shadow-[0_0_50px_rgba(255,70,85,0.25)] relative overflow-hidden">
+               <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-brand-accent via-amber-400 to-emerald-400"></div>
+
+               <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2.5">
+                     <div className="w-10 h-10 rounded-xl bg-brand-accent/20 border border-brand-accent/30 text-brand-accent flex items-center justify-center">
+                        <AlertTriangle size={20} />
+                     </div>
+                     <div>
+                        <h3 className="text-lg font-bold text-white">Report Issue & Claim Refund</h3>
+                        <span className="text-[10px] font-mono text-brand-cyan font-bold uppercase tracking-wider">
+                           Order #{reportingBooking.orderId} • {reportingBooking.accountName}
+                        </span>
+                     </div>
+                  </div>
+                  <button 
+                     onClick={() => { if (!isSubmittingTicket) { setReportingBooking(null); setTicketSuccess(null); } }} 
+                     className="text-slate-400 hover:text-white transition-colors p-1"
+                  >
+                     <X size={20} />
+                  </button>
+               </div>
+
+               {ticketSuccess ? (
+                  <div className="p-5 bg-emerald-500/20 border border-emerald-500/40 rounded-xl text-emerald-300 text-xs font-bold flex items-center gap-3 animate-in fade-in">
+                     <CheckCircle2 size={22} className="text-emerald-400 shrink-0" />
+                     <span>{ticketSuccess}</span>
+                  </div>
+               ) : (
+                  <form onSubmit={handleSubmitRentalTicket} className="space-y-4">
+                     <div className="p-3.5 bg-amber-500/10 border border-amber-500/20 rounded-xl text-xs text-amber-300/90 leading-relaxed flex gap-2.5 items-start">
+                        <AlertTriangle size={18} className="text-amber-400 shrink-0 mt-0.5" />
+                        <div>
+                           <span className="font-bold uppercase tracking-wider block text-amber-400 mb-0.5">
+                              Immediate Session Revocation
+                           </span>
+                           Submitting this ticket will immediately revoke login access. Our automated system will review and credit <strong className="text-white font-mono">₹{reportingBooking.totalPrice}</strong> to your Store Wallet within 10 minutes.
+                        </div>
+                     </div>
+
+                     <div>
+                        <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                           Issue Heading
+                        </label>
+                        <input 
+                           type="text" 
+                           value={ticketHeading} 
+                           onChange={(e) => setTicketHeading(e.target.value)} 
+                           placeholder="e.g. Credentials didn't work / Login failed"
+                           required
+                           className="w-full bg-brand-dark border border-white/10 rounded-xl p-3 text-white text-xs focus:border-brand-accent outline-none"
+                        />
+                        <div className="flex gap-1.5 flex-wrap mt-2">
+                           {["Wrong Password", "2FA Code Required", "Account Suspended", "Queue Cooldown Active"].map(tag => (
+                              <button
+                                 key={tag}
+                                 type="button"
+                                 onClick={() => setTicketHeading(tag)}
+                                 className="px-2 py-1 bg-white/5 hover:bg-white/10 border border-white/10 rounded-md text-[10px] text-slate-300 font-medium transition-colors"
+                              >
+                                 {tag}
+                              </button>
+                           ))}
+                        </div>
+                     </div>
+
+                     <div>
+                        <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                           Explain What Happened (Passage)
+                        </label>
+                        <textarea 
+                           rows={3} 
+                           value={ticketPassage} 
+                           onChange={(e) => setTicketPassage(e.target.value)} 
+                           placeholder="Please describe exactly what happened when you tried to log into the Riot client..."
+                           required
+                           className="w-full bg-brand-dark border border-white/10 rounded-xl p-3 text-white text-xs focus:border-brand-accent outline-none resize-none"
+                        />
+                     </div>
+
+                     <div className="flex gap-3 pt-2">
+                        <button 
+                           type="button" 
+                           onClick={() => setReportingBooking(null)} 
+                           disabled={isSubmittingTicket}
+                           className="flex-1 py-3 border border-white/10 rounded-xl text-slate-400 hover:text-white font-bold text-xs uppercase tracking-wider transition-colors"
+                        >
+                           Cancel
+                        </button>
+                        <button 
+                           type="submit" 
+                           disabled={isSubmittingTicket || !ticketPassage.trim()}
+                           className="flex-[1.5] py-3 bg-gradient-to-r from-red-600 to-brand-accent hover:from-red-500 hover:to-red-600 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-lg shadow-brand-accent/20 disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+                        >
+                           {isSubmittingTicket ? (
+                              <>
+                                 <Loader2 size={16} className="animate-spin" />
+                                 <span>Submitting...</span>
+                              </>
+                           ) : (
+                              <span>Submit & End Session</span>
+                           )}
+                        </button>
+                     </div>
+                  </form>
+               )}
             </div>
          </div>,
          document.body
@@ -847,13 +1141,80 @@ const UserDashboard: React.FC = () => {
 
 // --- Sub-Components ---
 
-const RentalCard: React.FC<{ booking: Booking, showCredentials?: boolean }> = ({ booking, showCredentials }) => {
+const TicketTimer: React.FC<{ ticket: SupportTicket, onAutoApproved?: () => void }> = ({ ticket, onAutoApproved }) => {
+  const createdAtMs = new Date(ticket.createdAt).getTime();
+  const tenMinsMs = 10 * 60 * 1000;
+  const [secondsLeft, setSecondsLeft] = useState(() => Math.max(0, Math.floor((createdAtMs + tenMinsMs - Date.now()) / 1000)));
+
+  useEffect(() => {
+    if (ticket.status !== TicketStatus.PENDING) return;
+    const interval = setInterval(async () => {
+      const remaining = Math.max(0, Math.floor((createdAtMs + tenMinsMs - Date.now()) / 1000));
+      setSecondsLeft(remaining);
+      if (remaining === 0) {
+        await StorageService.checkAndAutoApproveTickets();
+        onAutoApproved?.();
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [ticket, createdAtMs]);
+
+  if (ticket.status === TicketStatus.APPROVED) {
+    return (
+      <span className="px-2.5 py-1 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-xs font-bold font-mono">
+        ✓ Approved & Refunded
+      </span>
+    );
+  }
+
+  if (ticket.status === TicketStatus.REJECTED) {
+    return (
+      <span className="px-2.5 py-1 rounded bg-red-500/10 text-red-400 border border-red-500/30 text-xs font-bold font-mono">
+        Rejected
+      </span>
+    );
+  }
+
+  const m = Math.floor(secondsLeft / 60);
+  const s = secondsLeft % 60;
+  const timeFormatted = `${m}:${s < 10 ? '0' : ''}${s}`;
+
+  return (
+    <div className="flex items-center gap-2 font-mono text-xs">
+      <span className="px-2.5 py-1 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30 font-bold flex items-center gap-1.5">
+        <Clock size={12} className="animate-spin text-amber-400" />
+        Auto-refund in {timeFormatted}
+      </span>
+    </div>
+  );
+};
+
+const RentalCard: React.FC<{ booking: Booking, showCredentials?: boolean, onReportIssue?: (booking: Booking) => void }> = ({ booking, showCredentials, onReportIssue }) => {
   const [timeLeft, setTimeLeft] = useState<string>('--:--:--');
   const [timeLabel, setTimeLabel] = useState<string>('Time Remaining');
   const [progress, setProgress] = useState(0);
   const [isRevealed, setIsRevealed] = useState(false);
   const [accountDetails, setAccountDetails] = useState<Account | undefined>(undefined);
   const [bookingState, setBookingState] = useState<'PENDING' | 'UPCOMING' | 'ACTIVE' | 'EXPIRED' | 'OTHER'>('PENDING');
+
+  // 15-Minute Claim Window Timer
+  const rentalStartTime = new Date(booking.startTime || booking.createdAt).getTime();
+  const claimWindowMs = 15 * 60 * 1000;
+  const [claimSecsLeft, setClaimSecsLeft] = useState(() => Math.max(0, Math.floor((rentalStartTime + claimWindowMs - Date.now()) / 1000)));
+
+  useEffect(() => {
+    const int = setInterval(() => {
+      const left = Math.max(0, Math.floor((rentalStartTime + claimWindowMs - Date.now()) / 1000));
+      setClaimSecsLeft(left);
+    }, 1000);
+    return () => clearInterval(int);
+  }, [rentalStartTime]);
+
+  const formatClaimTimer = (secs: number) => {
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
 
   useEffect(() => {
     const fetchAccount = async () => {
@@ -1022,6 +1383,35 @@ const RentalCard: React.FC<{ booking: Booking, showCredentials?: boolean }> = ({
                <div className="mt-3 flex items-start gap-2 text-xs text-yellow-500/80 bg-yellow-500/5 p-2 rounded">
                   <AlertTriangle className="w-3 h-3 shrink-0 mt-0.5" />
                   <p>Do not change the email or password. The system auto-detects changes and will lock your account.</p>
+              {/* 15-Minute Credentials Claim Window */}
+              <div className="mt-3 pt-3 border-t border-white/5">
+                {booking.hasTicket ? (
+                  <div className="p-2.5 bg-amber-500/10 border border-amber-500/20 rounded-lg text-amber-400 text-xs font-bold flex items-center gap-2">
+                    <AlertTriangle size={14} />
+                    <span>Issue ticket raised • Session terminated & refund auto-processing in My Tickets</span>
+                  </div>
+                ) : claimSecsLeft > 0 ? (
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-amber-500/5 border border-amber-500/20 p-3 rounded-lg">
+                    <div className="text-[11px] text-slate-300">
+                      Credentials didn't work? Claim refund within <span className="font-mono text-amber-400 font-bold">{formatClaimTimer(claimSecsLeft)}</span>
+                    </div>
+                    {onReportIssue && (
+                      <button
+                        type="button"
+                        onClick={() => onReportIssue(booking)}
+                        className="w-full sm:w-auto px-3.5 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-400 font-bold text-xs uppercase tracking-wider rounded-md transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+                      >
+                        <AlertTriangle size={13} className="text-amber-400 animate-pulse" />
+                        <span>Credentials didn't work?</span>
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-[10px] text-slate-500 font-mono text-center">
+                    15-min issue claim window expired • For assistance contact 24/7 WhatsApp Support
+                  </div>
+                )}
+              </div>
                </div>
              )}
           </div>
